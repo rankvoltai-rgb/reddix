@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import logo from "@/assets/logo.png";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -35,14 +36,12 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarHeader className="p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">R</span>
-          </div>
+    <Sidebar className="border-r border-border/50 bg-card/50">
+      <SidebarHeader className="p-5 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="Reddix" className="h-9 w-9" />
           <div className="flex flex-col">
-            <span className="font-semibold text-foreground">Reddix</span>
+            <span className="font-semibold text-foreground tracking-tight">Reddix</span>
             {profile?.product_name && (
               <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                 {profile.product_name}
@@ -52,27 +51,27 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-3">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild disabled={item.disabled}>
                     {item.disabled ? (
-                      <div className="flex items-center gap-3 px-3 py-2 text-muted-foreground cursor-not-allowed opacity-50">
+                      <div className="flex items-center gap-3 px-3 py-2.5 text-muted-foreground/60 cursor-not-allowed rounded-lg">
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                        <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded">Soon</span>
+                        <span className="text-sm">{item.title}</span>
+                        <span className="ml-auto text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded-full font-medium">Soon</span>
                       </div>
                     ) : (
                       <NavLink
                         to={item.url}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
                         activeClassName="bg-primary/10 text-primary font-medium"
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="text-sm">{item.title}</span>
                       </NavLink>
                     )}
                   </SidebarMenuButton>
@@ -83,9 +82,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col min-w-0">
+      <SidebarFooter className="p-4 border-t border-border/50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-medium text-foreground truncate">
               {profile?.email || "User"}
             </span>
@@ -94,7 +93,7 @@ export function AppSidebar() {
             variant="ghost"
             size="icon"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           >
             <LogOut className="h-4 w-4" />
           </Button>
