@@ -3,14 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Mail, KeyRound, LogOut, Trash2, RefreshCw, AlertTriangle, Crown, Zap, ExternalLink } from 'lucide-react';
+import { Loader2, Save, Mail, KeyRound, LogOut, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -63,7 +61,6 @@ export default function Settings() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { profile, isLoading, updateProfile, isUpdating } = useProfile();
-  const { subscription, isLoading: subLoading } = useSubscription();
   
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isClearingLeads, setIsClearingLeads] = useState(false);
@@ -170,7 +167,7 @@ export default function Settings() {
     }
   };
 
-  if (isLoading || subLoading) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -179,9 +176,6 @@ export default function Settings() {
       </DashboardLayout>
     );
   }
-
-  const planIcon = subscription?.plan_type === 'advanced' ? Crown : Zap;
-  const PlanIcon = planIcon;
 
   return (
     <DashboardLayout>
@@ -194,72 +188,9 @@ export default function Settings() {
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList>
             <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="danger">Danger Zone</TabsTrigger>
           </TabsList>
-
-          {/* Subscription Tab */}
-          <TabsContent value="subscription">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Subscription</CardTitle>
-                <CardDescription>
-                  Manage your Reddix subscription and billing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {subscription ? (
-                  <>
-                    <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                      <div className={`p-3 rounded-lg ${subscription.plan_type === 'advanced' ? 'bg-primary/10' : 'bg-secondary'}`}>
-                        <PlanIcon className={`h-6 w-6 ${subscription.plan_type === 'advanced' ? 'text-primary' : 'text-muted-foreground'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg capitalize">{subscription.plan_type} Plan</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Status: <span className={`font-medium ${subscription.status === 'active' ? 'text-green-600' : 'text-amber-600'}`}>
-                            {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {subscription.current_period_end && (
-                      <div className="space-y-2">
-                        <Label>Current Billing Period</Label>
-                        <p className="text-muted-foreground">
-                          {subscription.current_period_start && format(new Date(subscription.current_period_start), 'MMM d, yyyy')}
-                          {' → '}
-                          {format(new Date(subscription.current_period_end), 'MMM d, yyyy')}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="pt-4 border-t">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => window.open('https://whop.com/orders', '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Manage on Whop
-                      </Button>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Update payment method, cancel, or view invoices.
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">No active subscription found.</p>
-                    <Button onClick={() => navigate('/pricing')}>
-                      View Plans
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Profile Tab */}
           <TabsContent value="profile">
