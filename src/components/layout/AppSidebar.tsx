@@ -45,7 +45,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <img src={logo} alt="Reddix" className="h-9 w-9" />
           <div className="flex flex-col">
-            <span className="font-semibold text-foreground tracking-tight">Lead Generation</span>
+            <span className="font-semibold text-foreground tracking-tight">Reddix</span>
             {profile?.product_name && <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                 {profile.product_name}
               </span>}
