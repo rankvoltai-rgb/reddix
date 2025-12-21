@@ -113,45 +113,49 @@ serve(async (req) => {
 
     const allPosts: RedditPost[] = [];
     
-    // Search each subreddit with each keyword
+    // Search each subreddit with each keyword - use OR for broader matching
     for (const sub of subreddits) {
-      for (const kw of keywords) {
-        const query = `site:reddit.com/r/${sub.subreddit_name} "${kw.keyword}"`;
-        console.log('Searching:', query);
+      // Build query without quotes for broader matching
+      const keywordQueries = keywords.map(kw => kw.keyword).join(' OR ');
+      const query = `site:reddit.com/r/${sub.subreddit_name} ${keywordQueries}`;
+      console.log('Searching:', query);
 
-        try {
-          const response = await fetch('https://api.firecrawl.dev/v1/search', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${firecrawlKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              query,
-              limit: 5,
-              tbs: 'qdr:w', // Last week
-              scrapeOptions: { formats: ['markdown'] },
-            }),
-          });
+      try {
+        const response = await fetch('https://api.firecrawl.dev/v1/search', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${firecrawlKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            limit: 15, // Increased for more results
+            tbs: 'qdr:m', // Last month instead of week
+            scrapeOptions: { formats: ['markdown'] },
+          }),
+        });
 
-          if (response.ok) {
-            const data = await response.json();
-            const posts = (data.data || []).map((item: any) => ({
-              url: item.url,
-              title: item.title || '',
-              description: item.description || '',
-              markdown: item.markdown || '',
-              subreddit: sub.subreddit_name,
-            }));
-            allPosts.push(...posts);
-          }
-        } catch (e) {
-          console.error('Search error for', query, e);
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`Firecrawl returned ${data.data?.length || 0} results for r/${sub.subreddit_name}`);
+          const posts = (data.data || []).map((item: any) => ({
+            url: item.url,
+            title: item.title || '',
+            description: item.description || '',
+            markdown: item.markdown || '',
+            subreddit: sub.subreddit_name,
+          }));
+          allPosts.push(...posts);
+        } else {
+          const errText = await response.text();
+          console.error('Firecrawl error:', response.status, errText);
         }
-
-        // Small delay to avoid rate limiting
-        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.error('Search error for', query, e);
       }
+
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 300));
     }
 
     console.log(`Found ${allPosts.length} total posts`);
@@ -176,20 +180,38 @@ serve(async (req) => {
 
     for (const post of uniquePosts.slice(0, 20)) { // Limit to 20 for efficiency
       try {
-        const analysisPrompt = `Analyze this Reddit post for purchase intent related to: ${profile?.product_name || 'our product'}.
+        const analysisPrompt = `You are a lead qualification expert. Analyze this Reddit post for PURCHASE INTENT.
 
-Product context: ${profile?.company_description || 'A software product'}
-Value proposition: ${profile?.value_proposition || 'Helps users solve problems'}
+PRODUCT BEING SOLD: ${profile?.product_name || 'a SaaS tool'}
+PRODUCT DESCRIPTION: ${profile?.company_description || 'Software that helps businesses'}
+VALUE PROPOSITION: ${profile?.value_proposition || 'Solves business problems'}
 
-Post Title: ${post.title}
-Post Content: ${post.markdown?.slice(0, 1500) || post.description || 'No content'}
+HIGH INTENT SIGNALS (score 50-100):
+- Explicitly asking for tool/software recommendations
+- Complaining about current solution and seeking alternatives
+- Asking "what do you use for X?" or "best tool for X?"
+- Budget discussions, comparing pricing
+- Ready to buy/try something new
 
-Respond with JSON only:
+MEDIUM INTENT SIGNALS (score 20-49):
+- Discussing problems the product solves
+- Showing interest in the problem space
+- Asking how others handle similar challenges
+
+LOW INTENT (score 1-19):
+- General discussion not seeking solutions
+- Already happy with current solution
+- Off-topic or unrelated content
+
+POST TITLE: ${post.title}
+POST CONTENT: ${post.markdown?.slice(0, 2000) || post.description || 'No content available'}
+
+Respond with valid JSON ONLY:
 {
-  "intent_score": <1-100>,
+  "intent_score": <number 1-100>,
   "intent_level": "<low|medium|high>",
-  "relevance_notes": "<brief explanation of why this is/isn't a good lead>",
-  "author": "<extract reddit username if visible, otherwise 'unknown'>"
+  "relevance_notes": "<1-2 sentence explanation>",
+  "author": "<reddit username if visible, else 'unknown'>"
 }`;
 
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -225,8 +247,8 @@ Respond with JSON only:
           
           console.log(`Post: "${post.title.slice(0, 40)}..." => Score: ${analysis.intent_score}, Level: ${analysis.intent_level}`);
           
-          // Lower threshold to 15 for testing - captures more leads
-          if (analysis.intent_score >= 15) {
+          // Lower threshold to 10 for testing - captures more leads
+          if (analysis.intent_score >= 10) {
             // Extract subreddit from URL
             const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
             const subreddit = subredditMatch ? subredditMatch[1] : (post as any).subreddit || 'unknown';
@@ -250,7 +272,7 @@ Respond with JSON only:
             });
             console.log(`✓ Added lead: ${post.title.slice(0, 50)}...`);
           } else {
-            console.log(`✗ Skipped (score ${analysis.intent_score} < 15): ${post.title.slice(0, 50)}...`);
+            console.log(`✗ Skipped (score ${analysis.intent_score} < 10): ${post.title.slice(0, 50)}...`);
           }
         } else {
           console.error('Could not parse AI response JSON:', content.slice(0, 200));

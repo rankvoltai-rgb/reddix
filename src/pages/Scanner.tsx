@@ -225,6 +225,23 @@ const Scanner = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {subreddits.length === 0 && (
+                <div className="pb-2">
+                  <p className="text-xs text-muted-foreground mb-2">Suggested subreddits:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {["SaaS", "startups", "Entrepreneur", "smallbusiness", "marketing"].map((sub) => (
+                      <Badge 
+                        key={sub} 
+                        variant="outline" 
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => addSubreddit.mutate(sub)}
+                      >
+                        + r/{sub}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Input
                   placeholder="e.g. entrepreneur, startups"
@@ -312,9 +329,17 @@ const Scanner = () => {
 
               {keywords.length === 0 && (
                 <div className="pt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Suggested keywords:</p>
+                  <p className="text-xs text-muted-foreground mb-2">Suggested high-intent keywords:</p>
                   <div className="flex flex-wrap gap-1">
-                    {["looking for", "any recommendations", "need help with", "what tool", "best way to"].map((kw) => (
+                    {[
+                      "looking for a tool",
+                      "need recommendation",
+                      "any suggestions for",
+                      "what do you use for",
+                      "best software for",
+                      "alternative to",
+                      "help me find"
+                    ].map((kw) => (
                       <Badge 
                         key={kw} 
                         variant="outline" 
@@ -366,8 +391,8 @@ const Scanner = () => {
               <div>
                 <h3 className="font-medium">How scanning works</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  We search each subreddit for posts containing your keywords, then use AI to analyze 
-                  purchase intent and score each lead. Leads with score 15+ are saved to your leads list.
+                  We search each subreddit for posts from the past month containing your keywords, 
+                  then use AI to analyze purchase intent. Leads scoring 10+ are saved to your list.
                 </p>
               </div>
             </div>
