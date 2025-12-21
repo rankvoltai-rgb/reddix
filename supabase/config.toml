@@ -1,1 +1,7 @@
 project_id = "iouqvoqsqttlvubpabwg"
+
+[functions.firecrawl-search]
+verify_jwt = false
+
+[functions.scan-reddit]
+verify_jwt = false

@@ -1,4 +1,4 @@
-import { Home, Search, Users, MessageSquare, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Search, Users, MessageSquare, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,8 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Scanner", url: "/scanner", icon: Search, disabled: true },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Scanner", url: "/scanner", icon: Search },
   { title: "Leads", url: "/leads", icon: Users, disabled: true },
   { title: "Replies", url: "/replies", icon: MessageSquare, disabled: true },
   { title: "Settings", url: "/settings", icon: Settings, disabled: true },
