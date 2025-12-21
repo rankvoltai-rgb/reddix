@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Scanner", url: "/scanner", icon: Search },
-  { title: "Leads", url: "/leads", icon: Users, disabled: true },
+  { title: "Leads", url: "/leads", icon: Users },
   { title: "Replies", url: "/replies", icon: MessageSquare, disabled: true },
   { title: "Settings", url: "/settings", icon: Settings, disabled: true },
 ];

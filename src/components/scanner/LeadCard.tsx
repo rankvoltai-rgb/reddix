@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Sparkles, Loader2, User } from "lucide-react";
+import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -12,7 +12,10 @@ type Lead = Tables<"leads">;
 interface LeadCardProps {
   lead: Lead;
   onGenerateReply: (leadId: string) => void;
+  onSaveLead?: (leadId: string) => void;
   isGenerating: boolean;
+  isSaving?: boolean;
+  showSaveButton?: boolean;
 }
 
 const intentConfig = {
@@ -38,7 +41,7 @@ const intentConfig = {
   },
 };
 
-export function LeadCard({ lead, onGenerateReply, isGenerating }: LeadCardProps) {
+export function LeadCard({ lead, onGenerateReply, onSaveLead, isGenerating, isSaving = false, showSaveButton = true }: LeadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const intentLevel = lead.intent_level || "low";
@@ -128,6 +131,24 @@ export function LeadCard({ lead, onGenerateReply, isGenerating }: LeadCardProps)
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
+            {showSaveButton && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-9 h-9 p-0"
+                onClick={() => onSaveLead?.(lead.id)}
+                disabled={isSaving || lead.status !== 'new'}
+                title={lead.status !== 'new' ? 'Already saved' : 'Save to CRM'}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : lead.status !== 'new' ? (
+                  <BookmarkCheck className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Bookmark className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             <Button
               size="sm"
               className="gap-1.5"
