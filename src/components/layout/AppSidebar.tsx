@@ -21,7 +21,7 @@ const navItems = [
   { title: "Scanner", url: "/scanner", icon: Search },
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Replies", url: "/replies", icon: MessageSquare, disabled: true },
-  { title: "Settings", url: "/settings", icon: Settings, disabled: true },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
