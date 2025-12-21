@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LeadCard } from "./LeadCard";
@@ -17,7 +17,9 @@ interface LeadsSectionProps {
 
 export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [generatingLeadId, setGeneratingLeadId] = useState<string | null>(null);
+  const [savingLeadId, setSavingLeadId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [generatedReply, setGeneratedReply] = useState("");
@@ -83,6 +85,28 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     }
   };
 
+  const handleSaveLead = async (leadId: string) => {
+    setSavingLeadId(leadId);
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ status: 'engaged' })
+        .eq('id', leadId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['leads', userId] });
+      queryClient.invalidateQueries({ queryKey: ['saved-leads', userId] });
+      
+      toast({ title: "Lead saved to CRM!" });
+    } catch (err) {
+      console.error('Error saving lead:', err);
+      toast({ title: "Failed to save lead", variant: "destructive" });
+    } finally {
+      setSavingLeadId(null);
+    }
+  };
+
   if (isLoading || isScanning) {
     return (
       <Card>
@@ -126,14 +150,16 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {leads.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onGenerateReply={handleGenerateReply}
-                  isGenerating={generatingLeadId === lead.id}
-                />
-              ))}
+          {leads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onGenerateReply={handleGenerateReply}
+              onSaveLead={handleSaveLead}
+              isGenerating={generatingLeadId === lead.id}
+              isSaving={savingLeadId === lead.id}
+            />
+          ))}
             </div>
           )}
         </CardContent>

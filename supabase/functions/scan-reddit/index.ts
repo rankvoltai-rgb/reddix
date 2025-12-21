@@ -135,12 +135,13 @@ serve(async (req) => {
       );
     }
 
-    // Clear all previous leads for a fresh scan
+    // Clear only unsaved leads (status='new') to preserve saved ones
     console.log('Clearing previous leads for fresh scan...');
     const { error: deleteError } = await supabase
       .from('leads')
       .delete()
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('status', 'new');
     
     if (deleteError) {
       console.error('Error clearing old leads:', deleteError);
