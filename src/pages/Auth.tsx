@@ -8,9 +8,18 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 
-const authSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const signupSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
 export default function Auth() {
@@ -32,7 +41,9 @@ export default function Auth() {
 
   const validateForm = () => {
     try {
-      authSchema.parse({ email, password });
+      // Use different schemas for login vs signup
+      const schema = isLogin ? loginSchema : signupSchema;
+      schema.parse({ email, password });
       setErrors({});
       return true;
     } catch (error) {
@@ -147,6 +158,11 @@ export default function Auth() {
               />
               {errors.password && (
                 <p className="text-destructive text-xs">{errors.password}</p>
+              )}
+              {!isLogin && !errors.password && (
+                <p className="text-muted-foreground text-xs">
+                  8+ characters with uppercase, lowercase, and number
+                </p>
               )}
             </div>
 
