@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, X, Search, Sparkles } from "lucide-react";
+import { LeadsSection } from "@/components/scanner/LeadsSection";
 
 const Scanner = () => {
   const navigate = useNavigate();
@@ -398,6 +399,9 @@ const Scanner = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Leads Section */}
+        {user && <LeadsSection userId={user.id} />}
       </div>
     </DashboardLayout>
   );

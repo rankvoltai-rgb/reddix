@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.scan-reddit]
 verify_jwt = false
+
+[functions.generate-reply]
+verify_jwt = false
