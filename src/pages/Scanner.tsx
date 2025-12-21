@@ -222,15 +222,15 @@ const Scanner = () => {
                 <span className="text-primary">r/</span> Subreddits
               </CardTitle>
               <CardDescription>
-                Add subreddits where your target audience hangs out
+                Add subreddits to search for intent signals (bonus results)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {subreddits.length === 0 && (
                 <div className="pb-2">
-                  <p className="text-xs text-muted-foreground mb-2">Suggested subreddits:</p>
+                  <p className="text-xs text-muted-foreground mb-2">💡 Match subreddits to your topics:</p>
                   <div className="flex flex-wrap gap-1">
-                    {["SaaS", "startups", "Entrepreneur", "smallbusiness", "marketing"].map((sub) => (
+                    {["webdev", "SaaS", "startups", "Entrepreneur", "smallbusiness", "marketing", "web_design", "frontend"].map((sub) => (
                       <Badge 
                         key={sub} 
                         variant="outline" 
@@ -245,7 +245,7 @@ const Scanner = () => {
               )}
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. entrepreneur, startups"
+                  placeholder="e.g. webdev, SaaS, startups"
                   value={newSubreddit}
                   onChange={(e) => setNewSubreddit(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && newSubreddit && addSubreddit.mutate(newSubreddit)}
@@ -277,6 +277,10 @@ const Scanner = () => {
                     </Badge>
                   ))
                 )}
+              </div>
+
+              <div className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                <strong>Tip:</strong> Match subreddits to your topics. For "Web development" add r/webdev, r/web_design, r/frontend
               </div>
             </CardContent>
           </Card>
@@ -395,11 +399,14 @@ const Scanner = () => {
                 <Search className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-medium">How smart scanning works</h3>
+                <h3 className="font-medium">Multi-Strategy Smart Scanning</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Just add your niche topics (e.g. "Website development"). We automatically search for posts 
-                  with buying intent like "looking for", "best tool", "alternative to", and more. 
-                  AI analyzes each post and saves leads scoring 10+ to your list.
+                  We run <strong>3 search strategies</strong> to maximize results:<br/>
+                  <span className="text-xs">
+                    1️⃣ <strong>Broad search:</strong> Your topics + intent signals across all of Reddit<br/>
+                    2️⃣ <strong>Subreddit scan:</strong> High-intent posts in your selected subreddits<br/>
+                    3️⃣ <strong>Fallback:</strong> Simple topic search if no results found
+                  </span>
                 </p>
               </div>
             </div>

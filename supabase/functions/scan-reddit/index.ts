@@ -145,17 +145,9 @@ serve(async (req) => {
 
     const allPosts: RedditPost[] = [];
     
-    // Smart Query Expansion: Combine topics with intent modifiers
-    // Instead of searching "Website development", we search "Website development" + intent signals
-    for (const sub of subreddits) {
-      // Build smart query: topic keywords combined with intent modifiers
-      // Example: site:reddit.com/r/SaaS ("website development" OR "web dev") AND ("looking for" OR "need recommendation" OR "best tool")
-      const topicPart = topics.map(t => `"${t}"`).join(' OR ');
-      const intentPart = INTENT_MODIFIERS.slice(0, 8).map(i => `"${i}"`).join(' OR '); // Top 8 intent signals
-      
-      const query = `site:reddit.com/r/${sub.subreddit_name} (${topicPart}) (${intentPart})`;
-      console.log('Smart query:', query);
-
+    // Helper function to run a search query
+    const runSearch = async (query: string, label: string): Promise<RedditPost[]> => {
+      console.log(`[${label}] Query:`, query);
       try {
         const response = await fetch('https://api.firecrawl.dev/v1/search', {
           method: 'POST',
@@ -165,7 +157,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             query,
-            limit: 20, // More results per subreddit
+            limit: 15,
             tbs: 'qdr:m', // Last month
             scrapeOptions: { formats: ['markdown'] },
           }),
@@ -173,25 +165,54 @@ serve(async (req) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log(`Firecrawl returned ${data.data?.length || 0} results for r/${sub.subreddit_name}`);
-          const posts = (data.data || []).map((item: any) => ({
+          console.log(`[${label}] Found ${data.data?.length || 0} results`);
+          return (data.data || []).map((item: any) => ({
             url: item.url,
             title: item.title || '',
             description: item.description || '',
             markdown: item.markdown || '',
-            subreddit: sub.subreddit_name,
           }));
-          allPosts.push(...posts);
         } else {
           const errText = await response.text();
-          console.error('Firecrawl error:', response.status, errText);
+          console.error(`[${label}] Error:`, response.status, errText);
+          return [];
         }
       } catch (e) {
-        console.error('Search error for', query, e);
+        console.error(`[${label}] Search error:`, e);
+        return [];
       }
+    };
 
-      // Small delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 300));
+    // Build intent query part (top signals only)
+    const intentPart = INTENT_MODIFIERS.slice(0, 8).map(i => `"${i}"`).join(' OR ');
+
+    // === STRATEGY A: Broad Reddit search with topic + intent (no subreddit lock) ===
+    console.log('=== Strategy A: Broad Topic + Intent Search ===');
+    for (const topic of topics) {
+      const broadQuery = `site:reddit.com "${topic}" (${intentPart})`;
+      const posts = await runSearch(broadQuery, `Broad:${topic}`);
+      allPosts.push(...posts);
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // === STRATEGY B: Subreddit-specific with intent only (no topic filter) ===
+    console.log('=== Strategy B: Subreddit + Intent Search ===');
+    for (const sub of subreddits) {
+      const subredditQuery = `site:reddit.com/r/${sub.subreddit_name} (${intentPart})`;
+      const posts = await runSearch(subredditQuery, `Subreddit:${sub.subreddit_name}`);
+      allPosts.push(...posts);
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // === STRATEGY C: Simple fallback - just topic on Reddit (if we still have no results) ===
+    if (allPosts.length === 0) {
+      console.log('=== Strategy C: Fallback Simple Search ===');
+      for (const topic of topics) {
+        const fallbackQuery = `site:reddit.com "${topic}" recommendation OR help`;
+        const posts = await runSearch(fallbackQuery, `Fallback:${topic}`);
+        allPosts.push(...posts);
+        await new Promise(r => setTimeout(r, 200));
+      }
     }
 
     console.log(`Found ${allPosts.length} total posts`);
