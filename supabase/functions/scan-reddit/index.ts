@@ -20,7 +20,7 @@ interface Lead {
   subreddit: string;
   author: string;
   intent_score: number;
-  intent_level: 'low' | 'medium' | 'high';
+  intent_level: 'low' | 'warm' | 'hot' | 'research';
   relevance_notes: string;
   user_id: string;
 }
@@ -91,6 +91,14 @@ serve(async (req) => {
     if (!firecrawlKey) {
       return new Response(
         JSON.stringify({ success: false, error: 'Firecrawl not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!lovableKey) {
+      console.error('LOVABLE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -199,34 +207,53 @@ Respond with JSON only:
           }),
         });
 
-        if (aiResponse.ok) {
-          const aiData = await aiResponse.json();
-          const content = aiData.choices?.[0]?.message?.content || '';
-          
-          // Extract JSON from response
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const analysis = JSON.parse(jsonMatch[0]);
-            
-            // Only save leads with score >= 30
-            if (analysis.intent_score >= 30) {
-              // Extract subreddit from URL
-              const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
-              const subreddit = subredditMatch ? subredditMatch[1] : (post as any).subreddit || 'unknown';
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          console.error('AI API error:', aiResponse.status, errorText);
+          continue;
+        }
 
-              leadsToInsert.push({
-                thread_url: post.url,
-                thread_title: post.title,
-                thread_content: post.markdown?.slice(0, 5000) || post.description || '',
-                subreddit,
-                author: analysis.author || 'unknown',
-                intent_score: analysis.intent_score,
-                intent_level: analysis.intent_level,
-                relevance_notes: analysis.relevance_notes,
-                user_id: user.id,
-              });
-            }
+        const aiData = await aiResponse.json();
+        const content = aiData.choices?.[0]?.message?.content || '';
+        
+        console.log(`AI response for "${post.title.slice(0, 50)}...":`, content.slice(0, 200));
+        
+        // Extract JSON from response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const analysis = JSON.parse(jsonMatch[0]);
+          
+          console.log(`Post: "${post.title.slice(0, 40)}..." => Score: ${analysis.intent_score}, Level: ${analysis.intent_level}`);
+          
+          // Lower threshold to 15 for testing - captures more leads
+          if (analysis.intent_score >= 15) {
+            // Extract subreddit from URL
+            const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
+            const subreddit = subredditMatch ? subredditMatch[1] : (post as any).subreddit || 'unknown';
+
+            // Map intent_level to valid enum values
+            let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
+            if (analysis.intent_score >= 70) intentLevel = 'hot';
+            else if (analysis.intent_score >= 40) intentLevel = 'warm';
+            else if (analysis.intent_score >= 20) intentLevel = 'research';
+
+            leadsToInsert.push({
+              thread_url: post.url,
+              thread_title: post.title,
+              thread_content: post.markdown?.slice(0, 5000) || post.description || '',
+              subreddit,
+              author: analysis.author || 'unknown',
+              intent_score: analysis.intent_score,
+              intent_level: intentLevel,
+              relevance_notes: analysis.relevance_notes,
+              user_id: user.id,
+            });
+            console.log(`✓ Added lead: ${post.title.slice(0, 50)}...`);
+          } else {
+            console.log(`✗ Skipped (score ${analysis.intent_score} < 15): ${post.title.slice(0, 50)}...`);
           }
+        } else {
+          console.error('Could not parse AI response JSON:', content.slice(0, 200));
         }
       } catch (e) {
         console.error('Analysis error for post:', post.url, e);

@@ -23,6 +23,7 @@ const Scanner = () => {
   const [newSubreddit, setNewSubreddit] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{ postsScanned?: number; leadsFound?: number; message?: string } | null>(null);
 
   // Redirect if not authenticated
   if (!authLoading && !user) {
@@ -144,10 +145,16 @@ const Scanner = () => {
     }
 
     setIsScanning(true);
+    setScanResult(null);
     try {
       const result = await firecrawlApi.scanForLeads();
       
       if (result.success) {
+        setScanResult({
+          postsScanned: result.postsScanned,
+          leadsFound: result.leadsFound,
+          message: result.message,
+        });
         toast({
           title: "Scan complete!",
           description: result.message || `Found ${result.leadsFound} new leads`,
@@ -324,6 +331,31 @@ const Scanner = () => {
           </Card>
         </div>
 
+        {/* Scan Results Card */}
+        {scanResult && (
+          <Card className="border-green-500/30 bg-green-500/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="rounded-full bg-green-500/10 p-2">
+                  <Sparkles className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-green-700 dark:text-green-400">Last Scan Results</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Analyzed <strong>{scanResult.postsScanned || 0}</strong> posts and found{" "}
+                    <strong>{scanResult.leadsFound || 0}</strong> qualified leads.
+                    {scanResult.leadsFound === 0 && scanResult.postsScanned && scanResult.postsScanned > 0 && (
+                      <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                        Tip: Try adding more specific intent keywords like "looking for a tool" or "need recommendation"
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Info Card */}
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
@@ -335,8 +367,7 @@ const Scanner = () => {
                 <h3 className="font-medium">How scanning works</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   We search each subreddit for posts containing your keywords, then use AI to analyze 
-                  purchase intent and score each lead. Only high-quality leads (score 30+) are saved 
-                  to your leads list.
+                  purchase intent and score each lead. Leads with score 15+ are saved to your leads list.
                 </p>
               </div>
             </div>
