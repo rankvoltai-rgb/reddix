@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// High-intent modifiers - automatically combined with user's topic keywords
+const INTENT_MODIFIERS = [
+  // Direct requests
+  "looking for",
+  "need recommendation",
+  "any suggestions",
+  "what do you use",
+  "best tool for",
+  "best software for",
+  "can anyone recommend",
+  // Comparison shopping
+  "alternative to",
+  "better than",
+  "switching from",
+  "vs",
+  "compared to",
+  // Buying signals
+  "worth it",
+  "pricing",
+  "free trial",
+  "which one should",
+  // Problem signals
+  "struggling with",
+  "frustrated with",
+  "need help with",
+  "how do you handle",
+];
+
 interface RedditPost {
   url: string;
   title: string;
@@ -78,12 +106,16 @@ serve(async (req) => {
 
     if (keywords.length === 0) {
       return new Response(
-        JSON.stringify({ success: false, error: 'No keywords configured. Add keywords to scan.' }),
+        JSON.stringify({ success: false, error: 'No topics configured. Add topics to scan.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Scanning ${subreddits.length} subreddits with ${keywords.length} keywords`);
+    // Topics are the user's niche keywords
+    const topics = keywords.map(kw => kw.keyword);
+    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics`);
+    console.log('Topics:', topics);
+    console.log('Intent modifiers:', INTENT_MODIFIERS.slice(0, 5), '...');
 
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
     const lovableKey = Deno.env.get('LOVABLE_API_KEY');
@@ -113,12 +145,16 @@ serve(async (req) => {
 
     const allPosts: RedditPost[] = [];
     
-    // Search each subreddit with each keyword - use OR for broader matching
+    // Smart Query Expansion: Combine topics with intent modifiers
+    // Instead of searching "Website development", we search "Website development" + intent signals
     for (const sub of subreddits) {
-      // Build query without quotes for broader matching
-      const keywordQueries = keywords.map(kw => kw.keyword).join(' OR ');
-      const query = `site:reddit.com/r/${sub.subreddit_name} ${keywordQueries}`;
-      console.log('Searching:', query);
+      // Build smart query: topic keywords combined with intent modifiers
+      // Example: site:reddit.com/r/SaaS ("website development" OR "web dev") AND ("looking for" OR "need recommendation" OR "best tool")
+      const topicPart = topics.map(t => `"${t}"`).join(' OR ');
+      const intentPart = INTENT_MODIFIERS.slice(0, 8).map(i => `"${i}"`).join(' OR '); // Top 8 intent signals
+      
+      const query = `site:reddit.com/r/${sub.subreddit_name} (${topicPart}) (${intentPart})`;
+      console.log('Smart query:', query);
 
       try {
         const response = await fetch('https://api.firecrawl.dev/v1/search', {
@@ -129,8 +165,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             query,
-            limit: 15, // Increased for more results
-            tbs: 'qdr:m', // Last month instead of week
+            limit: 20, // More results per subreddit
+            tbs: 'qdr:m', // Last month
             scrapeOptions: { formats: ['markdown'] },
           }),
         });

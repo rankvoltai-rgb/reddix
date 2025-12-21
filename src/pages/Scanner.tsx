@@ -281,20 +281,20 @@ const Scanner = () => {
             </CardContent>
           </Card>
 
-          {/* Keywords Card */}
+          {/* Topics Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" /> Keywords
+                <Sparkles className="h-5 w-5 text-primary" /> Topics & Niches
               </CardTitle>
               <CardDescription>
-                Trigger phrases that indicate purchase intent
+                Enter topics related to your product. We auto-find high-intent posts.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. looking for, any recommendations"
+                  placeholder="e.g. Website development, CRM software"
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && newKeyword && addKeyword.mutate(newKeyword)}
@@ -312,7 +312,7 @@ const Scanner = () => {
                 {keywordsLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : keywords.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No keywords added yet</p>
+                  <p className="text-sm text-muted-foreground">No topics added yet</p>
                 ) : (
                   keywords.map((kw) => (
                     <Badge key={kw.id} variant="outline" className="gap-1 pr-1">
@@ -330,16 +330,16 @@ const Scanner = () => {
 
               {keywords.length === 0 && (
                 <div className="pt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Suggested high-intent keywords:</p>
+                  <p className="text-xs text-muted-foreground mb-2">Suggested topics for your niche:</p>
                   <div className="flex flex-wrap gap-1">
                     {[
-                      "looking for a tool",
-                      "need recommendation",
-                      "any suggestions for",
-                      "what do you use for",
-                      "best software for",
-                      "alternative to",
-                      "help me find"
+                      "SaaS tools",
+                      "Web development",
+                      "Marketing automation",
+                      "Project management",
+                      "Email marketing",
+                      "CRM software",
+                      "E-commerce"
                     ].map((kw) => (
                       <Badge 
                         key={kw} 
@@ -353,6 +353,11 @@ const Scanner = () => {
                   </div>
                 </div>
               )}
+
+              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                <strong>🧠 Smart search:</strong> We automatically combine your topics with intent signals 
+                like "looking for", "need recommendation", "alternative to" etc.
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -390,10 +395,11 @@ const Scanner = () => {
                 <Search className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-medium">How scanning works</h3>
+                <h3 className="font-medium">How smart scanning works</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  We search each subreddit for posts from the past month containing your keywords, 
-                  then use AI to analyze purchase intent. Leads scoring 10+ are saved to your list.
+                  Just add your niche topics (e.g. "Website development"). We automatically search for posts 
+                  with buying intent like "looking for", "best tool", "alternative to", and more. 
+                  AI analyzes each post and saves leads scoring 10+ to your list.
                 </p>
               </div>
             </div>
