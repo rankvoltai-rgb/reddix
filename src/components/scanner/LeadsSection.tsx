@@ -34,6 +34,8 @@ export function LeadsSection({ userId }: LeadsSectionProps) {
       return data as Lead[];
     },
     enabled: !!userId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const handleGenerateReply = async (leadId: string) => {
