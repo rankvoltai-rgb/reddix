@@ -18,8 +18,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
 
-    /* Primary - Warm orange accent (Reddit-inspired) */
-    --primary: 14 100% 57%;
+    /* Primary - Reddit red accent */
+    --primary: 0 84% 55%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Soft gray */
@@ -53,7 +53,7 @@
     /* Borders and inputs */
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 14 100% 57%;
+    --ring: 0 84% 55%;
 
     --radius: 0.375rem;
 
@@ -65,7 +65,7 @@
     --sidebar-accent: 0 0% 94%;
     --sidebar-accent-foreground: 0 0% 9%;
     --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 14 100% 57%;
+    --sidebar-ring: 0 84% 55%;
   }
 }
 
