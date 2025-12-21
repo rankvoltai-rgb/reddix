@@ -118,41 +118,62 @@ export type Database = {
       }
       profiles: {
         Row: {
+          common_objections: string[] | null
           company_description: string | null
+          competitor_names: string[] | null
           created_at: string | null
           email: string | null
           id: string
+          key_features: string[] | null
           last_scan_at: string | null
           onboarding_completed: boolean | null
+          pricing_model: string | null
           product_name: string | null
+          product_url: string | null
+          success_stories: string | null
           target_audience: string | null
           tone: Database["public"]["Enums"]["tone_preference"] | null
+          unique_differentiators: string | null
           updated_at: string | null
           value_proposition: string | null
         }
         Insert: {
+          common_objections?: string[] | null
           company_description?: string | null
+          competitor_names?: string[] | null
           created_at?: string | null
           email?: string | null
           id: string
+          key_features?: string[] | null
           last_scan_at?: string | null
           onboarding_completed?: boolean | null
+          pricing_model?: string | null
           product_name?: string | null
+          product_url?: string | null
+          success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null
+          unique_differentiators?: string | null
           updated_at?: string | null
           value_proposition?: string | null
         }
         Update: {
+          common_objections?: string[] | null
           company_description?: string | null
+          competitor_names?: string[] | null
           created_at?: string | null
           email?: string | null
           id?: string
+          key_features?: string[] | null
           last_scan_at?: string | null
           onboarding_completed?: boolean | null
+          pricing_model?: string | null
           product_name?: string | null
+          product_url?: string | null
+          success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null
+          unique_differentiators?: string | null
           updated_at?: string | null
           value_proposition?: string | null
         }

@@ -10,6 +10,21 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
 
+interface ReplyVariant {
+  type: 'direct' | 'story' | 'expert';
+  content: string;
+  conversionScore: number;
+  reasoning: string;
+}
+
+interface AnalysisResult {
+  painLevel: number;
+  technicalLevel: string;
+  buyingStage: string;
+  emotionalState: string;
+  productRelevance: number;
+}
+
 interface LeadsSectionProps {
   userId: string;
   isScanning?: boolean;
@@ -23,6 +38,9 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [generatedReply, setGeneratedReply] = useState("");
+  const [replyVariants, setReplyVariants] = useState<ReplyVariant[]>([]);
+  const [postAnalysis, setPostAnalysis] = useState<AnalysisResult | undefined>();
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Fetch leads
   const { data: leads = [], isLoading } = useQuery({
@@ -41,12 +59,16 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     refetchOnWindowFocus: true,
   });
 
-  const handleGenerateReply = async (leadId: string) => {
+  const generateReplyForLead = async (leadId: string, isRegenerate = false) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
-    setGeneratingLeadId(leadId);
-    setSelectedLead(lead);
+    if (isRegenerate) {
+      setIsRegenerating(true);
+    } else {
+      setGeneratingLeadId(leadId);
+      setSelectedLead(lead);
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -69,9 +91,26 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
         throw new Error(data?.error || error?.message || 'Failed to generate reply');
       }
 
+      // Set the best variant as the main reply
       setGeneratedReply(data.reply);
-      setDialogOpen(true);
-      toast({ title: "Reply generated!" });
+      
+      // Store variants if available
+      if (data.variants && Array.isArray(data.variants)) {
+        setReplyVariants(data.variants);
+      } else {
+        setReplyVariants([]);
+      }
+
+      // Store analysis if available
+      if (data.analysis) {
+        setPostAnalysis(data.analysis);
+      }
+
+      if (!isRegenerate) {
+        setDialogOpen(true);
+      }
+      
+      toast({ title: isRegenerate ? "Reply regenerated!" : "Reply generated!" });
 
     } catch (err: any) {
       console.error('Reply generation error:', err);
@@ -82,6 +121,17 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
       });
     } finally {
       setGeneratingLeadId(null);
+      setIsRegenerating(false);
+    }
+  };
+
+  const handleGenerateReply = async (leadId: string) => {
+    await generateReplyForLead(leadId, false);
+  };
+
+  const handleRegenerate = async () => {
+    if (selectedLead) {
+      await generateReplyForLead(selectedLead.id, true);
     }
   };
 
@@ -171,6 +221,10 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
         lead={selectedLead}
         reply={generatedReply}
         onReplyChange={setGeneratedReply}
+        variants={replyVariants}
+        analysis={postAnalysis}
+        onRegenerate={handleRegenerate}
+        isRegenerating={isRegenerating}
       />
     </>
   );
