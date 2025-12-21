@@ -116,39 +116,41 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, isGenerating, isSa
           
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-9 h-9 p-0"
-              asChild
-            >
-              <a 
-                href={lead.thread_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                title="Open in Reddit"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-            {showSaveButton && (
+            <div className="flex gap-2">
+              {showSaveButton && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-9 h-9 p-0"
+                  onClick={() => onSaveLead?.(lead.id)}
+                  disabled={isSaving || lead.status !== 'new'}
+                  title={lead.status !== 'new' ? 'Already saved' : 'Save to CRM'}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : lead.status !== 'new' ? (
+                    <BookmarkCheck className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Bookmark className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
                 className="w-9 h-9 p-0"
-                onClick={() => onSaveLead?.(lead.id)}
-                disabled={isSaving || lead.status !== 'new'}
-                title={lead.status !== 'new' ? 'Already saved' : 'Save to CRM'}
+                asChild
               >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : lead.status !== 'new' ? (
-                  <BookmarkCheck className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Bookmark className="h-4 w-4" />
-                )}
+                <a 
+                  href={lead.thread_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Open in Reddit"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </Button>
-            )}
+            </div>
             <Button
               size="sm"
               className="gap-1.5"
