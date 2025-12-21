@@ -158,4 +158,41 @@
   .status-converted {
     @apply bg-green-100 text-green-700;
   }
+
+  /* Card hover utilities */
+  .card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  /* Stat card background tints */
+  .stat-tint-primary {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.04) 0%, hsl(var(--primary) / 0.02) 100%);
+  }
+
+  .stat-tint-destructive {
+    background: linear-gradient(135deg, hsl(var(--destructive) / 0.04) 0%, hsl(var(--destructive) / 0.02) 100%);
+  }
+
+  .stat-tint-warning {
+    background: linear-gradient(135deg, hsl(var(--warning) / 0.06) 0%, hsl(var(--warning) / 0.02) 100%);
+  }
+
+  .stat-tint-success {
+    background: linear-gradient(135deg, hsl(var(--success) / 0.04) 0%, hsl(var(--success) / 0.02) 100%);
+  }
+
+  /* Lead card hover effect */
+  .lead-card {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .lead-card:hover {
+    @apply bg-muted;
+    border-left: 2px solid hsl(var(--primary));
+    padding-left: calc(1rem - 2px);
+  }
 }
