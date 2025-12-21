@@ -160,7 +160,7 @@ const Scanner = () => {
           title: "Scan complete!",
           description: result.message || `Found ${result.leadsFound} new leads`,
         });
-        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['leads', user.id] });
       } else {
         toast({
           title: "Scan failed",
