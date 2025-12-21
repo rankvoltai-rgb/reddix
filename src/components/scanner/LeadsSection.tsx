@@ -12,9 +12,10 @@ type Lead = Tables<"leads">;
 
 interface LeadsSectionProps {
   userId: string;
+  isScanning?: boolean;
 }
 
-export function LeadsSection({ userId }: LeadsSectionProps) {
+export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) {
   const { toast } = useToast();
   const [generatingLeadId, setGeneratingLeadId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -82,11 +83,14 @@ export function LeadsSection({ userId }: LeadsSectionProps) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isScanning) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-12">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-2">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {isScanning ? 'Scanning for fresh leads...' : 'Loading leads...'}
+          </p>
         </CardContent>
       </Card>
     );

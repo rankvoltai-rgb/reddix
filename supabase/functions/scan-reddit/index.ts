@@ -135,13 +135,16 @@ serve(async (req) => {
       );
     }
 
-    // Get existing thread URLs to avoid duplicates
-    const { data: existingLeads } = await supabase
+    // Clear all previous leads for a fresh scan
+    console.log('Clearing previous leads for fresh scan...');
+    const { error: deleteError } = await supabase
       .from('leads')
-      .select('thread_url')
+      .delete()
       .eq('user_id', user.id);
     
-    const existingUrls = new Set(existingLeads?.map(l => l.thread_url) || []);
+    if (deleteError) {
+      console.error('Error clearing old leads:', deleteError);
+    }
 
     const allPosts: RedditPost[] = [];
     
@@ -217,9 +220,8 @@ serve(async (req) => {
 
     console.log(`Found ${allPosts.length} total posts`);
 
-    // Filter out duplicates and existing
+    // Filter out duplicates within this scan
     const uniquePosts = allPosts.filter((post, index, self) => 
-      !existingUrls.has(post.url) &&
       index === self.findIndex(p => p.url === post.url)
     );
 
