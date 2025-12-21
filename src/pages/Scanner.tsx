@@ -414,7 +414,7 @@ const Scanner = () => {
         </Card>
 
         {/* Leads Section */}
-        {user && <LeadsSection userId={user.id} />}
+        {user && <LeadsSection userId={user.id} isScanning={isScanning} />}
       </div>
     </DashboardLayout>
   );
