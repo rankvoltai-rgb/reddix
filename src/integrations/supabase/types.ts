@@ -122,6 +122,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          last_scan_at: string | null
           onboarding_completed: boolean | null
           product_name: string | null
           target_audience: string | null
@@ -134,6 +135,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id: string
+          last_scan_at?: string | null
           onboarding_completed?: boolean | null
           product_name?: string | null
           target_audience?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          last_scan_at?: string | null
           onboarding_completed?: boolean | null
           product_name?: string | null
           target_audience?: string | null

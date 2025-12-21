@@ -4,7 +4,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
 };
+
+// Rate limit: 1 scan per 5 minutes
+const RATE_LIMIT_MINUTES = 5;
 
 // High-intent modifiers - automatically combined with user's topic keywords
 const INTENT_MODIFIERS = [
@@ -86,16 +91,47 @@ serve(async (req) => {
 
     console.log('Scanning for user:', user.id);
 
+    // Fetch user's profile for rate limiting
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('product_name, company_description, value_proposition, last_scan_at')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Profile not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Rate limiting check
+    if (profile.last_scan_at) {
+      const lastScan = new Date(profile.last_scan_at);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - lastScan.getTime()) / (1000 * 60);
+      
+      if (diffMinutes < RATE_LIMIT_MINUTES) {
+        const waitMinutes = Math.ceil(RATE_LIMIT_MINUTES - diffMinutes);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Rate limit exceeded. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before scanning again.` 
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Fetch user's subreddits and keywords
-    const [subredditsRes, keywordsRes, profileRes] = await Promise.all([
+    const [subredditsRes, keywordsRes] = await Promise.all([
       supabase.from('monitored_subreddits').select('subreddit_name').eq('user_id', user.id).eq('is_active', true),
       supabase.from('keywords').select('keyword').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('profiles').select('product_name, company_description, value_proposition').eq('id', user.id).single()
     ]);
 
     const subreddits = subredditsRes.data || [];
     const keywords = keywordsRes.data || [];
-    const profile = profileRes.data;
 
     if (subreddits.length === 0) {
       return new Response(
@@ -110,6 +146,12 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Update last_scan_at timestamp for rate limiting
+    await supabase
+      .from('profiles')
+      .update({ last_scan_at: new Date().toISOString() })
+      .eq('id', user.id);
 
     // Topics are the user's niche keywords
     const topics = keywords.map(kw => kw.keyword);

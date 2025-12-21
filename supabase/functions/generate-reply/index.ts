@@ -4,7 +4,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
 };
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,9 +19,17 @@ serve(async (req) => {
   try {
     const { leadId } = await req.json();
     
-    if (!leadId) {
+    // Input validation - validate leadId format
+    if (!leadId || typeof leadId !== 'string') {
       return new Response(
         JSON.stringify({ success: false, error: 'Lead ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!UUID_REGEX.test(leadId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid Lead ID format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -44,6 +57,8 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Generating reply for user:', user.id, 'leadId:', leadId);
 
     // Fetch the lead
     const { data: lead, error: leadError } = await supabase
