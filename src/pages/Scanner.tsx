@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, X, Search, Sparkles } from "lucide-react";
 import { LeadsSection } from "@/components/scanner/LeadsSection";
+import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
 
 const Scanner = () => {
   const navigate = useNavigate();
@@ -412,6 +413,15 @@ const Scanner = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Smart Subreddit Discovery */}
+        {user && (
+          <SubredditDiscovery
+            userId={user.id}
+            existingSubreddits={subreddits.map(s => s.subreddit_name.toLowerCase())}
+            onAddSubreddit={(name) => addSubreddit.mutate(name)}
+          />
+        )}
 
         {/* Leads Section */}
         {user && <LeadsSection userId={user.id} isScanning={isScanning} />}
