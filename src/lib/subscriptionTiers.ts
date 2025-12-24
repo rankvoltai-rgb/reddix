@@ -1,8 +1,8 @@
 export const SUBSCRIPTION_TIERS = {
   pro: {
     name: 'Reddix Pro',
-    price_id: 'price_1ShkDQATaqTexwUQMrHl8xVj',
-    product_id: 'prod_Tf4MLK2dOGqYAX',
+    price_id: 'price_1ShkD4ATaqTexwUQ2VLJGoYi',
+    product_id: 'prod_Tf4LwTxHB5J3hd',
     price: 29,
     features: [
       'Unlimited lead discovery',
