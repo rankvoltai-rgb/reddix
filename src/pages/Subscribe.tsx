@@ -75,6 +75,7 @@ export default function Subscribe() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Unlock the power of AI-driven Reddit lead generation. Find your next customers where they're already talking.
           </p>
+          <p className="mt-3 text-primary font-medium">Start with a 7-day free trial</p>
         </div>
 
         {/* Pricing Cards */}
@@ -110,7 +111,7 @@ export default function Subscribe() {
                 </ul>
               </CardContent>
               
-              <CardFooter>
+              <CardFooter className="flex-col gap-2">
                 <Button 
                   className="w-full" 
                   size="lg"
@@ -121,8 +122,9 @@ export default function Subscribe() {
                   {loadingPlan === key ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : null}
-                  Get Started
+                  Start Free Trial
                 </Button>
+                <p className="text-xs text-muted-foreground">7 days free, then ${tier.price}/month</p>
               </CardFooter>
             </Card>
           ))}
