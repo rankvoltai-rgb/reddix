@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Mail, KeyRound, LogOut, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, Mail, KeyRound, LogOut, Trash2, RefreshCw, AlertTriangle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
+import { SUBSCRIPTION_TIERS } from '@/lib/subscriptionTiers';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,13 +61,15 @@ const toneOptions = [
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { profile, isLoading, updateProfile, isUpdating } = useProfile();
+  const { subscribed, plan, subscriptionEnd, isLoading: subLoading } = useSubscription();
   
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isClearingLeads, setIsClearingLeads] = useState(false);
   const [isResettingOnboarding, setIsResettingOnboarding] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -167,7 +171,25 @@ export default function Settings() {
     }
   };
 
-  if (isLoading) {
+  const handleManageSubscription = async () => {
+    if (!session?.access_token) return;
+    
+    setIsOpeningPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (error) throw error;
+      if (data?.url) window.open(data.url, '_blank');
+    } catch (error: any) {
+      toast.error(`Failed to open portal: ${error.message}`);
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
+
+  if (isLoading || subLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -188,6 +210,7 @@ export default function Settings() {
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList>
             <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="danger">Danger Zone</TabsTrigger>
           </TabsList>
@@ -316,6 +339,46 @@ export default function Settings() {
                     </Button>
                   </form>
                 </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Subscription Tab */}
+          <TabsContent value="subscription">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Subscription
+                </CardTitle>
+                <CardDescription>Manage your subscription and billing</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {subscribed && plan ? SUBSCRIPTION_TIERS[plan]?.name || 'Active Plan' : 'No active subscription'}
+                      </p>
+                      {subscribed && subscriptionEnd && (
+                        <p className="text-sm text-muted-foreground">
+                          Renews on {new Date(subscriptionEnd).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    {subscribed && (
+                      <Button onClick={handleManageSubscription} disabled={isOpeningPortal}>
+                        {isOpeningPortal && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        Manage Subscription
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {!subscribed && (
+                  <Button onClick={() => navigate('/subscribe')}>
+                    View Plans
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

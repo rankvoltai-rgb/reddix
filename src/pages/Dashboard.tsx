@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  const { subscribed, isLoading: subLoading } = useSubscription();
   const { stats, recentLeads, isLoading: statsLoading } = useDashboardStats();
   const navigate = useNavigate();
 
@@ -25,10 +27,15 @@ export default function Dashboard() {
 
     if (!profileLoading && profile && !profile.onboarding_completed) {
       navigate('/onboarding');
+      return;
     }
-  }, [user, authLoading, profile, profileLoading, navigate]);
 
-  if (authLoading || profileLoading) {
+    if (!subLoading && !subscribed && profile?.onboarding_completed) {
+      navigate('/subscribe');
+    }
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
+
+  if (authLoading || profileLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
