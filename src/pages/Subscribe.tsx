@@ -102,7 +102,7 @@ export default function Subscribe() {
           {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier], index) => (
             <Card 
               key={key} 
-              className={`relative flex flex-col pricing-card-hover shine-effect ${
+              className={`relative flex flex-col overflow-visible pricing-card-hover shine-effect ${
                 tier.popular 
                   ? 'border-primary/50 shadow-lg shadow-primary/5' 
                   : 'border-border'
