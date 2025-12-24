@@ -42,7 +42,18 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError) {
+      const msg = userError.message || "";
+      // If the token is expired/invalid, return a 401 instead of 500 so the client can recover gracefully
+      if (msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid jwt")) {
+        logStep("Auth token invalid/expired", { message: msg });
+        return new Response(JSON.stringify({ error: `Unauthorized: ${msg}` }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        });
+      }
+      throw new Error(`Authentication error: ${msg}`);
+    }
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
