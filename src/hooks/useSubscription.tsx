@@ -30,11 +30,33 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Get fresh session to ensure token is not expired
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // First try to get current session
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      // If session exists but might be expired, try to refresh it
+      if (sessionData.session) {
+        const tokenExpiry = sessionData.session.expires_at;
+        const now = Math.floor(Date.now() / 1000);
+        
+        // If token is expired or about to expire (within 60 seconds), refresh it
+        if (tokenExpiry && tokenExpiry - now < 60) {
+          const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error('Failed to refresh session:', refreshError);
+            // Sign out the user if refresh fails
+            await supabase.auth.signOut();
+            setSubscribed(false);
+            setPlan(null);
+            setSubscriptionEnd(null);
+            setIsLoading(false);
+            return;
+          }
+          sessionData = refreshedData;
+        }
+      }
       
       if (sessionError || !sessionData.session?.access_token) {
-        console.error('Failed to get fresh session:', sessionError);
+        console.error('Failed to get session:', sessionError);
         setSubscribed(false);
         setPlan(null);
         setSubscriptionEnd(null);
