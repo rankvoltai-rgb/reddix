@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Loader2, Sparkles } from 'lucide-react';
+import { Check, Loader2, Sparkles, Lock, CreditCard, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -67,53 +67,81 @@ export default function Subscribe() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-5xl mx-auto px-4 py-16">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute inset-0 bg-radial-glow pointer-events-none" />
+      <div className="absolute inset-0 bg-radial-glow-bottom pointer-events-none" />
+      <div className="absolute inset-0 bg-dot-pattern opacity-30 pointer-events-none" />
+
+      {/* Floating decorative elements */}
+      <div className="absolute top-40 left-[5%] w-72 h-72 bg-primary/5 rounded-full blur-3xl floating pointer-events-none" />
+      <div className="absolute top-60 right-[5%] w-56 h-56 bg-primary/5 rounded-full blur-3xl floating-delayed pointer-events-none" />
+
+      <div className="relative container max-w-5xl mx-auto px-4 py-16">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <span className="text-2xl font-bold text-foreground">Reddix</span>
+        </div>
+
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-14 animate-fade-in">
+          <Badge variant="secondary" className="mb-4 px-4 py-1.5 text-sm font-medium">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            7-day free trial
+          </Badge>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+            Choose Your Plan
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Unlock the power of AI-driven Reddit lead generation. Find your next customers where they're already talking.
           </p>
-          <p className="mt-3 text-primary font-medium">Start with a 7-day free trial</p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier]) => (
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
+          {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier], index) => (
             <Card 
               key={key} 
-              className={`relative flex flex-col ${tier.popular ? 'border-primary shadow-lg' : ''}`}
+              className={`relative flex flex-col pricing-card-hover shine-effect ${
+                tier.popular 
+                  ? 'border-primary/50 shadow-lg shadow-primary/5' 
+                  : 'border-border'
+              }`}
+              style={{ animationDelay: `${index * 100}ms` }}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Most Popular
-                </Badge>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground shadow-lg px-4 py-1">
+                    <Sparkles className="w-3 h-3 mr-1.5" />
+                    Most Popular
+                  </Badge>
+                </div>
               )}
               
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                <CardDescription>
-                  <span className="text-4xl font-bold text-foreground">${tier.price}</span>
-                  <span className="text-muted-foreground">/month</span>
+              <CardHeader className="text-center pt-8 pb-4">
+                <CardTitle className="text-2xl font-semibold">{tier.name}</CardTitle>
+                <CardDescription className="mt-3">
+                  <span className="text-5xl font-bold text-foreground">${tier.price}</span>
+                  <span className="text-muted-foreground text-base">/month</span>
                 </CardDescription>
               </CardHeader>
               
-              <CardContent className="flex-1">
-                <ul className="space-y-3">
-                  {tier.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm">{feature}</span>
+              <CardContent className="flex-1 pt-2">
+                <ul className="space-y-3.5">
+                  {tier.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="text-sm text-foreground/80">{feature}</span>
                     </li>
                   ))}
                 </ul>
               </CardContent>
               
-              <CardFooter className="flex-col gap-2">
+              <CardFooter className="flex-col gap-3 pb-8">
                 <Button 
-                  className="w-full" 
+                  className={`w-full h-12 text-base font-medium ${tier.popular ? '' : ''}`}
                   size="lg"
                   variant={tier.popular ? 'default' : 'outline'}
                   onClick={() => handleCheckout(key)}
@@ -124,21 +152,34 @@ export default function Subscribe() {
                   ) : null}
                   Start Free Trial
                 </Button>
-                <p className="text-xs text-muted-foreground">7 days free, then ${tier.price}/month</p>
+                <p className="text-xs text-muted-foreground">
+                  7 days free, then ${tier.price}/month
+                </p>
               </CardFooter>
             </Card>
           ))}
         </div>
 
         {/* Trust indicators */}
-        <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground mb-4">
-            Secure payment powered by Stripe. Cancel anytime.
-          </p>
-          <div className="flex items-center justify-center gap-6 text-muted-foreground">
-            <span className="text-sm">🔒 SSL Encrypted</span>
-            <span className="text-sm">💳 Secure Billing</span>
-            <span className="text-sm">❌ No Hidden Fees</span>
+        <div className="text-center animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border/50 mb-6">
+            <Lock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Secure payment powered by Stripe</span>
+          </div>
+          
+          <div className="flex flex-wrap items-center justify-center gap-8 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              <span className="text-sm">SSL Encrypted</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              <span className="text-sm">Secure Billing</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              <span className="text-sm">Cancel Anytime</span>
+            </div>
           </div>
         </div>
       </div>
