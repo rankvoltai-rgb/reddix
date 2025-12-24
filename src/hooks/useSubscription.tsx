@@ -64,11 +64,23 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
-      });
+      const invokeCheck = async (accessToken: string) => {
+        return await supabase.functions.invoke('check-subscription', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      };
+
+      let { data, error } = await invokeCheck(sessionData.session.access_token);
+
+      // If the backend says the JWT is expired/invalid, refresh and retry once.
+      if (error && (error as any)?.status === 401) {
+        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshed.session?.access_token) {
+          ({ data, error } = await invokeCheck(refreshed.session.access_token));
+        }
+      }
 
       if (error) {
         console.error('Error checking subscription:', error);
@@ -76,9 +88,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setPlan(null);
         setSubscriptionEnd(null);
       } else {
-        setSubscribed(data.subscribed ?? false);
-        setPlan(data.plan ?? null);
-        setSubscriptionEnd(data.subscriptionEnd ?? null);
+        setSubscribed(data?.subscribed ?? false);
+        setPlan(data?.plan ?? null);
+        setSubscriptionEnd(data?.subscriptionEnd ?? null);
       }
     } catch (err) {
       console.error('Failed to check subscription:', err);
