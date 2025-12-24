@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useSubscription } from "@/hooks/useSubscription";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,12 +54,31 @@ const intentConfig = {
 };
 
 export default function Leads() {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { subscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [intentFilter, setIntentFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+      return;
+    }
+
+    if (!profileLoading && profile && !profile.onboarding_completed) {
+      navigate("/onboarding");
+      return;
+    }
+
+    if (!subLoading && !subscribed && profile?.onboarding_completed) {
+      navigate("/subscribe");
+    }
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
 
   const { data: leads, isLoading } = useQuery({
     queryKey: ['saved-leads', user?.id],
@@ -120,7 +142,7 @@ export default function Leads() {
     return matchesSearch && matchesStatus && matchesIntent;
   });
 
-  if (authLoading) {
+  if (authLoading || profileLoading || subLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">

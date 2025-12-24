@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { firecrawlApi } from "@/lib/api/firecrawl";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -19,6 +20,7 @@ const Scanner = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  const { subscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -27,15 +29,28 @@ const Scanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ postsScanned?: number; leadsFound?: number; message?: string } | null>(null);
 
-  // Redirect if not authenticated
-  if (!authLoading && !user) {
-    navigate("/auth");
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+      return;
+    }
 
-  if (!profileLoading && profile && !profile.onboarding_completed) {
-    navigate("/onboarding");
-    return null;
+    if (!profileLoading && profile && !profile.onboarding_completed) {
+      navigate("/onboarding");
+      return;
+    }
+
+    if (!subLoading && !subscribed && profile?.onboarding_completed) {
+      navigate("/subscribe");
+    }
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
+
+  if (authLoading || profileLoading || subLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // Fetch subreddits
@@ -180,13 +195,6 @@ const Scanner = () => {
     }
   };
 
-  if (authLoading || profileLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <DashboardLayout>

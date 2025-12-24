@@ -127,9 +127,9 @@ export default function OnboardingWizard() {
         onSuccess: () => {
           toast({
             title: 'Setup complete!',
-            description: 'Your AI is now optimized for high-converting Reddit replies.',
+            description: 'Choose a plan to start finding leads.',
           });
-          navigate('/dashboard');
+          navigate('/subscribe');
         },
         onError: () => {
           toast({
