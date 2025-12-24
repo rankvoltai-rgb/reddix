@@ -21,7 +21,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const checkSubscription = useCallback(async () => {
-    if (!session?.access_token) {
+    if (!user) {
       setSubscribed(false);
       setPlan(null);
       setSubscriptionEnd(null);
@@ -30,9 +30,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Get fresh session to ensure token is not expired
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session?.access_token) {
+        console.error('Failed to get fresh session:', sessionError);
+        setSubscribed(false);
+        setPlan(null);
+        setSubscriptionEnd(null);
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${sessionData.session.access_token}`,
         },
       });
 
@@ -54,7 +66,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.access_token]);
+  }, [user]);
 
   const refreshSubscription = useCallback(async () => {
     setIsLoading(true);
