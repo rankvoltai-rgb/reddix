@@ -14,7 +14,7 @@ const logStep = (step: string, details?: any) => {
 
 // Product ID to plan mapping
 const PRODUCT_TO_PLAN: Record<string, string> = {
-  "prod_Tf4MLK2dOGqYAX": "pro",
+  "prod_Tf4LwTxHB5J3hd": "pro",
   "prod_Tf4MWwcVys39nO": "business",
 };
 
