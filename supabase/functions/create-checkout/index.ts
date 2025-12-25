@@ -55,6 +55,11 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
+    logStep("Origin detected", { origin });
+    
+    const successUrl = `${origin}/dashboard`;
+    const cancelUrl = `${origin}/subscribe`;
+    logStep("Redirect URLs configured", { successUrl, cancelUrl });
     
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -69,8 +74,8 @@ serve(async (req) => {
       subscription_data: {
         trial_period_days: 7,
       },
-      success_url: `${origin}/dashboard`,
-      cancel_url: `${origin}/subscribe`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
