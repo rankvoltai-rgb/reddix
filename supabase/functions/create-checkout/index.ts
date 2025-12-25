@@ -69,7 +69,7 @@ serve(async (req) => {
       subscription_data: {
         trial_period_days: 7,
       },
-      success_url: `${origin}/subscribe/success`,
+      success_url: `${origin}/dashboard`,
       cancel_url: `${origin}/subscribe`,
     });
 
