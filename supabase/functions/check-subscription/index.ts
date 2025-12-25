@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
+type StripeSubscription = Stripe.Subscription;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -72,24 +74,33 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    // Fetch subscriptions with statuses that count as "subscribed" (active OR trialing)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
 
-    const hasActiveSub = subscriptions.data.length > 0;
+    // Find the best subscription: prefer active, then trialing
+    const validStatuses = ["active", "trialing"];
+    const validSubscription = subscriptions.data.find((sub: StripeSubscription) => validStatuses.includes(sub.status));
+
+    let hasActiveSub = false;
     let plan: string | null = null;
     let subscriptionEnd: string | null = null;
 
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      const productId = subscription.items.data[0].price.product as string;
-      plan = PRODUCT_TO_PLAN[productId] || "unknown";
-      logStep("Active subscription found", { subscriptionId: subscription.id, plan, endDate: subscriptionEnd });
+    if (validSubscription) {
+      hasActiveSub = true;
+      subscriptionEnd = new Date(validSubscription.current_period_end * 1000).toISOString();
+      const productId = validSubscription.items.data[0].price.product as string;
+      plan = PRODUCT_TO_PLAN[productId] || null;
+      logStep("Valid subscription found", { 
+        subscriptionId: validSubscription.id, 
+        status: validSubscription.status,
+        plan, 
+        endDate: subscriptionEnd 
+      });
     } else {
-      logStep("No active subscription found");
+      logStep("No active or trialing subscription found");
     }
 
     return new Response(JSON.stringify({

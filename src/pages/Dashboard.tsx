@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -15,9 +15,29 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
-  const { subscribed, isLoading: subLoading } = useSubscription();
+  const { subscribed, isLoading: subLoading, refreshSubscription } = useSubscription();
   const { stats, recentLeads, isLoading: statsLoading } = useDashboardStats();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isVerifyingSubscription, setIsVerifyingSubscription] = useState(false);
+  const hasRefreshedRef = useRef(false);
+
+  // Handle checkout success - refresh subscription status
+  useEffect(() => {
+    const checkoutSuccess = searchParams.get('checkout');
+    if (checkoutSuccess === 'success' && !hasRefreshedRef.current) {
+      hasRefreshedRef.current = true;
+      setIsVerifyingSubscription(true);
+      
+      // Clear the query param
+      setSearchParams({}, { replace: true });
+      
+      // Refresh subscription status
+      refreshSubscription().finally(() => {
+        setIsVerifyingSubscription(false);
+      });
+    }
+  }, [searchParams, setSearchParams, refreshSubscription]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -30,15 +50,21 @@ export default function Dashboard() {
       return;
     }
 
-    if (!subLoading && !subscribed && profile?.onboarding_completed) {
+    // Only redirect to subscribe if we're done loading and NOT verifying subscription
+    if (!subLoading && !isVerifyingSubscription && !subscribed && profile?.onboarding_completed) {
       navigate('/subscribe');
     }
-  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, isVerifyingSubscription, navigate]);
 
-  if (authLoading || profileLoading || subLoading) {
+  if (authLoading || profileLoading || subLoading || isVerifyingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <div className="text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-3" />
+          {isVerifyingSubscription && (
+            <p className="text-sm text-muted-foreground">Finalizing your subscription...</p>
+          )}
+        </div>
       </div>
     );
   }
