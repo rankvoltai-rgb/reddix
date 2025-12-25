@@ -13,7 +13,6 @@ import Scanner from "./pages/Scanner";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Subscribe from "./pages/Subscribe";
-import SubscribeSuccess from "./pages/SubscribeSuccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +30,6 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/subscribe" element={<Subscribe />} />
-              <Route path="/subscribe/success" element={<SubscribeSuccess />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/leads" element={<Leads />} />
