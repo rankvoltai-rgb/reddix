@@ -14,10 +14,14 @@ export default function Index() {
     if (authLoading || profileLoading) return;
 
     if (user) {
-      if (profile?.onboarding_completed) {
-        navigate('/dashboard');
+      // Full flow: setup -> subscribe -> onboarding -> dashboard
+      if (!profile?.initial_setup_completed) {
+        navigate('/setup');
+      } else if (!profile?.onboarding_completed) {
+        // They'll be redirected to subscribe or onboarding based on subscription status
+        navigate('/subscribe');
       } else {
-        navigate('/onboarding');
+        navigate('/dashboard');
       }
     }
   }, [user, authLoading, profile, profileLoading, navigate]);

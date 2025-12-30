@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +54,11 @@ export default function OnboardingWizard() {
   const [featureInput, setFeatureInput] = useState('');
   const [competitorInput, setCompetitorInput] = useState('');
   const [objectionInput, setObjectionInput] = useState('');
+  const { profile, updateProfile, isUpdating } = useProfile();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Pre-populate data from profile (collected during initial setup)
   const [data, setData] = useState<OnboardingData>({
     product_name: '',
     product_url: '',
@@ -68,10 +73,27 @@ export default function OnboardingWizard() {
     unique_differentiators: '',
     tone: 'friendly',
   });
-  
-  const { updateProfile, isUpdating } = useProfile();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+
+  // Pre-populate form with existing profile data
+  useEffect(() => {
+    if (profile) {
+      setData(prev => ({
+        ...prev,
+        product_name: profile.product_name || prev.product_name,
+        product_url: profile.product_url || prev.product_url,
+        company_description: profile.company_description || prev.company_description,
+        target_audience: profile.target_audience || prev.target_audience,
+        value_proposition: profile.value_proposition || prev.value_proposition,
+        key_features: profile.key_features || prev.key_features,
+        competitor_names: profile.competitor_names || prev.competitor_names,
+        common_objections: profile.common_objections || prev.common_objections,
+        success_stories: profile.success_stories || prev.success_stories,
+        pricing_model: profile.pricing_model || prev.pricing_model,
+        unique_differentiators: profile.unique_differentiators || prev.unique_differentiators,
+        tone: profile.tone || prev.tone,
+      }));
+    }
+  }, [profile]);
 
   const updateField = <K extends keyof OnboardingData>(field: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -127,9 +149,9 @@ export default function OnboardingWizard() {
         onSuccess: () => {
           toast({
             title: 'Setup complete!',
-            description: 'Choose a plan to start finding leads.',
+            description: 'Welcome to Reddix. Let\'s find some leads!',
           });
-          navigate('/subscribe');
+          navigate('/dashboard');
         },
         onError: () => {
           toast({

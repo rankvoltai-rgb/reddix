@@ -57,7 +57,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:3000";
     logStep("Origin detected", { origin });
     
-    const successUrl = `${origin}/dashboard?checkout=success`;
+    const successUrl = `${origin}/onboarding?checkout=success`;
     const cancelUrl = `${origin}/subscribe`;
     logStep("Redirect URLs configured", { successUrl, cancelUrl });
     

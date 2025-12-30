@@ -123,7 +123,9 @@ export type Database = {
           competitor_names: string[] | null
           created_at: string | null
           email: string | null
+          full_name: string | null
           id: string
+          initial_setup_completed: boolean | null
           key_features: string[] | null
           last_scan_at: string | null
           onboarding_completed: boolean | null
@@ -143,7 +145,9 @@ export type Database = {
           competitor_names?: string[] | null
           created_at?: string | null
           email?: string | null
+          full_name?: string | null
           id: string
+          initial_setup_completed?: boolean | null
           key_features?: string[] | null
           last_scan_at?: string | null
           onboarding_completed?: boolean | null
@@ -163,7 +167,9 @@ export type Database = {
           competitor_names?: string[] | null
           created_at?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string
+          initial_setup_completed?: boolean | null
           key_features?: string[] | null
           last_scan_at?: string | null
           onboarding_completed?: boolean | null
