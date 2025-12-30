@@ -4,6 +4,7 @@ import { Check, Loader2, Sparkles, Lock, CreditCard, Shield } from 'lucide-react
 import { toast } from 'sonner';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS, SubscriptionPlan } from '@/lib/subscriptionTiers';
@@ -14,20 +15,35 @@ import { Badge } from '@/components/ui/badge';
 export default function Subscribe() {
   const navigate = useNavigate();
   const { user, session, loading: authLoading } = useAuth();
+  const { profile, isLoading: profileLoading } = useProfile();
   const { subscribed, isLoading: subLoading } = useSubscription();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
 
+  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
 
+  // Redirect if initial setup not completed
   useEffect(() => {
-    if (!subLoading && subscribed) {
-      navigate('/dashboard');
+    if (!profileLoading && profile && !profile.initial_setup_completed) {
+      navigate('/setup');
     }
-  }, [subscribed, subLoading, navigate]);
+  }, [profile, profileLoading, navigate]);
+
+  // Redirect based on subscription status
+  useEffect(() => {
+    if (!subLoading && subscribed && !profileLoading && profile) {
+      // If subscribed but onboarding not complete, go to onboarding
+      if (!profile.onboarding_completed) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [subscribed, subLoading, profile, profileLoading, navigate]);
 
   const handleCheckout = async (planKey: SubscriptionPlan) => {
     if (!session?.access_token) {
@@ -58,7 +74,7 @@ export default function Subscribe() {
     }
   };
 
-  if (authLoading || subLoading) {
+  if (authLoading || subLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

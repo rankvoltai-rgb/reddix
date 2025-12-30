@@ -45,14 +45,22 @@ export default function Dashboard() {
       return;
     }
 
-    if (!profileLoading && profile && !profile.onboarding_completed) {
-      navigate('/onboarding');
+    // Check initial setup first
+    if (!profileLoading && profile && !profile.initial_setup_completed) {
+      navigate('/setup');
       return;
     }
 
-    // Only redirect to subscribe if we're done loading and NOT verifying subscription
-    if (!subLoading && !isVerifyingSubscription && !subscribed && profile?.onboarding_completed) {
+    // Check subscription
+    if (!subLoading && !isVerifyingSubscription && !subscribed && profile?.initial_setup_completed) {
       navigate('/subscribe');
+      return;
+    }
+
+    // Check onboarding completion
+    if (!profileLoading && profile && subscribed && !profile.onboarding_completed) {
+      navigate('/onboarding');
+      return;
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, isVerifyingSubscription, navigate]);
 

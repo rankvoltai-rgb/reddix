@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Setup from "./pages/Setup";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
@@ -28,6 +29,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/setup" element={<Setup />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/dashboard" element={<Dashboard />} />

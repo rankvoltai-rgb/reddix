@@ -35,7 +35,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/setup');
     }
   }, [user, navigate]);
 
