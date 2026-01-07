@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Loader2, User, Globe, FileText } from 'lucide-react';
+import { ArrowRight, Loader2, User, Globe, FileText, Lock, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
+import logo from '@/assets/logo.png';
 
 const setupSchema = z.object({
   full_name: z.string().min(1, 'Please enter your name').max(100, 'Name is too long'),
@@ -112,48 +112,84 @@ export default function Setup() {
     );
   }
 
+  const descriptionLength = formData.company_description.length;
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 bg-radial-glow pointer-events-none" />
-      <div className="absolute inset-0 bg-dot-pattern opacity-40 pointer-events-none" />
+      {/* Subtle background gradients */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.04)_0%,transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--primary)/0.03)_0%,transparent_50%)]" />
       
-      {/* Floating decorative elements */}
-      <div className="absolute top-20 left-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl floating pointer-events-none" />
-      <div className="absolute bottom-20 right-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl floating-delayed pointer-events-none" />
+      {/* Floating decorations */}
+      <div className="absolute top-20 left-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" />
+      <div className="absolute bottom-20 right-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
 
-      <div className="relative flex items-center justify-center min-h-screen px-4 py-12">
+      <div className="relative flex flex-col items-center justify-center min-h-screen px-4 py-12">
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shadow-sm">
+                1
+              </div>
+              <span className="font-medium text-foreground">Profile</span>
+            </div>
+            <div className="w-8 h-px bg-border" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">
+                2
+              </div>
+              <span className="text-muted-foreground">Plan</span>
+            </div>
+            <div className="w-8 h-px bg-border" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">
+                3
+              </div>
+              <span className="text-muted-foreground">Setup</span>
+            </div>
+          </div>
+        </div>
+
         <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <span className="text-2xl font-bold text-foreground">Reddix</span>
+          <div className="flex justify-center mb-6">
+            <img src={logo} alt="Reddix" className="h-10 w-auto" />
+          </div>
+
+          {/* Step Badge */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              <User className="w-3 h-3" />
+              Step 1 of 3 • Profile Setup
+            </div>
           </div>
 
           {/* Header */}
           <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-2xl font-semibold text-foreground mb-2">
-              Welcome! Let's get you set up
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Let's set up your profile
             </h1>
-            <p className="text-muted-foreground">
-              Tell us a bit about yourself and what you're building.
+            <p className="text-muted-foreground text-sm">
+              Tell us about yourself and what you're building so we can personalize your experience.
             </p>
           </div>
 
           {/* Form Card */}
-          <form onSubmit={handleSubmit} className="glass-card-elevated rounded-2xl p-8 animate-fade-in">
-            <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border shadow-sm p-8 animate-fade-in transition-shadow hover:shadow-md">
+            <div className="space-y-6">
               {/* Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="full_name" className="text-sm font-medium flex items-center gap-2">
+                <label htmlFor="full_name" className="text-sm font-medium flex items-center gap-2 text-foreground">
                   <User className="w-4 h-4 text-muted-foreground" />
-                  What's your name? *
-                </Label>
+                  What's your name? <span className="text-primary">*</span>
+                </label>
                 <Input
                   id="full_name"
                   placeholder="John Doe"
                   value={formData.full_name}
                   onChange={(e) => handleChange('full_name', e.target.value)}
-                  className={`h-11 ${errors.full_name ? 'border-destructive' : ''}`}
+                  className={`h-11 transition-all ${errors.full_name ? 'border-destructive focus:ring-destructive/20' : 'focus:ring-2 focus:ring-primary/20'}`}
                   disabled={isUpdating}
                 />
                 {errors.full_name && (
@@ -161,18 +197,21 @@ export default function Setup() {
                 )}
               </div>
 
+              {/* Divider */}
+              <div className="h-px bg-border" />
+
               {/* Product URL */}
               <div className="space-y-2">
-                <Label htmlFor="product_url" className="text-sm font-medium flex items-center gap-2">
+                <label htmlFor="product_url" className="text-sm font-medium flex items-center gap-2 text-foreground">
                   <Globe className="w-4 h-4 text-muted-foreground" />
-                  Website URL <span className="text-muted-foreground font-normal">(optional)</span>
-                </Label>
+                  Website URL <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                </label>
                 <Input
                   id="product_url"
                   placeholder="https://yourproduct.com"
                   value={formData.product_url}
                   onChange={(e) => handleChange('product_url', e.target.value)}
-                  className={`h-11 ${errors.product_url ? 'border-destructive' : ''}`}
+                  className={`h-11 transition-all ${errors.product_url ? 'border-destructive focus:ring-destructive/20' : 'focus:ring-2 focus:ring-primary/20'}`}
                   disabled={isUpdating}
                 />
                 {errors.product_url && (
@@ -180,21 +219,30 @@ export default function Setup() {
                 )}
               </div>
 
+              {/* Divider */}
+              <div className="h-px bg-border" />
+
               {/* Service Description */}
               <div className="space-y-2">
-                <Label htmlFor="company_description" className="text-sm font-medium flex items-center gap-2">
+                <label htmlFor="company_description" className="text-sm font-medium flex items-center gap-2 text-foreground">
                   <FileText className="w-4 h-4 text-muted-foreground" />
-                  What are you selling? *
-                </Label>
-                <Textarea
-                  id="company_description"
-                  placeholder="Briefly describe your product or service and the problems it solves..."
-                  value={formData.company_description}
-                  onChange={(e) => handleChange('company_description', e.target.value)}
-                  rows={4}
-                  className={`resize-none ${errors.company_description ? 'border-destructive' : ''}`}
-                  disabled={isUpdating}
-                />
+                  What are you selling? <span className="text-primary">*</span>
+                </label>
+                <div className="relative">
+                  <Textarea
+                    id="company_description"
+                    placeholder="Briefly describe your product or service and the problems it solves..."
+                    value={formData.company_description}
+                    onChange={(e) => handleChange('company_description', e.target.value)}
+                    rows={4}
+                    maxLength={1000}
+                    className={`resize-none pb-6 transition-all ${errors.company_description ? 'border-destructive focus:ring-destructive/20' : 'focus:ring-2 focus:ring-primary/20'}`}
+                    disabled={isUpdating}
+                  />
+                  <span className={`absolute bottom-2 right-3 text-xs ${descriptionLength > 900 ? 'text-warning' : 'text-muted-foreground'}`}>
+                    {descriptionLength}/1000
+                  </span>
+                </div>
                 {errors.company_description && (
                   <p className="text-destructive text-xs">{errors.company_description}</p>
                 )}
@@ -204,21 +252,25 @@ export default function Setup() {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full mt-6 h-12 text-base"
+              className="w-full mt-8 h-12 text-base font-semibold group transition-all hover:shadow-lg"
               disabled={isUpdating}
             >
               {isUpdating ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Continue
-              <ArrowRight className="w-4 h-4 ml-2" />
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
             </Button>
           </form>
 
-          {/* Footer */}
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            This helps us personalize your experience.
-          </p>
+          {/* Security Note */}
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Your data is secure and private</span>
+          </div>
         </div>
       </div>
     </div>

@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, ArrowLeft, Check, Loader2, Plus, X, Package, Sparkles, Users, Shield, Trophy, MessageSquare } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Loader2, X, Package, Sparkles, Users, Shield, Trophy, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import logo from '@/assets/logo.png';
 
 interface OnboardingData {
   product_name: string;
@@ -25,28 +25,28 @@ interface OnboardingData {
 }
 
 const TONE_OPTIONS = [
-  { value: 'professional', label: 'Professional', description: 'Formal and business-like' },
-  { value: 'casual', label: 'Casual', description: 'Relaxed and conversational' },
-  { value: 'friendly', label: 'Friendly', description: 'Warm and approachable' },
-  { value: 'technical', label: 'Technical', description: 'Detailed and precise' },
-  { value: 'witty', label: 'Witty', description: 'Clever with personality' },
+  { value: 'professional', label: 'Professional', description: 'Formal and business-like', icon: '💼' },
+  { value: 'casual', label: 'Casual', description: 'Relaxed and conversational', icon: '😊' },
+  { value: 'friendly', label: 'Friendly', description: 'Warm and approachable', icon: '🤝' },
+  { value: 'technical', label: 'Technical', description: 'Detailed and precise', icon: '⚙️' },
+  { value: 'witty', label: 'Witty', description: 'Clever with personality', icon: '😄' },
 ] as const;
 
 const PRICING_OPTIONS = [
-  { value: 'free', label: 'Free', description: 'No cost to use' },
-  { value: 'freemium', label: 'Freemium', description: 'Free tier with paid upgrades' },
-  { value: 'free-trial', label: 'Free Trial', description: 'Trial period before payment' },
-  { value: 'paid', label: 'Paid Only', description: 'Requires payment to use' },
-  { value: 'enterprise', label: 'Enterprise', description: 'Custom pricing for businesses' },
+  { value: 'free', label: 'Free', description: 'No cost to use', icon: '🆓' },
+  { value: 'freemium', label: 'Freemium', description: 'Free tier with paid upgrades', icon: '🎁' },
+  { value: 'free-trial', label: 'Free Trial', description: 'Trial period before payment', icon: '⏱️' },
+  { value: 'paid', label: 'Paid Only', description: 'Requires payment to use', icon: '💰' },
+  { value: 'enterprise', label: 'Enterprise', description: 'Custom pricing for businesses', icon: '🏢' },
 ] as const;
 
 const STEPS = [
-  { id: 1, title: 'Your Product', description: 'Tell us about what you\'re building', icon: Package },
-  { id: 2, title: 'Key Features', description: 'What are your top selling points?', icon: Sparkles },
-  { id: 3, title: 'Target Audience', description: 'Who are you trying to reach?', icon: Users },
-  { id: 4, title: 'Competition & Objections', description: 'Know your market', icon: Shield },
-  { id: 5, title: 'Social Proof', description: 'Success stories & pricing', icon: Trophy },
-  { id: 6, title: 'Communication Style', description: 'How should we sound?', icon: MessageSquare },
+  { id: 1, title: 'Your Product', shortTitle: 'Product', description: 'Tell us about what you\'re building', icon: Package },
+  { id: 2, title: 'Key Features', shortTitle: 'Features', description: 'What are your top selling points?', icon: Sparkles },
+  { id: 3, title: 'Target Audience', shortTitle: 'Audience', description: 'Who are you trying to reach?', icon: Users },
+  { id: 4, title: 'Competition', shortTitle: 'Competition', description: 'Know your market', icon: Shield },
+  { id: 5, title: 'Social Proof', shortTitle: 'Proof', description: 'Success stories & pricing', icon: Trophy },
+  { id: 6, title: 'Communication', shortTitle: 'Tone', description: 'How should we sound?', icon: MessageSquare },
 ];
 
 export default function OnboardingWizard() {
@@ -164,400 +164,452 @@ export default function OnboardingWizard() {
     );
   };
 
-  const progressPercentage = ((step - 1) / (STEPS.length - 1)) * 100;
-  const StepIcon = STEPS[step - 1].icon;
+  const progressPercentage = Math.round((step / STEPS.length) * 100);
+  const currentStep = STEPS[step - 1];
+  const StepIcon = currentStep.icon;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 bg-radial-glow pointer-events-none" />
-      <div className="absolute inset-0 bg-dot-pattern opacity-40 pointer-events-none" />
+      {/* Subtle background */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,hsl(var(--primary)/0.04)_0%,transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,hsl(var(--primary)/0.03)_0%,transparent_50%)]" />
       
-      {/* Floating decorative elements */}
-      <div className="absolute top-20 left-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl floating pointer-events-none" />
-      <div className="absolute bottom-20 right-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl floating-delayed pointer-events-none" />
+      {/* Floating decorations */}
+      <div className="absolute top-32 left-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" />
+      <div className="absolute bottom-32 right-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '3s' }} />
 
-      <div className="relative flex items-center justify-center min-h-screen px-4 py-12">
+      <div className="relative flex flex-col items-center min-h-screen px-4 py-8">
+        {/* Logo */}
+        <div className="mb-6">
+          <img src={logo} alt="Reddix" className="h-9 w-auto" />
+        </div>
+
+        {/* Progress Stepper */}
+        <div className="w-full max-w-2xl mb-8">
+          <div className="flex items-center justify-between">
+            {STEPS.map((s, index) => {
+              const isCompleted = step > s.id;
+              const isCurrent = step === s.id;
+              const Icon = s.icon;
+              
+              return (
+                <div key={s.id} className="flex items-center">
+                  <div className="flex flex-col items-center">
+                    <div 
+                      className={`
+                        w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300
+                        ${isCompleted ? 'bg-primary text-primary-foreground shadow-sm' : ''}
+                        ${isCurrent ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 shadow-sm' : ''}
+                        ${!isCompleted && !isCurrent ? 'bg-muted text-muted-foreground' : ''}
+                      `}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span className={`text-xs mt-2 font-medium hidden sm:block ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {s.shortTitle}
+                    </span>
+                  </div>
+                  {index < STEPS.length - 1 && (
+                    <div className={`w-6 sm:w-10 h-0.5 mx-1 sm:mx-2 transition-colors duration-300 ${step > s.id ? 'bg-primary' : 'bg-border'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Main Card */}
         <div className="w-full max-w-xl">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <img src="/logo.png" alt="Reddix" className="h-8 opacity-0" />
-            <span className="text-2xl font-bold text-foreground">Reddix</span>
-          </div>
-
-          {/* Progress Section */}
-          <div className="mb-8 animate-fade-in">
-            {/* Progress bar */}
-            <div className="relative mb-6">
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary rounded-full progress-bar-fill"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-              {/* Step dots */}
-              <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-0">
-                {STEPS.map((s) => (
-                  <div
-                    key={s.id}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      step >= s.id
-                        ? 'bg-primary scale-100'
-                        : 'bg-muted scale-75'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Step info */}
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground font-medium">
-                Step {step} of {STEPS.length}
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <StepIcon className="w-5 h-5 text-primary" />
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+            {/* Step Header */}
+            <div className="bg-gradient-to-b from-muted/50 to-transparent px-8 py-6 border-b border-border">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <StepIcon className="w-6 h-6 text-primary" />
                 </div>
-                <div className="text-left">
-                  <h2 className="text-xl font-semibold text-foreground">
-                    {STEPS[step - 1].title}
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    {STEPS[step - 1].description}
-                  </p>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">{currentStep.title}</h2>
+                  <p className="text-sm text-muted-foreground">{currentStep.description}</p>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Form Card */}
-          <div className="glass-card-elevated rounded-2xl p-8 animate-fade-in">
-            <div className="min-h-[320px]">
-              {step === 1 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label htmlFor="product_name" className="text-sm font-medium">Product Name *</Label>
-                    <Input
-                      id="product_name"
-                      placeholder="e.g., Acme Analytics"
-                      value={data.product_name}
-                      onChange={(e) => updateField('product_name', e.target.value)}
-                      className="h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="product_url" className="text-sm font-medium">Product URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <Input
-                      id="product_url"
-                      placeholder="e.g., https://acme.com"
-                      value={data.product_url}
-                      onChange={(e) => updateField('product_url', e.target.value)}
-                      className="h-11"
-                    />
-                    <p className="text-xs text-muted-foreground">For natural link mentions in replies</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company_description" className="text-sm font-medium">Product Description *</Label>
-                    <Textarea
-                      id="company_description"
-                      placeholder="What does your product do? Be specific about the problems it solves..."
-                      value={data.company_description}
-                      onChange={(e) => updateField('company_description', e.target.value)}
-                      rows={4}
-                      className="resize-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {step === 2 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Key Features <span className="text-muted-foreground font-normal">(add up to 5)</span> *</Label>
-                    <div className="flex gap-2">
+            {/* Step Content */}
+            <div className="p-8">
+              <div className="min-h-[280px]">
+                {step === 1 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Product Name <span className="text-primary">*</span>
+                      </label>
                       <Input
-                        placeholder="e.g., Real-time analytics dashboard"
-                        value={featureInput}
-                        onChange={(e) => setFeatureInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                        placeholder="e.g., Acme Analytics"
+                        value={data.product_name}
+                        onChange={(e) => updateField('product_name', e.target.value)}
+                        className="h-11"
+                      />
+                    </div>
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Product URL <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                      </label>
+                      <Input
+                        placeholder="e.g., https://acme.com"
+                        value={data.product_url}
+                        onChange={(e) => updateField('product_url', e.target.value)}
+                        className="h-11"
+                      />
+                      <p className="text-xs text-muted-foreground">For natural link mentions in replies</p>
+                    </div>
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Product Description <span className="text-primary">*</span>
+                      </label>
+                      <Textarea
+                        placeholder="What does your product do? Be specific about the problems it solves..."
+                        value={data.company_description}
+                        onChange={(e) => updateField('company_description', e.target.value)}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {step === 2 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Key Features <span className="text-muted-foreground text-xs font-normal">(add up to 5)</span> <span className="text-primary">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., Real-time analytics dashboard"
+                          value={featureInput}
+                          onChange={(e) => setFeatureInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addToArray('key_features', featureInput);
+                              setFeatureInput('');
+                            }
+                          }}
+                          className="h-11"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="secondary"
+                          className="h-11 px-4"
+                          onClick={() => {
                             addToArray('key_features', featureInput);
                             setFeatureInput('');
-                          }
-                        }}
-                        className="h-11"
+                          }}
+                          disabled={data.key_features.length >= 5}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {data.key_features.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {data.key_features.map((feature, i) => (
+                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
+                              {feature}
+                              <button onClick={() => removeFromArray('key_features', i)} className="ml-2 hover:text-destructive transition-colors">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        What Makes You Different? <span className="text-primary">*</span>
+                      </label>
+                      <Textarea
+                        placeholder="Why should someone choose you over alternatives? What's your unique angle?"
+                        value={data.value_proposition}
+                        onChange={(e) => updateField('value_proposition', e.target.value)}
+                        rows={4}
+                        className="resize-none"
                       />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon"
-                        className="h-11 w-11 shrink-0"
-                        onClick={() => {
-                          addToArray('key_features', featureInput);
-                          setFeatureInput('');
-                        }}
-                        disabled={data.key_features.length >= 5}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {data.key_features.map((feature, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1.5 pr-1.5 py-1.5 text-sm">
-                          {feature}
-                          <button onClick={() => removeFromArray('key_features', i)} className="ml-1 hover:text-destructive transition-colors">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </Badge>
-                      ))}
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Unique Differentiators <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                      </label>
+                      <Textarea
+                        placeholder="Any patents, proprietary tech, exclusive partnerships, or unique methodologies?"
+                        value={data.unique_differentiators}
+                        onChange={(e) => updateField('unique_differentiators', e.target.value)}
+                        rows={3}
+                        className="resize-none"
+                      />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="value_proposition" className="text-sm font-medium">What Makes You Different? *</Label>
-                    <Textarea
-                      id="value_proposition"
-                      placeholder="Why should someone choose you over alternatives? What's your unique angle?"
-                      value={data.value_proposition}
-                      onChange={(e) => updateField('value_proposition', e.target.value)}
-                      rows={4}
-                      className="resize-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="unique_differentiators" className="text-sm font-medium">Unique Differentiators <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <Textarea
-                      id="unique_differentiators"
-                      placeholder="Any patents, proprietary tech, exclusive partnerships, or unique methodologies?"
-                      value={data.unique_differentiators}
-                      onChange={(e) => updateField('unique_differentiators', e.target.value)}
-                      rows={3}
-                      className="resize-none"
-                    />
-                  </div>
-                </div>
-              )}
+                )}
 
-              {step === 3 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label htmlFor="target_audience" className="text-sm font-medium">Target Audience *</Label>
-                    <Textarea
-                      id="target_audience"
-                      placeholder="Describe your ideal customers. What roles do they have? What problems do they face? Which subreddits might they be in?"
-                      value={data.target_audience}
-                      onChange={(e) => updateField('target_audience', e.target.value)}
-                      rows={6}
-                      className="resize-none"
-                    />
+                {step === 3 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Describe Your Ideal Customer <span className="text-primary">*</span>
+                      </label>
+                      <Textarea
+                        placeholder="Describe your ideal customers. What roles do they have? What problems do they face? Which subreddits might they be in?"
+                        value={data.target_audience}
+                        onChange={(e) => updateField('target_audience', e.target.value)}
+                        rows={6}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        The more specific, the better. This helps us identify relevant conversations.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {step === 4 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Competitors <span className="text-muted-foreground font-normal">(optional, add up to 5)</span></Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="e.g., Mixpanel, Amplitude"
-                        value={competitorInput}
-                        onChange={(e) => setCompetitorInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                {step === 4 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Competitors <span className="text-muted-foreground text-xs font-normal">(optional, add up to 5)</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., Mixpanel, Amplitude"
+                          value={competitorInput}
+                          onChange={(e) => setCompetitorInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addToArray('competitor_names', competitorInput);
+                              setCompetitorInput('');
+                            }
+                          }}
+                          className="h-11"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="secondary"
+                          className="h-11 px-4"
+                          onClick={() => {
                             addToArray('competitor_names', competitorInput);
                             setCompetitorInput('');
-                          }
-                        }}
-                        className="h-11"
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon"
-                        className="h-11 w-11 shrink-0"
-                        onClick={() => {
-                          addToArray('competitor_names', competitorInput);
-                          setCompetitorInput('');
-                        }}
-                        disabled={data.competitor_names.length >= 5}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                          }}
+                          disabled={data.competitor_names.length >= 5}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {data.competitor_names.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {data.competitor_names.map((name, i) => (
+                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
+                              {name}
+                              <button onClick={() => removeFromArray('competitor_names', i)} className="ml-2 hover:text-destructive transition-colors">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">Helps AI understand what alternatives users might mention</p>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {data.competitor_names.map((name, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1.5 pr-1.5 py-1.5 text-sm">
-                          {name}
-                          <button onClick={() => removeFromArray('competitor_names', i)} className="ml-1 hover:text-destructive transition-colors">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Helps AI understand what alternatives users might mention</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Common Objections <span className="text-muted-foreground font-normal">(optional, add up to 5)</span></Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder='e.g., "Too expensive", "Hard to set up"'
-                        value={objectionInput}
-                        onChange={(e) => setObjectionInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Common Objections <span className="text-muted-foreground text-xs font-normal">(optional, add up to 5)</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder='"Too expensive", "Hard to set up"'
+                          value={objectionInput}
+                          onChange={(e) => setObjectionInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addToArray('common_objections', objectionInput);
+                              setObjectionInput('');
+                            }
+                          }}
+                          className="h-11"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="secondary"
+                          className="h-11 px-4"
+                          onClick={() => {
                             addToArray('common_objections', objectionInput);
                             setObjectionInput('');
-                          }
-                        }}
-                        className="h-11"
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon"
-                        className="h-11 w-11 shrink-0"
-                        onClick={() => {
-                          addToArray('common_objections', objectionInput);
-                          setObjectionInput('');
-                        }}
-                        disabled={data.common_objections.length >= 5}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {data.common_objections.map((objection, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1.5 pr-1.5 py-1.5 text-sm">
-                          {objection}
-                          <button onClick={() => removeFromArray('common_objections', i)} className="ml-1 hover:text-destructive transition-colors">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">AI will preemptively address these concerns</p>
-                  </div>
-                </div>
-              )}
-
-              {step === 5 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label htmlFor="success_stories" className="text-sm font-medium">Success Stories <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <Textarea
-                      id="success_stories"
-                      placeholder='Brief case studies or testimonials. E.g., "Helped Company X increase conversions by 40%" or "Used by 500+ startups"'
-                      value={data.success_stories}
-                      onChange={(e) => updateField('success_stories', e.target.value)}
-                      rows={4}
-                      className="resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground">Social proof to weave into replies naturally</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Pricing Model</Label>
-                    <div className="grid gap-2">
-                      {PRICING_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => updateField('pricing_model', option.value)}
-                          className={`flex items-center justify-between p-3.5 rounded-xl border transition-all text-left ${
-                            data.pricing_model === option.value
-                              ? 'border-primary bg-primary/5 shadow-sm'
-                              : 'border-border hover:border-primary/30 hover:bg-muted/50'
-                          }`}
+                          }}
+                          disabled={data.common_objections.length >= 5}
                         >
-                          <div>
-                            <p className="font-medium text-foreground text-sm">{option.label}</p>
-                            <p className="text-xs text-muted-foreground">{option.description}</p>
-                          </div>
-                          {data.pricing_model === option.value && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-primary-foreground" />
-                            </div>
-                          )}
-                        </button>
-                      ))}
+                          Add
+                        </Button>
+                      </div>
+                      {data.common_objections.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {data.common_objections.map((objection, i) => (
+                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
+                              {objection}
+                              <button onClick={() => removeFromArray('common_objections', i)} className="ml-2 hover:text-destructive transition-colors">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">AI will preemptively address these concerns</p>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {step === 6 && (
-                <div className="space-y-5 animate-fade-in">
-                  <Label className="text-sm font-medium">Select your preferred tone for AI-generated replies</Label>
-                  <div className="grid gap-3">
-                    {TONE_OPTIONS.map((tone) => (
-                      <button
-                        key={tone.value}
-                        type="button"
-                        onClick={() => updateField('tone', tone.value)}
-                        className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
-                          data.tone === tone.value
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-border hover:border-primary/30 hover:bg-muted/50'
-                        }`}
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{tone.label}</p>
-                          <p className="text-sm text-muted-foreground">{tone.description}</p>
-                        </div>
-                        {data.tone === tone.value && (
-                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
+                {step === 5 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Success Stories <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                      </label>
+                      <Textarea
+                        placeholder='"Helped Company X increase conversions by 40%" or "Used by 500+ startups"'
+                        value={data.success_stories}
+                        onChange={(e) => updateField('success_stories', e.target.value)}
+                        rows={4}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-muted-foreground">Social proof to weave into replies naturally</p>
+                    </div>
+                    
+                    <div className="h-px bg-border" />
+                    
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">Pricing Model</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {PRICING_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateField('pricing_model', option.value)}
+                            className={`
+                              p-3 rounded-xl border-2 text-left transition-all duration-200
+                              ${data.pricing_model === option.value 
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'}
+                            `}
+                          >
+                            <div className="text-lg mb-1">{option.icon}</div>
+                            <div className="text-sm font-medium text-foreground">{option.label}</div>
+                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {step === 6 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Reply Tone <span className="text-primary">*</span>
+                      </label>
+                      <p className="text-xs text-muted-foreground">Select your preferred tone for AI-generated replies</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {TONE_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateField('tone', option.value)}
+                            className={`
+                              p-3 rounded-xl border-2 text-left transition-all duration-200
+                              ${data.tone === option.value 
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'}
+                            `}
+                          >
+                            <div className="text-lg mb-1">{option.icon}</div>
+                            <div className="text-sm font-medium text-foreground">{option.label}</div>
+                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-8 pt-6 border-t border-border/50">
-              <Button
-                variant="ghost"
-                onClick={() => setStep((s) => s - 1)}
-                disabled={step === 1}
-                className="gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
+            {/* Navigation Footer */}
+            <div className="px-8 py-5 bg-muted/30 border-t border-border">
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep((s) => s - 1)}
+                  disabled={step === 1}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
 
-              {step < 6 ? (
-                <Button 
-                  onClick={() => setStep((s) => s + 1)} 
-                  disabled={!canProceed()}
-                  className="gap-2 px-6"
-                >
-                  Continue
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleComplete} 
-                  disabled={isUpdating}
-                  className="gap-2 px-6"
-                >
-                  {isUpdating && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Complete Setup
-                  <Check className="w-4 h-4" />
-                </Button>
-              )}
+                {step < 6 ? (
+                  <Button 
+                    type="button"
+                    onClick={() => setStep((s) => s + 1)} 
+                    disabled={!canProceed()}
+                    className="gap-2 group"
+                  >
+                    Continue
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button"
+                    onClick={handleComplete} 
+                    disabled={isUpdating}
+                    className="gap-2"
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Complete Setup
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Your information helps us generate better, more personalized replies.
-          </p>
+          {/* Progress indicator */}
+          <div className="mt-6 text-center">
+            <span className="text-sm text-muted-foreground">
+              Step {step} of {STEPS.length} • {progressPercentage}% complete
+            </span>
+          </div>
         </div>
       </div>
     </div>
