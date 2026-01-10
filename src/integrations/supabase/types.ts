@@ -19,6 +19,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_auto_generated: boolean | null
           keyword: string
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean | null
           keyword: string
           user_id: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean | null
           keyword?: string
           user_id?: string
         }
@@ -118,6 +121,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auto_pilot_enabled: boolean | null
           common_objections: string[] | null
           company_description: string | null
           competitor_names: string[] | null
@@ -128,10 +132,12 @@ export type Database = {
           initial_setup_completed: boolean | null
           key_features: string[] | null
           last_scan_at: string | null
+          next_scheduled_scan_at: string | null
           onboarding_completed: boolean | null
           pricing_model: string | null
           product_name: string | null
           product_url: string | null
+          scan_frequency_hours: number | null
           success_stories: string | null
           target_audience: string | null
           tone: Database["public"]["Enums"]["tone_preference"] | null
@@ -140,6 +146,7 @@ export type Database = {
           value_proposition: string | null
         }
         Insert: {
+          auto_pilot_enabled?: boolean | null
           common_objections?: string[] | null
           company_description?: string | null
           competitor_names?: string[] | null
@@ -150,10 +157,12 @@ export type Database = {
           initial_setup_completed?: boolean | null
           key_features?: string[] | null
           last_scan_at?: string | null
+          next_scheduled_scan_at?: string | null
           onboarding_completed?: boolean | null
           pricing_model?: string | null
           product_name?: string | null
           product_url?: string | null
+          scan_frequency_hours?: number | null
           success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null
@@ -162,6 +171,7 @@ export type Database = {
           value_proposition?: string | null
         }
         Update: {
+          auto_pilot_enabled?: boolean | null
           common_objections?: string[] | null
           company_description?: string | null
           competitor_names?: string[] | null
@@ -172,10 +182,12 @@ export type Database = {
           initial_setup_completed?: boolean | null
           key_features?: string[] | null
           last_scan_at?: string | null
+          next_scheduled_scan_at?: string | null
           onboarding_completed?: boolean | null
           pricing_model?: string | null
           product_name?: string | null
           product_url?: string | null
+          scan_frequency_hours?: number | null
           success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null
@@ -219,6 +231,94 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_history: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          hot_leads: number | null
+          id: string
+          leads_found: number | null
+          posts_scanned: number | null
+          scan_type: string
+          started_at: string | null
+          status: string | null
+          user_id: string
+          warm_leads: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          hot_leads?: number | null
+          id?: string
+          leads_found?: number | null
+          posts_scanned?: number | null
+          scan_type?: string
+          started_at?: string | null
+          status?: string | null
+          user_id: string
+          warm_leads?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          hot_leads?: number | null
+          id?: string
+          leads_found?: number | null
+          posts_scanned?: number | null
+          scan_type?: string
+          started_at?: string | null
+          status?: string | null
+          user_id?: string
+          warm_leads?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seen_posts: {
+        Row: {
+          first_seen_at: string | null
+          id: string
+          last_seen_at: string | null
+          post_hash: string | null
+          post_url: string
+          user_id: string
+        }
+        Insert: {
+          first_seen_at?: string | null
+          id?: string
+          last_seen_at?: string | null
+          post_hash?: string | null
+          post_url: string
+          user_id: string
+        }
+        Update: {
+          first_seen_at?: string | null
+          id?: string
+          last_seen_at?: string | null
+          post_hash?: string | null
+          post_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seen_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
