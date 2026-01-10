@@ -11,15 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, X, Search, Sparkles } from "lucide-react";
+import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, TrendingUp, History, RefreshCw, ChevronRight, Settings2 } from "lucide-react";
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
+import { formatDistanceToNow } from "date-fns";
 
 const Scanner = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile, isLoading: profileLoading } = useProfile();
+  const { profile, isLoading: profileLoading, updateProfile } = useProfile();
   const { subscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -27,7 +29,8 @@ const Scanner = () => {
   const [newSubreddit, setNewSubreddit] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<{ postsScanned?: number; leadsFound?: number; message?: string } | null>(null);
+  const [scanResult, setScanResult] = useState<{ postsScanned?: number; leadsFound?: number; hotLeads?: number; warmLeads?: number; message?: string } | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -77,6 +80,22 @@ const Scanner = () => {
         .select('*')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch scan history
+  const { data: scanHistory = [] } = useQuery({
+    queryKey: ['scan-history', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scan_history')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
       if (error) throw error;
       return data;
     },
@@ -150,6 +169,15 @@ const Scanner = () => {
     },
   });
 
+  // Toggle auto-pilot
+  const toggleAutoPilot = async (enabled: boolean) => {
+    updateProfile({ auto_pilot_enabled: enabled });
+    toast({ 
+      title: enabled ? "Auto-pilot enabled" : "Auto-pilot disabled",
+      description: enabled ? "Leads will be discovered automatically" : "Use manual scanning"
+    });
+  };
+
   // Scan mutation
   const handleScan = async () => {
     if (subreddits.length === 0 || keywords.length === 0) {
@@ -164,19 +192,22 @@ const Scanner = () => {
     setIsScanning(true);
     setScanResult(null);
     try {
-      const result = await firecrawlApi.scanForLeads();
+      const result = await firecrawlApi.scanForLeads('manual');
       
       if (result.success) {
         setScanResult({
           postsScanned: result.postsScanned,
           leadsFound: result.leadsFound,
+          hotLeads: result.hotLeads,
+          warmLeads: result.warmLeads,
           message: result.message,
         });
         toast({
           title: "Scan complete!",
           description: result.message || `Found ${result.leadsFound} new leads`,
         });
-        queryClient.invalidateQueries({ queryKey: ['leads', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['leads', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['scan-history', user?.id] });
       } else {
         toast({
           title: "Scan failed",
@@ -195,185 +226,156 @@ const Scanner = () => {
     }
   };
 
+  const isConfigured = subreddits.length > 0 && keywords.length > 0;
+  const lastScan = profile?.last_scan_at ? new Date(profile.last_scan_at) : null;
+  const autoPilotEnabled = profile?.auto_pilot_enabled ?? true;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header with Auto-Pilot Status */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Reddit Scanner</h1>
-            <p className="text-muted-foreground">Configure subreddits and keywords to find leads</p>
+            <h1 className="text-2xl font-bold">Lead Scanner</h1>
+            <p className="text-muted-foreground">
+              {isConfigured 
+                ? `Monitoring ${subreddits.length} subreddits with ${keywords.length} topics`
+                : "Configure subreddits and keywords to find leads"}
+            </p>
           </div>
-          <Button 
-            onClick={handleScan} 
-            disabled={isScanning || subreddits.length === 0 || keywords.length === 0}
-            size="lg"
-          >
-            {isScanning ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Scanning...
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Scan Now
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowConfig(!showConfig)}
+              className="gap-2"
+            >
+              <Settings2 className="h-4 w-4" />
+              {showConfig ? 'Hide' : 'Configure'}
+            </Button>
+            <Button 
+              onClick={handleScan} 
+              disabled={isScanning || !isConfigured}
+              size="lg"
+              className="gap-2"
+            >
+              {isScanning ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4" />
+                  Scan Now
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Subreddits Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="text-primary">r/</span> Subreddits
-              </CardTitle>
-              <CardDescription>
-                Add subreddits to search for intent signals (bonus results)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {subreddits.length === 0 && (
-                <div className="pb-2">
-                  <p className="text-xs text-muted-foreground mb-2">💡 Match subreddits to your topics:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {["webdev", "SaaS", "startups", "Entrepreneur", "smallbusiness", "marketing", "web_design", "frontend"].map((sub) => (
-                      <Badge 
-                        key={sub} 
-                        variant="outline" 
-                        className="cursor-pointer hover:bg-accent"
-                        onClick={() => addSubreddit.mutate(sub)}
-                      >
-                        + r/{sub}
-                      </Badge>
-                    ))}
-                  </div>
+        {/* Auto-Pilot Status Card */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`p-2.5 rounded-xl ${autoPilotEnabled ? 'bg-primary/10' : 'bg-muted'}`}>
+                  <Zap className={`h-5 w-5 ${autoPilotEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. webdev, SaaS, startups"
-                  value={newSubreddit}
-                  onChange={(e) => setNewSubreddit(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && newSubreddit && addSubreddit.mutate(newSubreddit)}
-                />
-                <Button 
-                  onClick={() => newSubreddit && addSubreddit.mutate(newSubreddit)}
-                  disabled={!newSubreddit || addSubreddit.isPending}
-                  size="icon"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">Auto-Pilot</h3>
+                    <Badge variant={autoPilotEnabled ? "default" : "secondary"} className="text-xs">
+                      {autoPilotEnabled ? 'Active' : 'Paused'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {autoPilotEnabled 
+                      ? `Scanning every ${profile?.scan_frequency_hours || 4} hours automatically`
+                      : 'Enable to discover leads automatically'}
+                  </p>
+                </div>
               </div>
               
-              <div className="flex flex-wrap gap-2">
-                {subredditsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : subreddits.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No subreddits added yet</p>
-                ) : (
-                  subreddits.map((sub) => (
-                    <Badge key={sub.id} variant="secondary" className="gap-1 pr-1">
-                      r/{sub.subreddit_name}
-                      <button
-                        onClick={() => removeSubreddit.mutate(sub.id)}
-                        className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))
+              <div className="flex items-center gap-6">
+                {lastScan && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Last scan: {formatDistanceToNow(lastScan, { addSuffix: true })}</span>
+                  </div>
                 )}
-              </div>
-
-              <div className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-                <strong>Tip:</strong> Match subreddits to your topics. For "Web development" add r/webdev, r/web_design, r/frontend
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Topics Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" /> Topics & Niches
-              </CardTitle>
-              <CardDescription>
-                Enter topics related to your product. We auto-find high-intent posts.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. Website development, CRM software"
-                  value={newKeyword}
-                  onChange={(e) => setNewKeyword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && newKeyword && addKeyword.mutate(newKeyword)}
+                <Switch
+                  checked={autoPilotEnabled}
+                  onCheckedChange={toggleAutoPilot}
                 />
-                <Button 
-                  onClick={() => newKeyword && addKeyword.mutate(newKeyword)}
-                  disabled={!newKeyword || addKeyword.isPending}
-                  size="icon"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {keywordsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : keywords.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No topics added yet</p>
-                ) : (
-                  keywords.map((kw) => (
-                    <Badge key={kw.id} variant="outline" className="gap-1 pr-1">
-                      {kw.keyword}
-                      <button
-                        onClick={() => removeKeyword.mutate(kw.id)}
-                        className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))
-                )}
-              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              {keywords.length === 0 && (
-                <div className="pt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Suggested topics for your niche:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {[
-                      "SaaS tools",
-                      "Web development",
-                      "Marketing automation",
-                      "Project management",
-                      "Email marketing",
-                      "CRM software",
-                      "E-commerce"
-                    ].map((kw) => (
-                      <Badge 
-                        key={kw} 
-                        variant="outline" 
-                        className="cursor-pointer hover:bg-accent"
-                        onClick={() => addKeyword.mutate(kw)}
-                      >
-                        + {kw}
-                      </Badge>
-                    ))}
+        {/* Quick Stats */}
+        {scanHistory.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {scanHistory.reduce((sum, s) => sum + (s.leads_found || 0), 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Total Leads (5 scans)</p>
                   </div>
                 </div>
-              )}
-
-              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                <strong>🧠 Smart search:</strong> We automatically combine your topics with intent signals 
-                like "looking for", "need recommendation", "alternative to" etc.
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/10">
+                    <Sparkles className="h-4 w-4 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {scanHistory.reduce((sum, s) => sum + (s.hot_leads || 0), 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Hot Leads</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <RefreshCw className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{scanHistory.length}</p>
+                    <p className="text-xs text-muted-foreground">Recent Scans</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <History className="h-4 w-4 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {scanHistory.reduce((sum, s) => sum + (s.posts_scanned || 0), 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Posts Analyzed</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Scan Results Card */}
         {scanResult && (
@@ -383,16 +385,12 @@ const Scanner = () => {
                 <div className="rounded-full bg-green-500/10 p-2">
                   <Sparkles className="h-5 w-5 text-green-500" />
                 </div>
-                <div>
-                  <h3 className="font-medium text-green-700 dark:text-green-400">Last Scan Results</h3>
+                <div className="flex-1">
+                  <h3 className="font-medium text-green-700 dark:text-green-400">Latest Scan Results</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Analyzed <strong>{scanResult.postsScanned || 0}</strong> posts and found{" "}
-                    <strong>{scanResult.leadsFound || 0}</strong> qualified leads.
-                    {scanResult.leadsFound === 0 && scanResult.postsScanned && scanResult.postsScanned > 0 && (
-                      <span className="block mt-1 text-amber-600 dark:text-amber-400">
-                        Tip: Try adding more specific intent keywords like "looking for a tool" or "need recommendation"
-                      </span>
-                    )}
+                    <strong>{scanResult.leadsFound || 0}</strong> qualified leads
+                    {scanResult.hotLeads ? ` (${scanResult.hotLeads} hot, ${scanResult.warmLeads} warm)` : ''}.
                   </p>
                 </div>
               </div>
@@ -400,35 +398,218 @@ const Scanner = () => {
           </Card>
         )}
 
-        {/* Info Card */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Search className="h-5 w-5 text-primary" />
+        {/* Configuration Panel (Collapsible) */}
+        {showConfig && (
+          <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
+            {/* Subreddits Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="text-primary">r/</span> Subreddits
+                </CardTitle>
+                <CardDescription>
+                  Communities to search for leads
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. webdev, SaaS, startups"
+                    value={newSubreddit}
+                    onChange={(e) => setNewSubreddit(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && newSubreddit && addSubreddit.mutate(newSubreddit)}
+                  />
+                  <Button 
+                    onClick={() => newSubreddit && addSubreddit.mutate(newSubreddit)}
+                    disabled={!newSubreddit || addSubreddit.isPending}
+                    size="icon"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {subredditsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : subreddits.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No subreddits added yet</p>
+                  ) : (
+                    subreddits.map((sub) => (
+                      <Badge key={sub.id} variant="secondary" className="gap-1 pr-1">
+                        r/{sub.subreddit_name}
+                        <button
+                          onClick={() => removeSubreddit.mutate(sub.id)}
+                          className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))
+                  )}
+                </div>
+
+                {subreddits.length === 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">Quick add:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {["webdev", "SaaS", "startups", "Entrepreneur", "smallbusiness"].map((sub) => (
+                        <Badge 
+                          key={sub} 
+                          variant="outline" 
+                          className="cursor-pointer hover:bg-accent text-xs"
+                          onClick={() => addSubreddit.mutate(sub)}
+                        >
+                          + r/{sub}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Topics Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-4 w-4 text-primary" /> Topics
+                </CardTitle>
+                <CardDescription>
+                  Keywords related to your product
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Website development, CRM software"
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && newKeyword && addKeyword.mutate(newKeyword)}
+                  />
+                  <Button 
+                    onClick={() => newKeyword && addKeyword.mutate(newKeyword)}
+                    disabled={!newKeyword || addKeyword.isPending}
+                    size="icon"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {keywordsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : keywords.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No topics added yet</p>
+                  ) : (
+                    keywords.map((kw: any) => (
+                      <Badge 
+                        key={kw.id} 
+                        variant={kw.is_auto_generated ? "default" : "outline"} 
+                        className="gap-1 pr-1"
+                      >
+                        {kw.keyword}
+                        {kw.is_auto_generated && <Sparkles className="h-2.5 w-2.5 ml-0.5" />}
+                        <button
+                          onClick={() => removeKeyword.mutate(kw.id)}
+                          className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))
+                  )}
+                </div>
+
+                {keywords.length === 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">Quick add:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {["SaaS tools", "Web development", "Marketing automation", "Project management"].map((kw) => (
+                        <Badge 
+                          key={kw} 
+                          variant="outline" 
+                          className="cursor-pointer hover:bg-accent text-xs"
+                          onClick={() => addKeyword.mutate(kw)}
+                        >
+                          + {kw}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground">
+                  <strong>🧠 Smart search:</strong> We automatically combine your topics with intent signals.
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isConfigured && !showConfig && (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Settings2 className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <h3 className="font-medium">Multi-Strategy Smart Scanning</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  We run <strong>3 search strategies</strong> to maximize results:<br/>
-                  <span className="text-xs">
-                    1️⃣ <strong>Broad search:</strong> Your topics + intent signals across all of Reddit<br/>
-                    2️⃣ <strong>Subreddit scan:</strong> High-intent posts in your selected subreddits<br/>
-                    3️⃣ <strong>Fallback:</strong> Simple topic search if no results found
-                  </span>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              <h3 className="font-semibold mb-2">Scanner not configured</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Add subreddits and topics to start finding leads
+              </p>
+              <Button onClick={() => setShowConfig(true)}>
+                Configure Scanner
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Smart Subreddit Discovery */}
-        {user && (
+        {user && showConfig && (
           <SubredditDiscovery
             userId={user.id}
             existingSubreddits={subreddits.map(s => s.subreddit_name.toLowerCase())}
             onAddSubreddit={(name) => addSubreddit.mutate(name)}
           />
+        )}
+
+        {/* Scan History */}
+        {scanHistory.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <History className="h-4 w-4 text-muted-foreground" /> Recent Scans
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {scanHistory.map((scan: any) => (
+                  <div 
+                    key={scan.id} 
+                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant={scan.scan_type === 'auto' ? 'secondary' : 'outline'} className="text-xs">
+                        {scan.scan_type === 'auto' ? 'Auto' : 'Manual'}
+                      </Badge>
+                      <span className="text-sm">
+                        {scan.leads_found || 0} leads from {scan.posts_scanned || 0} posts
+                      </span>
+                      {(scan.hot_leads || 0) > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {scan.hot_leads} hot
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(scan.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Leads Section */}

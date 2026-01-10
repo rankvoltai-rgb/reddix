@@ -128,7 +128,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     updateProfile(
       { 
         product_name: data.product_name,
@@ -144,13 +144,18 @@ export default function OnboardingWizard() {
         unique_differentiators: data.unique_differentiators || null,
         tone: data.tone,
         onboarding_completed: true,
+        auto_pilot_enabled: true,
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           toast({
             title: 'Setup complete!',
-            description: 'Welcome to Reddix. Let\'s find some leads!',
+            description: 'Configuring your scanner automatically...',
           });
+          
+          // Trigger auto-setup in the background
+          triggerAutoSetup();
+          
           navigate('/dashboard');
         },
         onError: () => {
@@ -162,6 +167,50 @@ export default function OnboardingWizard() {
         },
       }
     );
+  };
+  
+  const triggerAutoSetup = async () => {
+    try {
+      // Import dynamically to avoid circular deps
+      const { firecrawlApi } = await import('@/lib/api/firecrawl');
+      
+      // Auto-generate keywords from profile data
+      console.log('Auto-generating keywords...');
+      const keywordsResult = await firecrawlApi.autoGenerateKeywords();
+      if (keywordsResult.success) {
+        console.log(`Generated ${keywordsResult.inserted} keywords`);
+      }
+      
+      // Auto-discover and add subreddits
+      console.log('Discovering subreddits...');
+      const subredditsResult = await firecrawlApi.discoverSubreddits();
+      if (subredditsResult.success && subredditsResult.suggestions) {
+        // Add top 5 subreddits automatically
+        const topSubreddits = subredditsResult.suggestions.slice(0, 5);
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          for (const sub of topSubreddits) {
+            await supabase.from('monitored_subreddits').upsert({
+              user_id: user.id,
+              subreddit_name: sub.name.toLowerCase(),
+              is_active: true,
+            }, { onConflict: 'user_id,subreddit_name' }).select();
+          }
+          console.log(`Added ${topSubreddits.length} subreddits`);
+        }
+      }
+      
+      // Trigger first scan
+      console.log('Running initial scan...');
+      await firecrawlApi.scanForLeads('auto');
+      console.log('Initial scan complete');
+      
+    } catch (error) {
+      console.error('Auto-setup error:', error);
+      // Non-blocking - user can still use the app
+    }
   };
 
   const progressPercentage = Math.round((step / STEPS.length) * 100);

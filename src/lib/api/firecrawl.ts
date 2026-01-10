@@ -6,6 +6,8 @@ type FirecrawlResponse<T = any> = {
   data?: T;
   leadsFound?: number;
   postsScanned?: number;
+  hotLeads?: number;
+  warmLeads?: number;
   message?: string;
 };
 
@@ -15,6 +17,28 @@ type SearchOptions = {
   country?: string;
   tbs?: string;
   scrapeOptions?: { formats?: ('markdown' | 'html')[] };
+};
+
+type AutoGenerateKeywordsResponse = {
+  success: boolean;
+  error?: string;
+  keywords?: Array<{ keyword: string; category: string; reasoning: string }>;
+  summary?: string;
+  inserted?: number;
+};
+
+type DiscoverSubredditsResponse = {
+  success: boolean;
+  error?: string;
+  suggestions?: Array<{
+    name: string;
+    relevance_score: number;
+    reasoning: string;
+    typical_intent_signals: string[];
+    estimated_activity: string;
+    category: string;
+  }>;
+  analysis_summary?: string;
 };
 
 export const firecrawlApi = {
@@ -29,7 +53,7 @@ export const firecrawlApi = {
     return data;
   },
 
-  async scanForLeads(): Promise<FirecrawlResponse> {
+  async scanForLeads(scanType: 'manual' | 'auto' = 'manual'): Promise<FirecrawlResponse> {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
@@ -37,6 +61,45 @@ export const firecrawlApi = {
     }
 
     const { data, error } = await supabase.functions.invoke('scan-reddit', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: { scan_type: scanType },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return data;
+  },
+
+  async autoGenerateKeywords(): Promise<AutoGenerateKeywordsResponse> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { data, error } = await supabase.functions.invoke('auto-generate-keywords', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return data;
+  },
+
+  async discoverSubreddits(): Promise<DiscoverSubredditsResponse> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { data, error } = await supabase.functions.invoke('discover-subreddits', {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
