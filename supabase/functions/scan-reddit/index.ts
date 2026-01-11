@@ -76,35 +76,45 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from auth header
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const anonClient = createClient(supabaseUrl, anonKey);
-    const { data: { user }, error: userError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-    
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid authorization' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Scanning for user:', user.id);
-
-    // Parse request body for scan type
+    // Parse request body for scan type and user_id (for scheduled scans)
     let scanType = 'manual';
+    let targetUserId: string | null = null;
     try {
       const body = await req.json();
       scanType = body.scan_type || 'manual';
+      targetUserId = body.user_id || null;
     } catch {
       // No body, default to manual
+    }
+
+    let userId: string;
+
+    // For scheduled scans with service role, use the provided user_id
+    if (scanType === 'scheduled' && targetUserId && authHeader.includes(supabaseKey)) {
+      userId = targetUserId;
+      console.log('Scheduled scan for user:', userId);
+    } else {
+      // Get user from auth header for manual scans
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { data: { user }, error: userError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid authorization' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      userId = user.id;
+      console.log('Manual scan for user:', userId);
     }
 
     // Create scan history entry
     const { data: scanRecord, error: scanRecordError } = await supabase
       .from('scan_history')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         scan_type: scanType,
         status: 'running',
       })
@@ -119,7 +129,7 @@ serve(async (req) => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('product_name, company_description, value_proposition, last_scan_at, key_features, competitor_names')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError) {
@@ -160,8 +170,8 @@ serve(async (req) => {
 
     // Fetch user's subreddits and keywords
     const [subredditsRes, keywordsRes] = await Promise.all([
-      supabase.from('monitored_subreddits').select('subreddit_name').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('keywords').select('keyword').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('monitored_subreddits').select('subreddit_name').eq('user_id', userId).eq('is_active', true),
+      supabase.from('keywords').select('keyword').eq('user_id', userId).eq('is_active', true),
     ]);
 
     const subreddits = subredditsRes.data || [];
@@ -199,7 +209,7 @@ serve(async (req) => {
     await supabase
       .from('profiles')
       .update({ last_scan_at: new Date().toISOString() })
-      .eq('id', user.id);
+      .eq('id', userId);
 
     // Topics are the user's niche keywords
     const topics = keywords.map(kw => kw.keyword);
@@ -226,7 +236,7 @@ serve(async (req) => {
     const { data: seenPosts } = await supabase
       .from('seen_posts')
       .select('post_url')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     
     const seenUrls = new Set((seenPosts || []).map(p => p.post_url));
     console.log(`User has ${seenUrls.size} previously seen posts`);
@@ -347,7 +357,7 @@ serve(async (req) => {
 
     // Mark posts as seen (batch insert)
     const postsToMark = uniquePosts.map(p => ({
-      user_id: user.id,
+      user_id: userId,
       post_url: p.url,
     }));
 
@@ -451,7 +461,7 @@ Respond with valid JSON ONLY:
               intent_score: analysis.intent_score,
               intent_level: intentLevel,
               relevance_notes: analysis.relevance_notes,
-              user_id: user.id,
+              user_id: userId,
             });
           }
         }
