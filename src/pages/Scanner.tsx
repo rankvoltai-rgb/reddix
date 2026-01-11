@@ -13,10 +13,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, TrendingUp, History, RefreshCw, ChevronRight, Settings2 } from "lucide-react";
+import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, TrendingUp, History, RefreshCw, ChevronRight, Settings2, Timer } from "lucide-react";
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInSeconds, formatDuration, intervalToDuration } from "date-fns";
 
 const Scanner = () => {
   const navigate = useNavigate();
@@ -229,6 +229,46 @@ const Scanner = () => {
   const isConfigured = subreddits.length > 0 && keywords.length > 0;
   const lastScan = profile?.last_scan_at ? new Date(profile.last_scan_at) : null;
   const autoPilotEnabled = profile?.auto_pilot_enabled ?? true;
+  const nextScheduledScan = profile?.next_scheduled_scan_at ? new Date(profile.next_scheduled_scan_at) : null;
+
+  // Countdown timer state
+  const [countdown, setCountdown] = useState<string>('');
+  
+  useEffect(() => {
+    if (!nextScheduledScan || !autoPilotEnabled) {
+      setCountdown('');
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const secondsRemaining = differenceInSeconds(nextScheduledScan, now);
+      
+      if (secondsRemaining <= 0) {
+        setCountdown('Scanning soon...');
+        return;
+      }
+
+      const duration = intervalToDuration({ start: now, end: nextScheduledScan });
+      const parts: string[] = [];
+      
+      if (duration.hours && duration.hours > 0) {
+        parts.push(`${duration.hours}h`);
+      }
+      if (duration.minutes !== undefined) {
+        parts.push(`${duration.minutes}m`);
+      }
+      if (duration.hours === 0 && duration.seconds !== undefined) {
+        parts.push(`${duration.seconds}s`);
+      }
+      
+      setCountdown(parts.join(' ') || 'Soon');
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [nextScheduledScan, autoPilotEnabled]);
 
   return (
     <DashboardLayout>
@@ -298,12 +338,20 @@ const Scanner = () => {
               </div>
               
               <div className="flex items-center gap-6">
-                {lastScan && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Last scan: {formatDistanceToNow(lastScan, { addSuffix: true })}</span>
-                  </div>
-                )}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+                  {lastScan && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Last: {formatDistanceToNow(lastScan, { addSuffix: true })}</span>
+                    </div>
+                  )}
+                  {autoPilotEnabled && countdown && (
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <Timer className="h-4 w-4" />
+                      <span>Next: {countdown}</span>
+                    </div>
+                  )}
+                </div>
                 <Switch
                   checked={autoPilotEnabled}
                   onCheckedChange={toggleAutoPilot}

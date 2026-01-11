@@ -129,6 +129,9 @@ export default function OnboardingWizard() {
   };
 
   const handleComplete = async () => {
+    // Calculate initial next_scheduled_scan_at (4 hours from now)
+    const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
+    
     updateProfile(
       { 
         product_name: data.product_name,
@@ -145,6 +148,7 @@ export default function OnboardingWizard() {
         tone: data.tone,
         onboarding_completed: true,
         auto_pilot_enabled: true,
+        next_scheduled_scan_at: nextScan.toISOString(),
       },
       {
         onSuccess: async () => {
