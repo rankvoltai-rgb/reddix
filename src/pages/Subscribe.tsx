@@ -65,19 +65,18 @@ export default function Subscribe() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-16">
-        {/* Logo */}
-        <div className="flex justify-center mb-10">
-          <span className="text-2xl font-bold text-foreground">Reddix</span>
-        </div>
-
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-foreground">
             Choose your plan
           </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-4">
             Start finding qualified leads on Reddit. 7-day free trial on all plans.
           </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 border border-primary/10 text-sm text-foreground">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            <span><span className="font-semibold">2,847+ founders</span> already finding leads on Reddit</span>
+          </div>
         </div>
 
         {/* Pricing Cards */}
