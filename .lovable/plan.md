@@ -1,62 +1,55 @@
 
 
-# Remove Topics: Make Scanning Fully Autonomous
+# Scanner Power-Ups: Advanced but Effortless
 
-## Insight
-The "Topics" section is manual friction that shouldn't exist. The `scan-reddit` edge function already has the user's full product context from onboarding (product name, description, features, competitors, audience). Right now it requires a separate `keywords` table to build search queries — but those keywords are just derivatives of the product profile that AI can generate on-the-fly.
+## The Insight
+The Scanner finds leads well, but once they arrive, users face a flat, unfiltered wall of cards. The bottleneck has shifted from **discovery** to **triage**. These five changes make triage instant while keeping the UI dead simple.
 
-The 400 IQ move: **generate search queries dynamically at scan time from the product profile**, eliminating the keywords table dependency entirely from the scanning flow.
+## Changes
 
-## What Changes
+### 1. Intent Filter Tabs on Leads Section
+Replace the static "Discovered Leads" header with horizontal filter tabs: **All | Hot | Warm | Research | Low** -- each showing a live count badge (e.g. "Hot (3)"). Clicking a tab instantly filters. Default view: "Hot" if any exist, otherwise "All". This puts the highest-value leads one click away instead of buried in a scroll.
 
-### 1. Remove Topics UI from Scanner page
-- Delete the entire "Topics" row (keyword badges, add input, suggestions)
-- Remove keyword-related state, queries, and mutations from Scanner.tsx
-- The config strip becomes just subreddits — one clean row
-- The "Scan Now" button only requires subreddits (not keywords)
+- File: `src/components/scanner/LeadsSection.tsx`
+- Add `activeFilter` state, count leads per intent level, render tab row, filter displayed leads
 
-### 2. Update `scan-reddit` edge function
-- Remove the keywords table fetch and the check that fails when keywords are empty
-- Instead, dynamically generate 5-8 search terms from the profile at scan time using a fast AI call (gemini-2.5-flash-lite)
-- These ephemeral search terms are used for that scan only — no persistence needed
-- Falls back to product name + description keywords if AI call fails
-- This makes every scan contextually fresh (search terms can evolve as the product evolves)
+### 2. Dismiss Leads Inline
+Add a subtle X (dismiss) button on each LeadCard. Clicking it sets the lead status to `archived`, removing it from the scanner view (archived leads are already excluded from the Leads/CRM page by default -- they only show if filtered). This lets users clean noise without leaving the scanner.
 
-### 3. Keep keywords table but make it optional/hidden
-- The table stays for backwards compatibility and for the `auto-generate-keywords` function
-- It becomes an internal system detail, not user-facing
-- Existing keywords won't break anything
+- File: `src/components/scanner/LeadCard.tsx` -- add `onDismiss` prop and X button
+- File: `src/components/scanner/LeadsSection.tsx` -- add dismiss handler, filter out archived leads from display
 
-## Result
-- Scanner config strip: just subreddits + discover button
-- Zero keyword management friction
-- Scans automatically know what to search for based on product profile
-- Search terms stay fresh and contextual
+### 3. "Copy and Go" One-Click Action in ReplyDialog
+Currently the reply workflow is: Copy Reply, then Open Reddit Post (two clicks). Add a single "Copy and Go" primary button that copies the reply to clipboard AND opens the Reddit thread in one action. Keep the individual buttons for flexibility, but make the combined action prominent.
+
+- File: `src/components/scanner/ReplyDialog.tsx` -- add combined button in footer
+
+### 4. Product Context Pill
+Add a small pill/badge below the command bar showing "Scanning for: [Product Name]" with a link to Settings to update product info. This gives users confidence the AI knows what it's looking for, and a quick path to update context if their product evolves.
+
+- File: `src/pages/Scanner.tsx` -- add context pill between command bar and config strip, reading from `profile.product_name`
+
+### 5. Realtime Lead Counter
+Subscribe to the `leads` table via realtime so when auto-pilot scans find new leads in the background, the lead count updates live without requiring a page refresh. Show a subtle "N new leads" toast or badge when new ones arrive.
+
+- Database: enable realtime on `leads` table (migration)
+- File: `src/components/scanner/LeadsSection.tsx` -- add Supabase realtime subscription, auto-refetch on INSERT events
 
 ---
 
 ## Technical Details
 
+### Database Migration
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
+```
+
 ### Files Modified
+- **src/components/scanner/LeadsSection.tsx** -- Intent filter tabs with counts, dismiss handler, realtime subscription
+- **src/components/scanner/LeadCard.tsx** -- Add `onDismiss` prop and dismiss (X) button
+- **src/components/scanner/ReplyDialog.tsx** -- Add "Copy and Go" combined action button
+- **src/pages/Scanner.tsx** -- Add product context pill
 
-**src/pages/Scanner.tsx**
-- Remove `newKeyword` state
-- Remove `keywords` query (`useQuery` for keywords table)
-- Remove `addKeyword` and `removeKeyword` mutations
-- Remove the keywords/topics row from the config strip UI
-- Update `isConfigured` to only check `subreddits.length > 0`
-- Update config count text to only show subreddit count
-
-**supabase/functions/scan-reddit/index.ts**
-- Remove keywords table fetch (lines 173-174)
-- Remove keywords empty check (lines 194-206)
-- Add a new step: generate search terms from profile using AI (fast call to gemini-2.5-flash-lite)
-- Use generated terms in place of `topics` variable for search strategies A and D
-- Add fallback: if AI fails, extract simple terms from product_name + company_description via string splitting
-- Keep competitor strategy (Strategy B) unchanged — it already uses profile data directly
-
-### Files NOT Modified
-- `auto-generate-keywords` edge function — kept as-is for any future use
-- `keywords` table — stays in database, just not queried by scanner UI
-- LeadsSection, LeadCard, SubredditDiscovery — no changes needed
+### No New Files or Tables
+All changes use existing data structures. Dismiss uses the existing `archived` status on the leads table. Realtime uses native capabilities.
 
