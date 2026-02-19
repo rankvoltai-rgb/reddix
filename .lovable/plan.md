@@ -1,55 +1,60 @@
 
 
-# Scanner Power-Ups: Advanced but Effortless
+# Clean Up /subscribe -- Notion-Style Minimalism
 
-## The Insight
-The Scanner finds leads well, but once they arrive, users face a flat, unfiltered wall of cards. The bottleneck has shifted from **discovery** to **triage**. These five changes make triage instant while keeping the UI dead simple.
+## Problem
+The current page has **9 distinct visual sections** competing for attention: urgency banner, background decorations, floating blobs, logo, header with badge, activity feed, pricing cards, "what you're missing" card, money-back guarantee card, testimonial, and trust indicators. For a Notion-style design system, this is far too noisy.
 
-## Changes
+## Design Philosophy
+Strip away every element that doesn't directly move the user toward clicking "Start Free Trial." Keep only what earns its space.
 
-### 1. Intent Filter Tabs on Leads Section
-Replace the static "Discovered Leads" header with horizontal filter tabs: **All | Hot | Warm | Research | Low** -- each showing a live count badge (e.g. "Hot (3)"). Clicking a tab instantly filters. Default view: "Hot" if any exist, otherwise "All". This puts the highest-value leads one click away instead of buried in a scroll.
+## What Gets Removed
 
-- File: `src/components/scanner/LeadsSection.tsx`
-- Add `activeFilter` state, count leads per intent level, render tab row, filter displayed leads
+1. **Urgency banner** -- The fake countdown timer and "50% off" banner feel like a dark pattern and contradict the "no dark patterns" design principle. Remove entirely.
+2. **Background decorations** -- The radial glows, dot patterns, and floating blur blobs create visual clutter. A clean white background is more Notion-like.
+3. **"Limited Beta Access" badge** -- Redundant with the header copy.
+4. **Live activity feed** -- Simulated social proof with fake names cycling every 3 seconds. Remove the animation, state, and interval.
+5. **"What you're missing" card** -- Negative framing adds a full card that doesn't convert. The features list already covers this implicitly.
+6. **Money-back guarantee card** -- Collapse into a single line of text under the pricing cards.
+7. **Testimonial section** -- Keep but make it more compact (inline with trust indicators).
+8. **Strikethrough pricing** -- Remove the fake "was $58/$90" crossed-out prices and the "Save 50%" text. Show honest pricing only.
+9. **Trust indicator section** -- Consolidate into one clean line.
 
-### 2. Dismiss Leads Inline
-Add a subtle X (dismiss) button on each LeadCard. Clicking it sets the lead status to `archived`, removing it from the scanner view (archived leads are already excluded from the Leads/CRM page by default -- they only show if filtered). This lets users clean noise without leaving the scanner.
+## What Stays (Simplified)
 
-- File: `src/components/scanner/LeadCard.tsx` -- add `onDismiss` prop and X button
-- File: `src/components/scanner/LeadsSection.tsx` -- add dismiss handler, filter out archived leads from display
+1. **Logo** -- Clean, as-is
+2. **Header** -- Simpler: just the headline and one line of subtext, no badge
+3. **Pricing cards** -- Two cards side-by-side, cleaner styling: no shine-effect, no gradient-border animation, no overflow-visible badge tricks. Just clean cards with a subtle border highlight on the popular one.
+4. **CTA buttons** -- "Start Free Trial" with "7 days free, then $X/mo" subtitle
+5. **Single trust line** -- One row: guarantee + secure payment + cancel anytime
 
-### 3. "Copy and Go" One-Click Action in ReplyDialog
-Currently the reply workflow is: Copy Reply, then Open Reddit Post (two clicks). Add a single "Copy and Go" primary button that copies the reply to clipboard AND opens the Reddit thread in one action. Keep the individual buttons for flexibility, but make the combined action prominent.
-
-- File: `src/components/scanner/ReplyDialog.tsx` -- add combined button in footer
-
-### 4. Product Context Pill
-Add a small pill/badge below the command bar showing "Scanning for: [Product Name]" with a link to Settings to update product info. This gives users confidence the AI knows what it's looking for, and a quick path to update context if their product evolves.
-
-- File: `src/pages/Scanner.tsx` -- add context pill between command bar and config strip, reading from `profile.product_name`
-
-### 5. Realtime Lead Counter
-Subscribe to the `leads` table via realtime so when auto-pilot scans find new leads in the background, the lead count updates live without requiring a page refresh. Show a subtle "N new leads" toast or badge when new ones arrive.
-
-- Database: enable realtime on `leads` table (migration)
-- File: `src/components/scanner/LeadsSection.tsx` -- add Supabase realtime subscription, auto-refetch on INSERT events
+## Result
+Page goes from ~320 lines to ~180 lines. Feels like a Notion pricing page: confident, minimal, no gimmicks.
 
 ---
 
 ## Technical Details
 
-### Database Migration
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
-```
+### File Modified: `src/pages/Subscribe.tsx`
 
-### Files Modified
-- **src/components/scanner/LeadsSection.tsx** -- Intent filter tabs with counts, dismiss handler, realtime subscription
-- **src/components/scanner/LeadCard.tsx** -- Add `onDismiss` prop and dismiss (X) button
-- **src/components/scanner/ReplyDialog.tsx** -- Add "Copy and Go" combined action button
-- **src/pages/Scanner.tsx** -- Add product context pill
+**State removed:**
+- `activityIndex` state and the `useEffect` interval cycling through `ACTIVITY_FEED`
+- `ACTIVITY_FEED` constant
+- `COUNTDOWN_END` constant
 
-### No New Files or Tables
-All changes use existing data structures. Dismiss uses the existing `archived` status on the leads table. Realtime uses native capabilities.
+**Imports cleaned:**
+- Remove unused icons: `Flame`, `Clock`, `Star`, `XCircle`, `CreditCard`, `Lock`
 
+**UI structure (top to bottom):**
+1. Logo (centered, `text-2xl font-bold`)
+2. Headline + subtitle (no badge, clean text)
+3. Two pricing cards (clean borders, no shine-effect/gradient-border/floating badge -- popular card gets `border-primary` and a simple inline "Recommended" badge inside the header)
+4. One-line trust footer: "7-day money-back guarantee -- Secure payment -- Cancel anytime"
+
+**CSS classes no longer used on this page:**
+- `shine-effect`, `gradient-border`, `pricing-card-hover`, `bg-radial-glow`, `bg-radial-glow-bottom`, `bg-dot-pattern`, `floating`, `floating-delayed`
+- These stay in `index.css` since other pages may use them
+
+### File NOT Modified
+- `src/lib/subscriptionTiers.ts` -- pricing data stays as-is
+- `src/index.css` -- utility classes remain available
