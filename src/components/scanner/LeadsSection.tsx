@@ -63,8 +63,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
         .select('*')
         .eq('user_id', userId)
         .neq('status', 'archived')
-        .order('intent_score', { ascending: false })
-        .order('discovered_at', { ascending: false });
+        .order('intent_score', { ascending: false });
       if (error) throw error;
       return data as Lead[];
     },
