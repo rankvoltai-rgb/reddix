@@ -203,6 +203,22 @@ const Scanner = () => {
           </div>
         </div>
 
+        {/* ── Product Context Pill ── */}
+        {profile?.product_name && (
+          <div className="flex items-center gap-2 px-1">
+            <Badge variant="outline" className="gap-1.5 text-xs font-normal py-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              Scanning for: <span className="font-medium">{profile.product_name}</span>
+            </Badge>
+            <button
+              onClick={() => navigate("/settings")}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Edit
+            </button>
+          </div>
+        )}
+
         {/* ── Config Strip ── */}
         <div className="space-y-3 rounded-lg border bg-card p-4">
           {/* Subreddits row */}
@@ -284,7 +300,6 @@ const Scanner = () => {
               </div>
             )}
           </div>
-
         </div>
 
         {/* ── Leads (Hero) ── */}

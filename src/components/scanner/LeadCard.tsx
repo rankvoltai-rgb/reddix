@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck } from "lucide-react";
+import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -13,6 +13,7 @@ interface LeadCardProps {
   lead: Lead;
   onGenerateReply: (leadId: string) => void;
   onSaveLead?: (leadId: string) => void;
+  onDismiss?: (leadId: string) => void;
   isGenerating: boolean;
   isSaving?: boolean;
   showSaveButton?: boolean;
@@ -41,7 +42,7 @@ const intentConfig = {
   },
 };
 
-export function LeadCard({ lead, onGenerateReply, onSaveLead, isGenerating, isSaving = false, showSaveButton = true }: LeadCardProps) {
+export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGenerating, isSaving = false, showSaveButton = true }: LeadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const intentLevel = lead.intent_level || "low";
@@ -54,7 +55,17 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, isGenerating, isSa
   const shouldShowExpand = lead.thread_content && lead.thread_content.length > 150;
 
   return (
-    <Card className={cn("border-l-4 hover:shadow-md transition-shadow", config.borderColor)}>
+    <Card className={cn("border-l-4 hover:shadow-md transition-shadow group relative", config.borderColor)}>
+      {/* Dismiss button */}
+      {onDismiss && (
+        <button
+          onClick={() => onDismiss(lead.id)}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+          title="Dismiss lead"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
       <CardContent className="p-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
