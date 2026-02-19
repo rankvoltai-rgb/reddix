@@ -27,7 +27,6 @@ const Scanner = () => {
   const queryClient = useQueryClient();
 
   const [newSubreddit, setNewSubreddit] = useState("");
-  const [newKeyword, setNewKeyword] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
 
@@ -59,21 +58,6 @@ const Scanner = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('monitored_subreddits')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  // Fetch keywords
-  const { data: keywords = [], isLoading: keywordsLoading } = useQuery({
-    queryKey: ['keywords', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('keywords')
         .select('*')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
@@ -116,36 +100,6 @@ const Scanner = () => {
     },
   });
 
-  const addKeyword = useMutation({
-    mutationFn: async (keyword: string) => {
-      const { error } = await supabase
-        .from('keywords')
-        .insert({ keyword: keyword.trim(), user_id: user!.id });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['keywords'] });
-      setNewKeyword("");
-      toast({ title: "Keyword added" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const removeKeyword = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('keywords')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['keywords'] });
-      toast({ title: "Keyword removed" });
-    },
-  });
 
   const toggleAutoPilot = async (enabled: boolean) => {
     updateProfile({ auto_pilot_enabled: enabled });
@@ -156,10 +110,10 @@ const Scanner = () => {
   };
 
   const handleScan = async () => {
-    if (subreddits.length === 0 || keywords.length === 0) {
+    if (subreddits.length === 0) {
       toast({
         title: "Configuration required",
-        description: "Add at least one subreddit and one keyword to scan.",
+        description: "Add at least one subreddit to scan.",
         variant: "destructive",
       });
       return;
@@ -184,7 +138,7 @@ const Scanner = () => {
     }
   };
 
-  const isConfigured = subreddits.length > 0 && keywords.length > 0;
+  const isConfigured = subreddits.length > 0;
   const lastScan = profile?.last_scan_at ? new Date(profile.last_scan_at) : null;
   const autoPilotEnabled = profile?.auto_pilot_enabled ?? true;
   const nextScheduledScan = profile?.next_scheduled_scan_at ? new Date(profile.next_scheduled_scan_at) : null;
@@ -244,7 +198,7 @@ const Scanner = () => {
               <span className="text-primary font-medium">Next: {getNextScanText()}</span>
             )}
             {isConfigured && (
-              <span>{subreddits.length} subs · {keywords.length} topics</span>
+              <span>{subreddits.length} subreddit{subreddits.length !== 1 ? 's' : ''}</span>
             )}
           </div>
         </div>
@@ -331,66 +285,6 @@ const Scanner = () => {
             )}
           </div>
 
-          <div className="h-px bg-border" />
-
-          {/* Keywords row */}
-          <div className="space-y-2">
-            <span className="text-sm font-medium">Topics</span>
-            <div className="flex flex-wrap items-center gap-2">
-              {keywordsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                keywords.map((kw: any) => (
-                  <Badge
-                    key={kw.id}
-                    variant={kw.is_auto_generated ? "default" : "outline"}
-                    className="gap-1 pr-1"
-                  >
-                    {kw.keyword}
-                    {kw.is_auto_generated && <Sparkles className="h-2.5 w-2.5 ml-0.5" />}
-                    <button
-                      onClick={() => removeKeyword.mutate(kw.id)}
-                      className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))
-              )}
-              <div className="flex items-center gap-1">
-                <Input
-                  placeholder="Add topic…"
-                  value={newKeyword}
-                  onChange={(e) => setNewKeyword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && newKeyword && addKeyword.mutate(newKeyword)}
-                  className="h-7 w-40 text-xs"
-                />
-                <Button
-                  onClick={() => newKeyword && addKeyword.mutate(newKeyword)}
-                  disabled={!newKeyword || addKeyword.isPending}
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-            {keywords.length === 0 && (
-              <div className="flex flex-wrap gap-1">
-                {["SaaS tools", "Web development", "Marketing automation", "Project management"].map((kw) => (
-                  <Badge
-                    key={kw}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-accent text-xs"
-                    onClick={() => addKeyword.mutate(kw)}
-                  >
-                    + {kw}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* ── Leads (Hero) ── */}

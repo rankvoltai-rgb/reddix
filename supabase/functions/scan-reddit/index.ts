@@ -168,14 +168,14 @@ serve(async (req) => {
       }
     }
 
-    // Fetch user's subreddits and keywords
-    const [subredditsRes, keywordsRes] = await Promise.all([
-      supabase.from('monitored_subreddits').select('subreddit_name').eq('user_id', userId).eq('is_active', true),
-      supabase.from('keywords').select('keyword').eq('user_id', userId).eq('is_active', true),
-    ]);
+    // Fetch user's subreddits
+    const { data: subredditsData } = await supabase
+      .from('monitored_subreddits')
+      .select('subreddit_name')
+      .eq('user_id', userId)
+      .eq('is_active', true);
 
-    const subreddits = subredditsRes.data || [];
-    const keywords = keywordsRes.data || [];
+    const subreddits = subredditsData || [];
 
     if (subreddits.length === 0) {
       if (scanRecord) {
@@ -191,32 +191,67 @@ serve(async (req) => {
       );
     }
 
-    if (keywords.length === 0) {
-      if (scanRecord) {
-        await supabase.from('scan_history').update({
-          status: 'failed',
-          error_message: 'No topics configured',
-          completed_at: new Date().toISOString(),
-        }).eq('id', scanRecord.id);
-      }
-      return new Response(
-        JSON.stringify({ success: false, error: 'No topics configured. Add topics to scan.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Update last_scan_at timestamp for rate limiting
     await supabase
       .from('profiles')
       .update({ last_scan_at: new Date().toISOString() })
       .eq('id', userId);
 
-    // Topics are the user's niche keywords
-    const topics = keywords.map(kw => kw.keyword);
-    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics`);
+    // Dynamically generate search terms from product profile using AI
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    let topics: string[] = [];
+
+    try {
+      const genPrompt = `Given this product, generate 5-8 short search terms (2-5 words each) that someone on Reddit would use when looking for this type of solution. Focus on pain points, use cases, and problem descriptions — NOT the product name itself.
+
+Product: ${profile.product_name || 'Unknown'}
+Description: ${profile.company_description || 'Not provided'}
+Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
+Target Audience: ${profile.value_proposition || 'Not specified'}
+
+Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
+
+      const genResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [
+            { role: 'system', content: 'Return only valid JSON. No markdown, no explanation.' },
+            { role: 'user', content: genPrompt },
+          ],
+        }),
+      });
+
+      if (genResponse.ok) {
+        const genData = await genResponse.json();
+        const content = genData.choices?.[0]?.message?.content || '';
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          topics = JSON.parse(jsonMatch[0]);
+          console.log('AI-generated search terms:', topics);
+        }
+      }
+    } catch (e) {
+      console.error('AI search term generation failed, using fallback:', e);
+    }
+
+    // Fallback: extract terms from profile if AI failed
+    if (topics.length === 0) {
+      const fallbackParts = [
+        profile.product_name,
+        ...(profile.company_description || '').split(/[.,;]/).slice(0, 3).map((s: string) => s.trim()).filter(Boolean),
+      ].filter(Boolean) as string[];
+      topics = fallbackParts.slice(0, 5);
+      console.log('Fallback search terms:', topics);
+    }
+
+    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} dynamic topics`);
 
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
 
     if (!firecrawlKey || !lovableKey) {
       if (scanRecord) {
