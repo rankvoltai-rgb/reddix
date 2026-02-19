@@ -1,67 +1,62 @@
 
 
-# Scanner Page Simplification
+# Remove Topics: Make Scanning Fully Autonomous
 
-## Problem
-The current Scanner page has **9 distinct visual sections** stacked vertically: header, auto-pilot card, 4 stat cards, scan results banner, collapsible config panel (2 cards), subreddit discovery, scan history, and leads. This creates cognitive overload -- users scroll past noise to reach the only thing that matters: **leads**.
+## Insight
+The "Topics" section is manual friction that shouldn't exist. The `scan-reddit` edge function already has the user's full product context from onboarding (product name, description, features, competitors, audience). Right now it requires a separate `keywords` table to build search queries — but those keywords are just derivatives of the product profile that AI can generate on-the-fly.
 
-## Design Philosophy
-One primary action surface. Leads front and center. Everything else is supporting context, not a section.
+The 400 IQ move: **generate search queries dynamically at scan time from the product profile**, eliminating the keywords table dependency entirely from the scanning flow.
 
-## Changes
+## What Changes
 
-### 1. Unified Command Bar (replaces header + auto-pilot card + scan results)
-A single horizontal bar at the top containing:
-- "Scan Now" button (primary action)
-- Auto-pilot toggle (compact, inline -- just a switch + label)
-- Last scan time + next scan countdown (small text)
-- Subreddit/keyword count as subtle context ("4 subs, 12 topics")
+### 1. Remove Topics UI from Scanner page
+- Delete the entire "Topics" row (keyword badges, add input, suggestions)
+- Remove keyword-related state, queries, and mutations from Scanner.tsx
+- The config strip becomes just subreddits — one clean row
+- The "Scan Now" button only requires subreddits (not keywords)
 
-This collapses 3 sections into one slim row.
+### 2. Update `scan-reddit` edge function
+- Remove the keywords table fetch and the check that fails when keywords are empty
+- Instead, dynamically generate 5-8 search terms from the profile at scan time using a fast AI call (gemini-2.5-flash-lite)
+- These ephemeral search terms are used for that scan only — no persistence needed
+- Falls back to product name + description keywords if AI call fails
+- This makes every scan contextually fresh (search terms can evolve as the product evolves)
 
-### 2. Remove Quick Stats Grid
-The 4 stat cards (Total Leads, Hot Leads, Recent Scans, Posts Analyzed) duplicate information already visible in the leads list and scan history. Remove entirely. The scan result feedback becomes a temporary toast notification instead of a persistent card.
+### 3. Keep keywords table but make it optional/hidden
+- The table stays for backwards compatibility and for the `auto-generate-keywords` function
+- It becomes an internal system detail, not user-facing
+- Existing keywords won't break anything
 
-### 3. Always-Visible Compact Config (replaces collapsible config + discovery)
-Instead of a hidden config panel with two large cards, show a single compact section below the command bar:
-- Two rows of tag-style badges for subreddits and keywords with inline add inputs
-- "Discover" button for AI subreddit discovery opens as a dialog instead of an inline card
-- No card wrappers -- just clean inline elements with subtle separators
-
-### 4. Remove Scan History Section
-Low-value section. Last scan info is in the command bar. Historical data belongs on a dedicated analytics page, not the scanner workflow.
-
-### 5. Leads as Hero Section (unchanged structure, cleaner container)
-LeadsSection stays as-is but becomes the dominant visual element with no competing sections above.
+## Result
+- Scanner config strip: just subreddits + discover button
+- Zero keyword management friction
+- Scans automatically know what to search for based on product profile
+- Search terms stay fresh and contextual
 
 ---
 
 ## Technical Details
 
 ### Files Modified
-- **src/pages/Scanner.tsx** -- Major rewrite: remove stat cards, scan history query, scan result card, auto-pilot card. Build unified command bar. Inline config with compact layout. Move SubredditDiscovery into a Dialog.
-- **src/components/scanner/SubredditDiscovery.tsx** -- Wrap content to work inside a Dialog (pass open/onOpenChange props or use internal trigger).
 
-### Files Unchanged
-- LeadCard.tsx, LeadsSection.tsx, ReplyDialog.tsx -- no changes needed
+**src/pages/Scanner.tsx**
+- Remove `newKeyword` state
+- Remove `keywords` query (`useQuery` for keywords table)
+- Remove `addKeyword` and `removeKeyword` mutations
+- Remove the keywords/topics row from the config strip UI
+- Update `isConfigured` to only check `subreddits.length > 0`
+- Update config count text to only show subreddit count
 
-### Removed Elements
-- 4x stat Card grid (lines 364-426)
-- Scan results Card (lines 428-447)
-- Auto-pilot status Card (lines 317-362)  
-- Scan history Card + query (lines 89-103, 625-661)
-- Empty state Card for unconfigured state (lines 597-614)
+**supabase/functions/scan-reddit/index.ts**
+- Remove keywords table fetch (lines 173-174)
+- Remove keywords empty check (lines 194-206)
+- Add a new step: generate search terms from profile using AI (fast call to gemini-2.5-flash-lite)
+- Use generated terms in place of `topics` variable for search strategies A and D
+- Add fallback: if AI fails, extract simple terms from product_name + company_description via string splitting
+- Keep competitor strategy (Strategy B) unchanged — it already uses profile data directly
 
-### New Structure (top to bottom)
-1. **Command bar** -- single flex row with scan button, auto-pilot switch, timing info, config counts
-2. **Config strip** -- two compact rows: subreddits as badges + input, keywords as badges + input, discover button
-3. **LeadsSection** -- full width, the hero
-
-### State Simplification
-- Remove `scanResult` state -- use toast notifications instead
-- Remove `showConfig` state -- config is always visible in compact form
-- Remove `countdown` timer logic -- simplify to just showing "Next: Xh Ym" text from `next_scheduled_scan_at`
-- Remove `scanHistory` query entirely
-
-Page drops from ~670 lines to ~350 lines.
+### Files NOT Modified
+- `auto-generate-keywords` edge function — kept as-is for any future use
+- `keywords` table — stays in database, just not queried by scanner UI
+- LeadsSection, LeadCard, SubredditDiscovery — no changes needed
 
