@@ -105,6 +105,19 @@ export function ReplyDialog({
     }
   };
 
+  const handleCopyAndGo = async () => {
+    try {
+      await navigator.clipboard.writeText(reply);
+      toast({ title: "Reply copied! Opening thread..." });
+      if (lead?.thread_url) {
+        window.open(lead.thread_url, '_blank');
+      }
+      onOpenChange(false);
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
   const handleSelectVariant = (variant: ReplyVariant) => {
     setSelectedVariant(variant.type);
     onReplyChange(variant.content);
@@ -232,11 +245,19 @@ export function ReplyDialog({
             )}
           </Button>
           <Button
+            variant="outline"
             onClick={handleOpenReddit}
             className="gap-2"
           >
             <ExternalLink className="h-4 w-4" />
-            Open Reddit Post
+            Open Thread
+          </Button>
+          <Button
+            onClick={handleCopyAndGo}
+            className="gap-2"
+          >
+            <Copy className="h-4 w-4" />
+            Copy & Go
           </Button>
         </DialogFooter>
       </DialogContent>
