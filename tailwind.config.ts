@@ -16,6 +16,9 @@ export default {
       fontFamily: {
         sans: ['"Open Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
+      fontWeight: {
+        bold: "600",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
