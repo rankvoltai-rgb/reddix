@@ -57,8 +57,8 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:3000";
     logStep("Origin detected", { origin });
     
-    const successUrl = `${origin}/onboarding?checkout=success`;
-    const cancelUrl = `${origin}/subscribe`;
+    const successUrl = `${origin}/onboarding?checkout=success&step=3`;
+    const cancelUrl = `${origin}/onboarding`;
     logStep("Redirect URLs configured", { successUrl, cancelUrl });
     
     const session = await stripe.checkout.sessions.create({

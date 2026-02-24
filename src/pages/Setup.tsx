@@ -39,7 +39,7 @@ export default function Setup() {
   // Redirect if already completed setup
   useEffect(() => {
     if (!profileLoading && profile?.initial_setup_completed) {
-      navigate('/subscribe');
+      navigate('/onboarding');
     }
   }, [profile, profileLoading, navigate]);
 
@@ -89,9 +89,9 @@ export default function Setup() {
         onSuccess: () => {
           toast({
             title: 'Setup complete!',
-            description: 'Now choose a plan to get started.',
+            description: 'Let\'s continue with onboarding.',
           });
-          navigate('/subscribe');
+          navigate('/onboarding');
         },
         onError: () => {
           toast({
@@ -139,13 +139,6 @@ export default function Setup() {
               <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">
                 2
               </div>
-              <span className="text-muted-foreground">Plan</span>
-            </div>
-            <div className="w-8 h-px bg-border" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">
-                3
-              </div>
               <span className="text-muted-foreground">Setup</span>
             </div>
           </div>
@@ -161,7 +154,7 @@ export default function Setup() {
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
               <User className="w-3 h-3" />
-              Step 1 of 3 • Profile Setup
+              Step 1 of 2 • Profile Setup
             </div>
           </div>
 

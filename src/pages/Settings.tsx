@@ -375,7 +375,7 @@ export default function Settings() {
                   </div>
                 </div>
                 {!subscribed && (
-                  <Button onClick={() => navigate('/subscribe')}>
+                  <Button onClick={() => navigate('/onboarding')}>
                     View Plans
                   </Button>
                 )}

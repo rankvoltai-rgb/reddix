@@ -51,9 +51,10 @@ export default function Dashboard() {
       return;
     }
 
-    // Check subscription
-    if (!subLoading && !isVerifyingSubscription && !subscribed && profile?.initial_setup_completed) {
-      navigate('/subscribe');
+    // Check subscription (allow free plan users through)
+    const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
+    if (!subLoading && !isVerifyingSubscription && !hasAccess && profile?.initial_setup_completed) {
+      navigate('/onboarding');
       return;
     }
 
