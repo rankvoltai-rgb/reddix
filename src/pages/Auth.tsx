@@ -159,9 +159,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="flex w-[95vw] h-[95vh] rounded-3xl overflow-hidden shadow-xl">
       {/* Left Panel - Form */}
-      <div className="w-full lg:w-[45%] flex flex-col bg-background px-6 py-8 md:px-12 lg:px-16">
+      <div className="w-full lg:w-[45%] flex flex-col bg-background px-6 py-8 md:px-12 lg:px-16 overflow-y-auto">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-16">
           <img src={logo} alt="Reddix" className="h-7 w-auto" />
@@ -291,6 +292,7 @@ export default function Auth() {
           <LeadPreviewCard className="translate-x-4" />
           <LeadPreviewCard className="translate-x-8" />
         </div>
+      </div>
       </div>
     </div>
   );
