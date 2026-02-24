@@ -39,8 +39,9 @@ const Scanner = () => {
       navigate("/onboarding");
       return;
     }
-    if (!subLoading && !subscribed && profile?.onboarding_completed) {
-      navigate("/subscribe");
+    const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
+    if (!subLoading && !hasAccess && profile?.onboarding_completed) {
+      navigate("/onboarding");
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
 

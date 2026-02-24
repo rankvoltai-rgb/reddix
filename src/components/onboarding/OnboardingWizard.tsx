@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, ArrowLeft, Check, Loader2, X, Package, Sparkles, Users, Shield, Trophy, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { SUBSCRIPTION_TIERS, SubscriptionPlan } from '@/lib/subscriptionTiers';
+import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { ArrowRight, ArrowLeft, Check, Loader2, X, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 interface OnboardingData {
@@ -22,6 +27,7 @@ interface OnboardingData {
   pricing_model: string;
   unique_differentiators: string;
   tone: 'professional' | 'casual' | 'friendly' | 'technical' | 'witty';
+  selected_plan: SubscriptionPlan | null;
 }
 
 const TONE_OPTIONS = [
@@ -33,32 +39,39 @@ const TONE_OPTIONS = [
 ] as const;
 
 const PRICING_OPTIONS = [
-  { value: 'free', label: 'Free', description: 'No cost to use', icon: '🆓' },
-  { value: 'freemium', label: 'Freemium', description: 'Free tier with paid upgrades', icon: '🎁' },
-  { value: 'free-trial', label: 'Free Trial', description: 'Trial period before payment', icon: '⏱️' },
-  { value: 'paid', label: 'Paid Only', description: 'Requires payment to use', icon: '💰' },
-  { value: 'enterprise', label: 'Enterprise', description: 'Custom pricing for businesses', icon: '🏢' },
+  { value: 'free', label: 'Free', icon: '🆓' },
+  { value: 'freemium', label: 'Freemium', icon: '🎁' },
+  { value: 'free-trial', label: 'Free Trial', icon: '⏱️' },
+  { value: 'paid', label: 'Paid Only', icon: '💰' },
+  { value: 'enterprise', label: 'Enterprise', icon: '🏢' },
 ] as const;
 
-const STEPS = [
-  { id: 1, title: 'Your Product', shortTitle: 'Product', description: 'Tell us about what you\'re building', icon: Package },
-  { id: 2, title: 'Key Features', shortTitle: 'Features', description: 'What are your top selling points?', icon: Sparkles },
-  { id: 3, title: 'Target Audience', shortTitle: 'Audience', description: 'Who are you trying to reach?', icon: Users },
-  { id: 4, title: 'Competition', shortTitle: 'Competition', description: 'Know your market', icon: Shield },
-  { id: 5, title: 'Social Proof', shortTitle: 'Proof', description: 'Success stories & pricing', icon: Trophy },
-  { id: 6, title: 'Communication', shortTitle: 'Tone', description: 'How should we sound?', icon: MessageSquare },
-];
+const TOTAL_STEPS = 6;
 
 export default function OnboardingWizard() {
+  const [searchParams] = useSearchParams();
+  const { session } = useAuth();
+  const { refreshSubscription } = useSubscription();
   const [step, setStep] = useState(1);
   const [featureInput, setFeatureInput] = useState('');
   const [competitorInput, setCompetitorInput] = useState('');
   const [objectionInput, setObjectionInput] = useState('');
+  const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Pre-populate data from profile (collected during initial setup)
+
+  // Handle checkout=success redirect from Stripe
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    const stepParam = searchParams.get('step');
+    if (checkout === 'success') {
+      refreshSubscription();
+      if (stepParam) setStep(Number(stepParam));
+      else setStep(3);
+    }
+  }, []);
+
   const [data, setData] = useState<OnboardingData>({
     product_name: '',
     product_url: '',
@@ -72,9 +85,9 @@ export default function OnboardingWizard() {
     pricing_model: 'freemium',
     unique_differentiators: '',
     tone: 'friendly',
+    selected_plan: null,
   });
 
-  // Pre-populate form with existing profile data
   useEffect(() => {
     if (profile) {
       setData(prev => ({
@@ -111,29 +124,58 @@ export default function OnboardingWizard() {
 
   const canProceed = () => {
     switch (step) {
-      case 1:
-        return data.product_name.trim() && data.company_description.trim();
-      case 2:
-        return data.key_features.length >= 1 && data.value_proposition.trim();
-      case 3:
-        return data.target_audience.trim();
-      case 4:
-        return true;
-      case 5:
-        return true;
-      case 6:
-        return true;
-      default:
-        return false;
+      case 1: return data.product_name.trim() && data.target_audience.trim();
+      case 2: return data.selected_plan !== null;
+      case 3: return data.key_features.length >= 1 && data.value_proposition.trim();
+      case 4: return true;
+      case 5: return true;
+      case 6: return true;
+      default: return false;
+    }
+  };
+
+  const handlePlanSelect = async (planKey: SubscriptionPlan) => {
+    if (planKey === 'free') {
+      updateField('selected_plan', 'free');
+    } else if (planKey === 'premium') {
+      if (!session?.access_token) {
+        toast({ variant: 'destructive', title: 'Please sign in to continue' });
+        return;
+      }
+      setLoadingPlan('premium');
+      try {
+        const tier = SUBSCRIPTION_TIERS.premium;
+        const { data: checkoutData, error } = await supabase.functions.invoke('create-checkout', {
+          body: { priceId: tier.price_id },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (error) throw error;
+        if (checkoutData?.url) window.location.href = checkoutData.url;
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
+      } finally {
+        setLoadingPlan(null);
+      }
+    } else if (planKey === 'enterprise') {
+      window.location.href = 'mailto:support@reddix.app?subject=Enterprise%20Plan%20Inquiry';
+    }
+  };
+
+  const handleContinueFromPlan = () => {
+    if (data.selected_plan === 'free') {
+      // Save selected_plan to profile immediately
+      updateProfile(
+        { selected_plan: 'free' } as any,
+        { onSuccess: () => setStep(3) }
+      );
     }
   };
 
   const handleComplete = async () => {
-    // Calculate initial next_scheduled_scan_at (4 hours from now)
     const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
-    
+
     updateProfile(
-      { 
+      {
         product_name: data.product_name,
         product_url: data.product_url || null,
         company_description: data.company_description,
@@ -149,51 +191,30 @@ export default function OnboardingWizard() {
         onboarding_completed: true,
         auto_pilot_enabled: true,
         next_scheduled_scan_at: nextScan.toISOString(),
-      },
+      } as any,
       {
         onSuccess: async () => {
-          toast({
-            title: 'Setup complete!',
-            description: 'Configuring your scanner automatically...',
-          });
-          
-          // Trigger auto-setup in the background
+          toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
           triggerAutoSetup();
-          
           navigate('/dashboard');
         },
         onError: () => {
-          toast({
-            variant: 'destructive',
-            title: 'Something went wrong',
-            description: 'Please try again.',
-          });
+          toast({ variant: 'destructive', title: 'Something went wrong', description: 'Please try again.' });
         },
       }
     );
   };
-  
+
   const triggerAutoSetup = async () => {
     try {
-      // Import dynamically to avoid circular deps
       const { firecrawlApi } = await import('@/lib/api/firecrawl');
-      
-      // Auto-generate keywords from profile data
-      console.log('Auto-generating keywords...');
       const keywordsResult = await firecrawlApi.autoGenerateKeywords();
-      if (keywordsResult.success) {
-        console.log(`Generated ${keywordsResult.inserted} keywords`);
-      }
-      
-      // Auto-discover and add subreddits
-      console.log('Discovering subreddits...');
+      if (keywordsResult.success) console.log(`Generated ${keywordsResult.inserted} keywords`);
+
       const subredditsResult = await firecrawlApi.discoverSubreddits();
       if (subredditsResult.success && subredditsResult.suggestions) {
-        // Add top 5 subreddits automatically
         const topSubreddits = subredditsResult.suggestions.slice(0, 5);
-        const { supabase } = await import('@/integrations/supabase/client');
         const { data: { user } } = await supabase.auth.getUser();
-        
         if (user) {
           for (const sub of topSubreddits) {
             await supabase.from('monitored_subreddits').upsert({
@@ -202,466 +223,247 @@ export default function OnboardingWizard() {
               is_active: true,
             }, { onConflict: 'user_id,subreddit_name' }).select();
           }
-          console.log(`Added ${topSubreddits.length} subreddits`);
         }
       }
-      
-      // Trigger first scan
-      console.log('Running initial scan...');
+
       await firecrawlApi.scanForLeads('auto');
-      console.log('Initial scan complete');
-      
     } catch (error) {
       console.error('Auto-setup error:', error);
-      // Non-blocking - user can still use the app
     }
   };
 
-  const progressPercentage = Math.round((step / STEPS.length) * 100);
-  const currentStep = STEPS[step - 1];
-  const StepIcon = currentStep.icon;
+  const progressPercentage = Math.round((step / TOTAL_STEPS) * 100);
+
+  const stepTitles: Record<number, string> = {
+    1: 'Personalize your lead generation',
+    2: 'Choose your lead generation plan',
+    3: 'Key features & value proposition',
+    4: 'Competition & objections',
+    5: 'Social proof & pricing',
+    6: 'Communication tone',
+  };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Subtle background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,hsl(var(--primary)/0.04)_0%,transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,hsl(var(--primary)/0.03)_0%,transparent_50%)]" />
-      
-      {/* Floating decorations */}
-      <div className="absolute top-32 left-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" />
-      <div className="absolute bottom-32 right-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '3s' }} />
-
-      <div className="relative flex flex-col items-center min-h-screen px-4 py-8">
-        {/* Logo */}
-        <div className="mb-6">
-          <img src={logo} alt="Reddix" className="h-9 w-auto" />
-        </div>
-
-        {/* Progress Stepper */}
-        <div className="w-full max-w-2xl mb-8">
-          <div className="flex items-center justify-between">
-            {STEPS.map((s, index) => {
-              const isCompleted = step > s.id;
-              const isCurrent = step === s.id;
-              const Icon = s.icon;
-              
-              return (
-                <div key={s.id} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div 
-                      className={`
-                        w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300
-                        ${isCompleted ? 'bg-primary text-primary-foreground shadow-sm' : ''}
-                        ${isCurrent ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 shadow-sm' : ''}
-                        ${!isCompleted && !isCurrent ? 'bg-muted text-muted-foreground' : ''}
-                      `}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        <Icon className="w-4 h-4" />
-                      )}
-                    </div>
-                    <span className={`text-xs mt-2 font-medium hidden sm:block ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {s.shortTitle}
-                    </span>
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <div className={`w-6 sm:w-10 h-0.5 mx-1 sm:mx-2 transition-colors duration-300 ${step > s.id ? 'bg-primary' : 'bg-border'}`} />
-                  )}
-                </div>
-              );
-            })}
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl">
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          {/* Header with logo */}
+          <div className="px-8 pt-8 pb-6">
+            <img src={logo} alt="Reddix" className="h-8 w-auto mb-6" />
+            <h2 className="text-2xl font-bold text-foreground">{stepTitles[step]}</h2>
           </div>
-        </div>
 
-        {/* Main Card */}
-        <div className="w-full max-w-xl">
-          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
-            {/* Step Header */}
-            <div className="bg-gradient-to-b from-muted/50 to-transparent px-8 py-6 border-b border-border">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <StepIcon className="w-6 h-6 text-primary" />
+          {/* Content */}
+          <div className="px-8 pb-6">
+            <div className="min-h-[300px]">
+              {/* Step 1: Personalization */}
+              {step === 1 && (
+                <div className="space-y-5 animate-fade-in">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Business Name <span className="text-primary">*</span></label>
+                    <Input placeholder="e.g., Acme Analytics" value={data.product_name} onChange={(e) => updateField('product_name', e.target.value)} className="h-11" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Website URL <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <Input placeholder="https://yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Target Audience <span className="text-primary">*</span></label>
+                    <Textarea placeholder="Describe your ideal customers..." value={data.target_audience} onChange={(e) => updateField('target_audience', e.target.value)} rows={4} className="resize-none" />
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">{currentStep.title}</h2>
-                  <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+              )}
+
+              {/* Step 2: Plan Selection */}
+              {step === 2 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier]) => {
+                      const isSelected = data.selected_plan === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => handlePlanSelect(key)}
+                          disabled={loadingPlan !== null}
+                          className={`relative flex flex-col items-start p-5 rounded-xl border-2 text-left transition-all duration-200 ${
+                            isSelected ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : tier.popular ? 'border-primary/50' : 'border-border hover:border-primary/30'
+                          }`}
+                        >
+                          {tier.popular && (
+                            <Badge variant="default" className="absolute -top-2.5 right-3 text-xs px-2 py-0.5">
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Recommended
+                            </Badge>
+                          )}
+                          <span className="text-base font-bold text-foreground">{tier.name}</span>
+                          <span className="text-2xl font-bold text-foreground mt-1">
+                            {tier.price !== null ? `$${tier.price.toFixed(2)}` : 'Custom'}
+                            {tier.price !== null && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                          </span>
+                          <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                            {tier.features.map((f, i) => (
+                              <li key={i} className="flex items-start gap-1.5">
+                                <Check className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-4 w-full">
+                            <div className={`w-full py-2 rounded-lg text-center text-sm font-medium transition-colors ${
+                              isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                            }`}>
+                              {loadingPlan === key ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : tier.cta}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime</p>
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* Step Content */}
-            <div className="p-8">
-              <div className="min-h-[280px]">
-                {step === 1 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Product Name <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        placeholder="e.g., Acme Analytics"
-                        value={data.product_name}
-                        onChange={(e) => updateField('product_name', e.target.value)}
-                        className="h-11"
-                      />
+              {/* Step 3: Features + Value Prop */}
+              {step === 3 && (
+                <div className="space-y-5 animate-fade-in">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">Key Features <span className="text-xs text-muted-foreground font-normal">(up to 5)</span> <span className="text-primary">*</span></label>
+                    <div className="flex gap-2">
+                      <Input placeholder="e.g., Real-time analytics dashboard" value={featureInput} onChange={(e) => setFeatureInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('key_features', featureInput); setFeatureInput(''); } }} className="h-11" />
+                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('key_features', featureInput); setFeatureInput(''); }} disabled={data.key_features.length >= 5}>Add</Button>
                     </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Product URL <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                      </label>
-                      <Input
-                        placeholder="e.g., https://acme.com"
-                        value={data.product_url}
-                        onChange={(e) => updateField('product_url', e.target.value)}
-                        className="h-11"
-                      />
-                      <p className="text-xs text-muted-foreground">For natural link mentions in replies</p>
-                    </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Product Description <span className="text-primary">*</span>
-                      </label>
-                      <Textarea
-                        placeholder="What does your product do? Be specific about the problems it solves..."
-                        value={data.company_description}
-                        onChange={(e) => updateField('company_description', e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Key Features <span className="text-muted-foreground text-xs font-normal">(add up to 5)</span> <span className="text-primary">*</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="e.g., Real-time analytics dashboard"
-                          value={featureInput}
-                          onChange={(e) => setFeatureInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addToArray('key_features', featureInput);
-                              setFeatureInput('');
-                            }
-                          }}
-                          className="h-11"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="secondary"
-                          className="h-11 px-4"
-                          onClick={() => {
-                            addToArray('key_features', featureInput);
-                            setFeatureInput('');
-                          }}
-                          disabled={data.key_features.length >= 5}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      {data.key_features.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {data.key_features.map((feature, i) => (
-                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
-                              {feature}
-                              <button onClick={() => removeFromArray('key_features', i)} className="ml-2 hover:text-destructive transition-colors">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        What Makes You Different? <span className="text-primary">*</span>
-                      </label>
-                      <Textarea
-                        placeholder="Why should someone choose you over alternatives? What's your unique angle?"
-                        value={data.value_proposition}
-                        onChange={(e) => updateField('value_proposition', e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                      />
-                    </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Unique Differentiators <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                      </label>
-                      <Textarea
-                        placeholder="Any patents, proprietary tech, exclusive partnerships, or unique methodologies?"
-                        value={data.unique_differentiators}
-                        onChange={(e) => updateField('unique_differentiators', e.target.value)}
-                        rows={3}
-                        className="resize-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {step === 3 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Describe Your Ideal Customer <span className="text-primary">*</span>
-                      </label>
-                      <Textarea
-                        placeholder="Describe your ideal customers. What roles do they have? What problems do they face? Which subreddits might they be in?"
-                        value={data.target_audience}
-                        onChange={(e) => updateField('target_audience', e.target.value)}
-                        rows={6}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        The more specific, the better. This helps us identify relevant conversations.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {step === 4 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Competitors <span className="text-muted-foreground text-xs font-normal">(optional, add up to 5)</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="e.g., Mixpanel, Amplitude"
-                          value={competitorInput}
-                          onChange={(e) => setCompetitorInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addToArray('competitor_names', competitorInput);
-                              setCompetitorInput('');
-                            }
-                          }}
-                          className="h-11"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="secondary"
-                          className="h-11 px-4"
-                          onClick={() => {
-                            addToArray('competitor_names', competitorInput);
-                            setCompetitorInput('');
-                          }}
-                          disabled={data.competitor_names.length >= 5}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      {data.competitor_names.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {data.competitor_names.map((name, i) => (
-                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
-                              {name}
-                              <button onClick={() => removeFromArray('competitor_names', i)} className="ml-2 hover:text-destructive transition-colors">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground">Helps AI understand what alternatives users might mention</p>
-                    </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Common Objections <span className="text-muted-foreground text-xs font-normal">(optional, add up to 5)</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder='"Too expensive", "Hard to set up"'
-                          value={objectionInput}
-                          onChange={(e) => setObjectionInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addToArray('common_objections', objectionInput);
-                              setObjectionInput('');
-                            }
-                          }}
-                          className="h-11"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="secondary"
-                          className="h-11 px-4"
-                          onClick={() => {
-                            addToArray('common_objections', objectionInput);
-                            setObjectionInput('');
-                          }}
-                          disabled={data.common_objections.length >= 5}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      {data.common_objections.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {data.common_objections.map((objection, i) => (
-                            <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm group hover:bg-destructive/10 transition-colors">
-                              {objection}
-                              <button onClick={() => removeFromArray('common_objections', i)} className="ml-2 hover:text-destructive transition-colors">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground">AI will preemptively address these concerns</p>
-                    </div>
-                  </div>
-                )}
-
-                {step === 5 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Success Stories <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                      </label>
-                      <Textarea
-                        placeholder='"Helped Company X increase conversions by 40%" or "Used by 500+ startups"'
-                        value={data.success_stories}
-                        onChange={(e) => updateField('success_stories', e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-muted-foreground">Social proof to weave into replies naturally</p>
-                    </div>
-                    
-                    <div className="h-px bg-border" />
-                    
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">Pricing Model</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {PRICING_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateField('pricing_model', option.value)}
-                            className={`
-                              p-3 rounded-xl border-2 text-left transition-all duration-200
-                              ${data.pricing_model === option.value 
-                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                : 'border-border hover:border-primary/50 hover:bg-muted/50'}
-                            `}
-                          >
-                            <div className="text-lg mb-1">{option.icon}</div>
-                            <div className="text-sm font-medium text-foreground">{option.label}</div>
-                            <div className="text-xs text-muted-foreground">{option.description}</div>
-                          </button>
+                    {data.key_features.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {data.key_features.map((f, i) => (
+                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">
+                            {f}
+                            <button onClick={() => removeFromArray('key_features', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button>
+                          </Badge>
                         ))}
                       </div>
-                    </div>
+                    )}
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">What Makes You Different? <span className="text-primary">*</span></label>
+                    <Textarea placeholder="Why should someone choose you over alternatives?" value={data.value_proposition} onChange={(e) => updateField('value_proposition', e.target.value)} rows={4} className="resize-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Unique Differentiators <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <Textarea placeholder="Any patents, proprietary tech, exclusive partnerships?" value={data.unique_differentiators} onChange={(e) => updateField('unique_differentiators', e.target.value)} rows={3} className="resize-none" />
+                  </div>
+                </div>
+              )}
 
-                {step === 6 && (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Reply Tone <span className="text-primary">*</span>
-                      </label>
-                      <p className="text-xs text-muted-foreground">Select your preferred tone for AI-generated replies</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {TONE_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateField('tone', option.value)}
-                            className={`
-                              p-3 rounded-xl border-2 text-left transition-all duration-200
-                              ${data.tone === option.value 
-                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                : 'border-border hover:border-primary/50 hover:bg-muted/50'}
-                            `}
-                          >
-                            <div className="text-lg mb-1">{option.icon}</div>
-                            <div className="text-sm font-medium text-foreground">{option.label}</div>
-                            <div className="text-xs text-muted-foreground">{option.description}</div>
-                          </button>
+              {/* Step 4: Competition + Objections */}
+              {step === 4 && (
+                <div className="space-y-5 animate-fade-in">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">Competitors <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span></label>
+                    <div className="flex gap-2">
+                      <Input placeholder="e.g., Mixpanel" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('competitor_names', competitorInput); setCompetitorInput(''); } }} className="h-11" />
+                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('competitor_names', competitorInput); setCompetitorInput(''); }} disabled={data.competitor_names.length >= 5}>Add</Button>
+                    </div>
+                    {data.competitor_names.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {data.competitor_names.map((n, i) => (
+                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">{n}<button onClick={() => removeFromArray('competitor_names', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button></Badge>
                         ))}
                       </div>
+                    )}
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">Common Objections <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span></label>
+                    <div className="flex gap-2">
+                      <Input placeholder='"Too expensive", "Hard to set up"' value={objectionInput} onChange={(e) => setObjectionInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('common_objections', objectionInput); setObjectionInput(''); } }} className="h-11" />
+                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('common_objections', objectionInput); setObjectionInput(''); }} disabled={data.common_objections.length >= 5}>Add</Button>
+                    </div>
+                    {data.common_objections.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {data.common_objections.map((o, i) => (
+                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">{o}<button onClick={() => removeFromArray('common_objections', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button></Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Social Proof + Pricing Model */}
+              {step === 5 && (
+                <div className="space-y-5 animate-fade-in">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Success Stories <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <Textarea placeholder='"Helped Company X increase conversions by 40%"' value={data.success_stories} onChange={(e) => updateField('success_stories', e.target.value)} rows={4} className="resize-none" />
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">Your Pricing Model</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {PRICING_OPTIONS.map((opt) => (
+                        <button key={opt.value} type="button" onClick={() => updateField('pricing_model', opt.value)} className={`p-3 rounded-xl border-2 text-left transition-all ${data.pricing_model === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                          <div className="text-lg mb-1">{opt.icon}</div>
+                          <div className="text-sm font-medium text-foreground">{opt.label}</div>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Step 6: Tone */}
+              {step === 6 && (
+                <div className="space-y-4 animate-fade-in">
+                  <p className="text-sm text-muted-foreground">Select your preferred tone for AI-generated replies</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {TONE_OPTIONS.map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => updateField('tone', opt.value)} className={`p-3 rounded-xl border-2 text-left transition-all ${data.tone === opt.value ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}>
+                        <div className="text-lg mb-1">{opt.icon}</div>
+                        <div className="text-sm font-medium text-foreground">{opt.label}</div>
+                        <div className="text-xs text-muted-foreground">{opt.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Navigation Footer */}
-            <div className="px-8 py-5 bg-muted/30 border-t border-border">
-              <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setStep((s) => s - 1)}
-                  disabled={step === 1}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
-                </Button>
-
-                {step < 6 ? (
-                  <Button 
-                    type="button"
-                    onClick={() => setStep((s) => s + 1)} 
-                    disabled={!canProceed()}
-                    className="gap-2 group"
-                  >
-                    Continue
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          {/* Footer: progress bar + navigation */}
+          <div className="px-8 py-5 border-t border-border">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Progress value={progressPercentage} className="h-2" />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {step > 1 && step !== 2 && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(s => s - 1)}>
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Back
+                  </Button>
+                )}
+                {step === 2 ? (
+                  data.selected_plan === 'free' ? (
+                    <Button type="button" onClick={handleContinueFromPlan} disabled={isUpdating} className="gap-2">
+                      {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
+                      <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                    </Button>
+                  )
+                ) : step < TOTAL_STEPS ? (
+                  <Button type="button" onClick={() => setStep(s => s + 1)} disabled={!canProceed()} className="gap-2">
+                    Continue <ArrowRight className="w-4 h-4" />
                   </Button>
                 ) : (
-                  <Button 
-                    type="button"
-                    onClick={handleComplete} 
-                    disabled={isUpdating}
-                    className="gap-2"
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Complete Setup
-                      </>
-                    )}
+                  <Button type="button" onClick={handleComplete} disabled={isUpdating} className="gap-2">
+                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Complete Setup</>}
                   </Button>
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="mt-6 text-center">
-            <span className="text-sm text-muted-foreground">
-              Step {step} of {STEPS.length} • {progressPercentage}% complete
-            </span>
           </div>
         </div>
       </div>

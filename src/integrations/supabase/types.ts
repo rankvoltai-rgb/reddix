@@ -138,6 +138,7 @@ export type Database = {
           product_name: string | null
           product_url: string | null
           scan_frequency_hours: number | null
+          selected_plan: string | null
           success_stories: string | null
           target_audience: string | null
           tone: Database["public"]["Enums"]["tone_preference"] | null
@@ -163,6 +164,7 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           scan_frequency_hours?: number | null
+          selected_plan?: string | null
           success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null
@@ -188,6 +190,7 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           scan_frequency_hours?: number | null
+          selected_plan?: string | null
           success_stories?: string | null
           target_audience?: string | null
           tone?: Database["public"]["Enums"]["tone_preference"] | null

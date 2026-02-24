@@ -1,26 +1,25 @@
 export const SUBSCRIPTION_TIERS = {
-  pro: {
-    name: 'Reddix Pro',
-    price_id: 'price_1ShkD4ATaqTexwUQ2VLJGoYi',
-    product_id: 'prod_Tf4LwTxHB5J3hd',
-    price: 29,
+  free: {
+    name: 'Free',
+    price_id: null,
+    product_id: null,
+    price: 0,
     features: [
-      'Unlimited lead discovery',
-      'AI-powered reply generation',
-      'Real-time Reddit monitoring',
-      'Up to 10 subreddits',
-      'Basic analytics',
-      'Email support',
+      '10 leads/day',
+      '4 subreddits',
+      'AI co-pilot',
+      'Hubspot integration',
     ],
     popular: false,
+    cta: 'Get Started',
   },
-  business: {
-    name: 'Reddix Business',
+  premium: {
+    name: 'Premium',
     price_id: 'price_1ShkDkATaqTexwUQgyS1Ljyh',
     product_id: 'prod_Tf4MWwcVys39nO',
     price: 45,
     features: [
-      'Everything in Pro',
+      'Unlimited leads',
       'Unlimited subreddits',
       'Priority scanning',
       'Advanced analytics',
@@ -28,6 +27,21 @@ export const SUBSCRIPTION_TIERS = {
       'Priority support',
     ],
     popular: true,
+    cta: 'Start free trial',
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price_id: null,
+    product_id: null,
+    price: null,
+    features: [
+      'Custom signals',
+      'Unlimited subreddits',
+      'N8n automation',
+      'Custom integration',
+    ],
+    popular: false,
+    cta: 'Contact us',
   },
 } as const;
 

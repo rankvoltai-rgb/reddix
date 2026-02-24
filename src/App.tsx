@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import Index from "./pages/Index";
@@ -13,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
-import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +30,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/setup" element={<Setup />} />
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/subscribe" element={<Navigate to="/onboarding" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/leads" element={<Leads />} />
