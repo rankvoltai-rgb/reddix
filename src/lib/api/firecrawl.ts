@@ -41,6 +41,22 @@ type DiscoverSubredditsResponse = {
   analysis_summary?: string;
 };
 
+type AnalyzeWebsiteResponse = {
+  success: boolean;
+  error?: string;
+  data?: {
+    company_description: string;
+    target_audience: string;
+    value_proposition: string;
+    key_features: string[];
+    competitor_names: string[];
+    pricing_model: string;
+    unique_differentiators: string;
+    common_objections: string[];
+    success_stories: string;
+  };
+};
+
 export const firecrawlApi = {
   async search(query: string, options?: SearchOptions): Promise<FirecrawlResponse> {
     const { data, error } = await supabase.functions.invoke('firecrawl-search', {
@@ -103,6 +119,26 @@ export const firecrawlApi = {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return data;
+  },
+
+  async analyzeWebsite(url: string): Promise<AnalyzeWebsiteResponse> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { data, error } = await supabase.functions.invoke('analyze-website', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: { url },
     });
 
     if (error) {
