@@ -1,60 +1,57 @@
 
 
-# Clean Up /subscribe -- Notion-Style Minimalism
+# Auth Page Layout Update -- Rounded Panels with Gray Backdrop
 
-## Problem
-The current page has **9 distinct visual sections** competing for attention: urgency banner, background decorations, floating blobs, logo, header with badge, activity feed, pricing cards, "what you're missing" card, money-back guarantee card, testimonial, and trust indicators. For a Notion-style design system, this is far too noisy.
+## What Changes
 
-## Design Philosophy
-Strip away every element that doesn't directly move the user toward clicking "Start Free Trial." Keep only what earns its space.
+The current `/auth` page uses a full-bleed split layout where white and red panels stretch edge-to-edge. The new layout wraps both panels inside a light gray backdrop with spacing, and rounds the inner edges where the panels meet the outer boundary.
 
-## What Gets Removed
+## Layout Structure
 
-1. **Urgency banner** -- The fake countdown timer and "50% off" banner feel like a dark pattern and contradict the "no dark patterns" design principle. Remove entirely.
-2. **Background decorations** -- The radial glows, dot patterns, and floating blur blobs create visual clutter. A clean white background is more Notion-like.
-3. **"Limited Beta Access" badge** -- Redundant with the header copy.
-4. **Live activity feed** -- Simulated social proof with fake names cycling every 3 seconds. Remove the animation, state, and interval.
-5. **"What you're missing" card** -- Negative framing adds a full card that doesn't convert. The features list already covers this implicitly.
-6. **Money-back guarantee card** -- Collapse into a single line of text under the pricing cards.
-7. **Testimonial section** -- Keep but make it more compact (inline with trust indicators).
-8. **Strikethrough pricing** -- Remove the fake "was $58/$90" crossed-out prices and the "Save 50%" text. Show honest pricing only.
-9. **Trust indicator section** -- Consolidate into one clean line.
+```text
++------ light gray bg (full screen) ------+
+|  padding (~2.5% on all sides)            |
+|  +--------------------------------------+|
+|  | White panel      | Red panel         ||
+|  | (rounded TL/BL)  | (rounded TR/BR)   ||
+|  |                  |                    ||
+|  +--------------------------------------+|
+|                                          |
++------------------------------------------+
+```
 
-## What Stays (Simplified)
-
-1. **Logo** -- Clean, as-is
-2. **Header** -- Simpler: just the headline and one line of subtext, no badge
-3. **Pricing cards** -- Two cards side-by-side, cleaner styling: no shine-effect, no gradient-border animation, no overflow-visible badge tricks. Just clean cards with a subtle border highlight on the popular one.
-4. **CTA buttons** -- "Start Free Trial" with "7 days free, then $X/mo" subtitle
-5. **Single trust line** -- One row: guarantee + secure payment + cancel anytime
-
-## Result
-Page goes from ~320 lines to ~180 lines. Feels like a Notion pricing page: confident, minimal, no gimmicks.
-
----
+- Outer container: `min-h-screen bg-gray-100 p-[2.5vh_2.5vw]` (creates the ~5% border)
+- Inner container: `h-[95vh] w-[95vw]` with `flex overflow-hidden rounded-3xl`
+- White (left) panel: gets natural rounding from parent's `rounded-3xl`
+- Red (right) panel: same -- parent border-radius clips both sides
 
 ## Technical Details
 
-### File Modified: `src/pages/Subscribe.tsx`
+### File: `src/pages/Auth.tsx`
 
-**State removed:**
-- `activityIndex` state and the `useEffect` interval cycling through `ACTIVITY_FEED`
-- `ACTIVITY_FEED` constant
-- `COUNTDOWN_END` constant
+**Current outer wrapper:**
+```tsx
+<div className="min-h-screen flex">
+```
 
-**Imports cleaned:**
-- Remove unused icons: `Flame`, `Clock`, `Star`, `XCircle`, `CreditCard`, `Lock`
+**New outer wrapper:**
+```tsx
+<div className="min-h-screen flex items-center justify-center bg-gray-100">
+  <div className="flex w-[95vw] h-[95vh] rounded-3xl overflow-hidden shadow-xl">
+```
 
-**UI structure (top to bottom):**
-1. Logo (centered, `text-2xl font-bold`)
-2. Headline + subtitle (no badge, clean text)
-3. Two pricing cards (clean borders, no shine-effect/gradient-border/floating badge -- popular card gets `border-primary` and a simple inline "Recommended" badge inside the header)
-4. One-line trust footer: "7-day money-back guarantee -- Secure payment -- Cancel anytime"
+- The `rounded-3xl` (~24px radius) on the inner container rounds all four corners
+- `overflow-hidden` ensures the white and red panels are clipped by the rounded corners
+- The left white panel and right red panel stay as flex children -- no border-radius changes needed on individual panels since the parent clips them
+- Remove `min-h-screen` from inner panels; they fill the container via flex
 
-**CSS classes no longer used on this page:**
-- `shine-effect`, `gradient-border`, `pricing-card-hover`, `bg-radial-glow`, `bg-radial-glow-bottom`, `bg-dot-pattern`, `floating`, `floating-delayed`
-- These stay in `index.css` since other pages may use them
+**Left panel change:**
+- Remove: `min-h-screen` (it fills the parent now)
+- Keep all form content as-is
 
-### File NOT Modified
-- `src/lib/subscriptionTiers.ts` -- pricing data stays as-is
-- `src/index.css` -- utility classes remain available
+**Right panel change:**
+- Remove: any standalone rounding if present
+- Keep all LeadPreviewCard content as-is
+
+No logic, auth flow, or component changes -- purely CSS layout adjustments.
+
