@@ -83,7 +83,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      navigate('/setup');
+      navigate('/onboarding');
     }
   }, [user, navigate]);
 
