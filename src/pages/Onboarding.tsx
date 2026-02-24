@@ -15,10 +15,6 @@ export default function Onboarding() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!profileLoading && profile && !profile.initial_setup_completed) navigate('/setup');
-  }, [profile, profileLoading, navigate]);
-
-  useEffect(() => {
     if (!profileLoading && profile?.onboarding_completed) navigate('/dashboard');
   }, [profile, profileLoading, navigate]);
 

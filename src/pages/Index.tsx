@@ -14,12 +14,8 @@ export default function Index() {
     if (authLoading || profileLoading) return;
 
     if (user) {
-      // Full flow: setup -> subscribe -> onboarding -> dashboard
-      if (!profile?.initial_setup_completed) {
-        navigate('/setup');
-      } else if (!profile?.onboarding_completed) {
-        // They'll be redirected to subscribe or onboarding based on subscription status
-        navigate('/subscribe');
+      if (!profile?.onboarding_completed) {
+        navigate('/onboarding');
       } else {
         navigate('/dashboard');
       }

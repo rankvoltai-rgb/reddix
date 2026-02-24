@@ -45,15 +45,9 @@ export default function Dashboard() {
       return;
     }
 
-    // Check initial setup first
-    if (!profileLoading && profile && !profile.initial_setup_completed) {
-      navigate('/setup');
-      return;
-    }
-
     // Check subscription (allow free plan users through)
     const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
-    if (!subLoading && !isVerifyingSubscription && !hasAccess && profile?.initial_setup_completed) {
+    if (!subLoading && !isVerifyingSubscription && !hasAccess && profile) {
       navigate('/onboarding');
       return;
     }

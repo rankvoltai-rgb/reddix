@@ -15,6 +15,7 @@ import { ArrowRight, ArrowLeft, Check, Loader2, X, Sparkles } from 'lucide-react
 import logo from '@/assets/logo.png';
 
 interface OnboardingData {
+  full_name: string;
   product_name: string;
   product_url: string;
   company_description: string;
@@ -73,6 +74,7 @@ export default function OnboardingWizard() {
   }, []);
 
   const [data, setData] = useState<OnboardingData>({
+    full_name: '',
     product_name: '',
     product_url: '',
     company_description: '',
@@ -92,6 +94,7 @@ export default function OnboardingWizard() {
     if (profile) {
       setData(prev => ({
         ...prev,
+        full_name: profile.full_name || prev.full_name,
         product_name: profile.product_name || prev.product_name,
         product_url: profile.product_url || prev.product_url,
         company_description: profile.company_description || prev.company_description,
@@ -124,7 +127,7 @@ export default function OnboardingWizard() {
 
   const canProceed = () => {
     switch (step) {
-      case 1: return data.product_name.trim() && data.target_audience.trim();
+      case 1: return data.full_name.trim() && data.product_name.trim() && data.company_description.trim().length >= 10 && data.target_audience.trim();
       case 2: return data.selected_plan !== null;
       case 3: return data.key_features.length >= 1 && data.value_proposition.trim();
       case 4: return true;
@@ -176,6 +179,7 @@ export default function OnboardingWizard() {
 
     updateProfile(
       {
+        full_name: data.full_name,
         product_name: data.product_name,
         product_url: data.product_url || null,
         company_description: data.company_description,
@@ -188,6 +192,7 @@ export default function OnboardingWizard() {
         pricing_model: data.pricing_model || null,
         unique_differentiators: data.unique_differentiators || null,
         tone: data.tone,
+        initial_setup_completed: true,
         onboarding_completed: true,
         auto_pilot_enabled: true,
         next_scheduled_scan_at: nextScan.toISOString(),
@@ -260,6 +265,10 @@ export default function OnboardingWizard() {
               {step === 1 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Your Name <span className="text-primary">*</span></label>
+                    <Input placeholder="John Doe" value={data.full_name} onChange={(e) => updateField('full_name', e.target.value)} className="h-11" />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Business Name <span className="text-primary">*</span></label>
                     <Input placeholder="e.g., Acme Analytics" value={data.product_name} onChange={(e) => updateField('product_name', e.target.value)} className="h-11" />
                   </div>
@@ -268,8 +277,12 @@ export default function OnboardingWizard() {
                     <Input placeholder="https://yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Describe Your Product <span className="text-primary">*</span></label>
+                    <Textarea placeholder="Briefly describe your product or service and the problems it solves..." value={data.company_description} onChange={(e) => updateField('company_description', e.target.value)} rows={3} maxLength={1000} className="resize-none" />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Target Audience <span className="text-primary">*</span></label>
-                    <Textarea placeholder="Describe your ideal customers..." value={data.target_audience} onChange={(e) => updateField('target_audience', e.target.value)} rows={4} className="resize-none" />
+                    <Textarea placeholder="Describe your ideal customers..." value={data.target_audience} onChange={(e) => updateField('target_audience', e.target.value)} rows={3} className="resize-none" />
                   </div>
                 </div>
               )}
