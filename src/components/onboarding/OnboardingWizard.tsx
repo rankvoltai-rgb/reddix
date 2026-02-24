@@ -58,6 +58,8 @@ export default function OnboardingWizard() {
   const [competitorInput, setCompetitorInput] = useState('');
   const [objectionInput, setObjectionInput] = useState('');
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -113,6 +115,49 @@ export default function OnboardingWizard() {
 
   const updateField = <K extends keyof OnboardingData>(field: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [field]: value }));
+    // Clear auto-filled badge when user manually edits
+    setAutoFilledFields(prev => { const next = new Set(prev); next.delete(field); return next; });
+  };
+
+  const handleAnalyzeWebsite = async () => {
+    const url = data.product_url.trim();
+    if (!url) return;
+
+    setIsAnalyzing(true);
+    try {
+      const { firecrawlApi } = await import('@/lib/api/firecrawl');
+      const result = await firecrawlApi.analyzeWebsite(url);
+
+      if (!result.success || !result.data) {
+        toast({ variant: 'destructive', title: 'Analysis failed', description: result.error || 'Could not analyze website' });
+        return;
+      }
+
+      const d = result.data;
+      const filled = new Set<string>();
+
+      setData(prev => {
+        const next = { ...prev };
+        if (!prev.company_description && d.company_description) { next.company_description = d.company_description; filled.add('company_description'); }
+        if (!prev.target_audience && d.target_audience) { next.target_audience = d.target_audience; filled.add('target_audience'); }
+        if (!prev.value_proposition && d.value_proposition) { next.value_proposition = d.value_proposition; filled.add('value_proposition'); }
+        if (prev.key_features.length === 0 && d.key_features.length > 0) { next.key_features = d.key_features; filled.add('key_features'); }
+        if (prev.competitor_names.length === 0 && d.competitor_names.length > 0) { next.competitor_names = d.competitor_names; filled.add('competitor_names'); }
+        if (prev.common_objections.length === 0 && d.common_objections.length > 0) { next.common_objections = d.common_objections; filled.add('common_objections'); }
+        if (!prev.success_stories && d.success_stories) { next.success_stories = d.success_stories; filled.add('success_stories'); }
+        if (prev.pricing_model === 'freemium' && d.pricing_model && d.pricing_model !== '') { next.pricing_model = d.pricing_model; filled.add('pricing_model'); }
+        if (!prev.unique_differentiators && d.unique_differentiators) { next.unique_differentiators = d.unique_differentiators; filled.add('unique_differentiators'); }
+        return next;
+      });
+
+      setAutoFilledFields(filled);
+      toast({ title: '✨ Website analyzed!', description: "We've pre-filled your details. Review and edit as needed." });
+    } catch (error) {
+      console.error('Analyze error:', error);
+      toast({ variant: 'destructive', title: 'Analysis failed', description: 'Something went wrong. You can fill in the fields manually.' });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const addToArray = (field: 'key_features' | 'competitor_names' | 'common_objections', value: string) => {
@@ -274,14 +319,27 @@ export default function OnboardingWizard() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Website URL <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
-                    <Input placeholder="https://yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
+                    <div className="flex gap-2">
+                      <Input placeholder="https://yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
+                      {data.product_url.trim() && (
+                        <Button type="button" variant="secondary" className="h-11 px-4 shrink-0 gap-2" onClick={handleAnalyzeWebsite} disabled={isAnalyzing}>
+                          {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Sparkles className="w-4 h-4" /> Analyze</>}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Describe Your Product <span className="text-primary">*</span></label>
+                    <label className="text-sm font-medium text-foreground">
+                      Describe Your Product <span className="text-primary">*</span>
+                      {autoFilledFields.has('company_description') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}
+                    </label>
                     <Textarea placeholder="Briefly describe your product or service and the problems it solves..." value={data.company_description} onChange={(e) => updateField('company_description', e.target.value)} rows={3} maxLength={1000} className="resize-none" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Target Audience <span className="text-primary">*</span></label>
+                    <label className="text-sm font-medium text-foreground">
+                      Target Audience <span className="text-primary">*</span>
+                      {autoFilledFields.has('target_audience') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}
+                    </label>
                     <Textarea placeholder="Describe your ideal customers..." value={data.target_audience} onChange={(e) => updateField('target_audience', e.target.value)} rows={3} className="resize-none" />
                   </div>
                 </div>
@@ -341,7 +399,7 @@ export default function OnboardingWizard() {
               {step === 3 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Key Features <span className="text-xs text-muted-foreground font-normal">(up to 5)</span> <span className="text-primary">*</span></label>
+                    <label className="text-sm font-medium text-foreground">Key Features <span className="text-xs text-muted-foreground font-normal">(up to 5)</span> <span className="text-primary">*</span>{autoFilledFields.has('key_features') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <div className="flex gap-2">
                       <Input placeholder="e.g., Real-time analytics dashboard" value={featureInput} onChange={(e) => setFeatureInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('key_features', featureInput); setFeatureInput(''); } }} className="h-11" />
                       <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('key_features', featureInput); setFeatureInput(''); }} disabled={data.key_features.length >= 5}>Add</Button>
@@ -358,11 +416,11 @@ export default function OnboardingWizard() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">What Makes You Different? <span className="text-primary">*</span></label>
+                    <label className="text-sm font-medium text-foreground">What Makes You Different? <span className="text-primary">*</span>{autoFilledFields.has('value_proposition') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <Textarea placeholder="Why should someone choose you over alternatives?" value={data.value_proposition} onChange={(e) => updateField('value_proposition', e.target.value)} rows={4} className="resize-none" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Unique Differentiators <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <label className="text-sm font-medium text-foreground">Unique Differentiators <span className="text-xs text-muted-foreground font-normal">(optional)</span>{autoFilledFields.has('unique_differentiators') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <Textarea placeholder="Any patents, proprietary tech, exclusive partnerships?" value={data.unique_differentiators} onChange={(e) => updateField('unique_differentiators', e.target.value)} rows={3} className="resize-none" />
                   </div>
                 </div>
@@ -372,7 +430,7 @@ export default function OnboardingWizard() {
               {step === 4 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Competitors <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span></label>
+                    <label className="text-sm font-medium text-foreground">Competitors <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span>{autoFilledFields.has('competitor_names') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <div className="flex gap-2">
                       <Input placeholder="e.g., Mixpanel" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('competitor_names', competitorInput); setCompetitorInput(''); } }} className="h-11" />
                       <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('competitor_names', competitorInput); setCompetitorInput(''); }} disabled={data.competitor_names.length >= 5}>Add</Button>
@@ -387,7 +445,7 @@ export default function OnboardingWizard() {
                   </div>
                   <div className="h-px bg-border" />
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Common Objections <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span></label>
+                    <label className="text-sm font-medium text-foreground">Common Objections <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span>{autoFilledFields.has('common_objections') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <div className="flex gap-2">
                       <Input placeholder='"Too expensive", "Hard to set up"' value={objectionInput} onChange={(e) => setObjectionInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('common_objections', objectionInput); setObjectionInput(''); } }} className="h-11" />
                       <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('common_objections', objectionInput); setObjectionInput(''); }} disabled={data.common_objections.length >= 5}>Add</Button>
@@ -407,7 +465,7 @@ export default function OnboardingWizard() {
               {step === 5 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Success Stories <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <label className="text-sm font-medium text-foreground">Success Stories <span className="text-xs text-muted-foreground font-normal">(optional)</span>{autoFilledFields.has('success_stories') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
                     <Textarea placeholder='"Helped Company X increase conversions by 40%"' value={data.success_stories} onChange={(e) => updateField('success_stories', e.target.value)} rows={4} className="resize-none" />
                   </div>
                   <div className="h-px bg-border" />
