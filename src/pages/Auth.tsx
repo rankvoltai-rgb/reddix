@@ -24,9 +24,9 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
-function LeadPreviewCard({ className = '' }: { className?: string }) {
+function LeadPreviewCard({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={`bg-white rounded-xl p-5 shadow-lg ${className}`}>
+    <div className={`bg-white rounded-xl p-5 shadow-lg ${className}`} style={style}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
@@ -288,9 +288,9 @@ export default function Auth() {
       {/* Right Panel - Product Preview */}
       <div className="hidden lg:flex lg:w-[55%] bg-primary flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="w-full max-w-lg space-y-5">
-          <LeadPreviewCard />
-          <LeadPreviewCard className="translate-x-4" />
-          <LeadPreviewCard className="translate-x-8" />
+          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in" style={{ animationDelay: '0.2s' }} />
+          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in translate-x-4" style={{ animationDelay: '0.4s' }} />
+          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in translate-x-8" style={{ animationDelay: '0.6s' }} />
         </div>
       </div>
       </div>
