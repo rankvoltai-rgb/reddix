@@ -4,9 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Loader2, ArrowRight, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Flame, Bookmark, ExternalLink, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 const loginSchema = z.object({
@@ -23,6 +24,50 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
+function LeadPreviewCard({ className = '' }: { className?: string }) {
+  return (
+    <div className={`bg-white rounded-xl p-5 shadow-lg ${className}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
+            🔥 Hot
+          </span>
+          <span className="text-xs text-gray-500 font-medium">Score: 95</span>
+          <span className="inline-flex items-center bg-emerald-50 text-emerald-600 text-xs font-medium px-2.5 py-1 rounded-full">
+            Engaged
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+            <Bookmark className="h-4 w-4" />
+          </button>
+          <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">
+            Any Affordable reddit post monitoring tool? : r/microsaas
+          </h4>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            I know that there are lots monitoring sites but they are kinda expensive for me so I'm looking for an affordable option to get alerts by tracking the...
+          </p>
+        </div>
+        <button className="inline-flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg shrink-0">
+          <Sparkles className="h-3 w-3" /> Reply
+        </button>
+      </div>
+      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">r/microsaas</span>
+        <span className="text-xs text-gray-400">u/unknown</span>
+        <span className="text-xs text-gray-400">2 day ago</span>
+      </div>
+    </div>
+  );
+}
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -30,7 +75,8 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
-  
+  const [agreedToTos, setAgreedToTos] = useState(false);
+
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,11 +108,11 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       if (isLogin) {
         const { error } = await signIn(email, password);
@@ -74,8 +120,8 @@ export default function Auth() {
           toast({
             variant: 'destructive',
             title: 'Sign in failed',
-            description: error.message === 'Invalid login credentials' 
-              ? 'Invalid email or password. Please try again.' 
+            description: error.message === 'Invalid login credentials'
+              ? 'Invalid email or password. Please try again.'
               : error.message,
           });
         } else {
@@ -103,7 +149,7 @@ export default function Auth() {
         } else {
           toast({
             title: 'Account created!',
-            description: 'Welcome to Reddix. Let\'s get you set up.',
+            description: "Welcome to Reddix. Let's get you set up.",
           });
         }
       }
@@ -115,50 +161,61 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Form */}
-      <div className="w-full md:w-1/2 flex flex-col bg-background px-6 py-8 md:px-12 lg:px-20">
+      <div className="w-full lg:w-[45%] flex flex-col bg-background px-6 py-8 md:px-12 lg:px-16">
         {/* Logo */}
-        <div className="mb-12">
-          <img src={logo} alt="Reddix" className="h-8 w-auto" />
+        <div className="flex items-center gap-2 mb-16">
+          <img src={logo} alt="Reddix" className="h-7 w-auto" />
+          <span className="text-lg font-bold text-foreground">Reddix</span>
         </div>
 
-        {/* Form Container - Centered Vertically */}
-        <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
-          <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-foreground mb-2">
-              {isLogin ? 'Welcome back' : 'Get started'}
-            </h1>
-            <p className="text-muted-foreground">
-              {isLogin ? 'Sign in to continue to Reddix' : 'Create your account to get started'}
-            </p>
+        {/* Form */}
+        <div className="flex-1 flex flex-col justify-center max-w-sm w-full">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-8 tracking-tight">
+            {isLogin ? 'Welcome back' : 'Create a free account'}
+          </h1>
+
+          {/* OAuth Buttons */}
+          <div className="flex gap-3 mb-8">
+            <button className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg border border-border bg-background hover:bg-muted transition-colors text-sm font-medium text-foreground">
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Google
+            </button>
+            <button className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg border border-border bg-background hover:bg-muted transition-colors text-sm font-medium text-foreground">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+              </svg>
+              Apple
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm text-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={errors.email ? 'border-destructive' : ''}
+                className={`h-11 bg-muted/50 border-border ${errors.email ? 'border-destructive' : ''}`}
                 disabled={isLoading}
               />
-              {errors.email && (
-                <p className="text-destructive text-xs">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm text-foreground">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                  className={`h-11 bg-muted/50 border-border pr-10 ${errors.password ? 'border-destructive' : ''}`}
                   disabled={isLoading}
                 />
                 <button
@@ -170,95 +227,69 @@ export default function Auth() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-destructive text-xs">{errors.password}</p>
-              )}
+              {errors.password && <p className="text-destructive text-xs">{errors.password}</p>}
               {!isLogin && !errors.password && (
-                <p className="text-muted-foreground text-xs">
-                  8+ characters with uppercase, lowercase, and number
-                </p>
+                <p className="text-muted-foreground text-xs">8+ characters with uppercase, lowercase, and number</p>
               )}
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base" 
-              disabled={isLoading}
+            {!isLogin && (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="tos"
+                  checked={agreedToTos}
+                  onCheckedChange={(v) => setAgreedToTos(v === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="tos" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  By creating an account you're agreeing to our TOS
+                </label>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-11 text-base rounded-lg bg-primary hover:bg-primary/90"
+              disabled={isLoading || (!isLogin && !agreedToTos)}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  {isLogin ? 'Sign in' : 'Create account'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+                isLogin ? 'Sign in' : 'Create account'
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex items-center justify-center gap-1">
             <button
               type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setErrors({});
+                setAgreedToTos(false);
               }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               disabled={isLoading}
             >
-              {isLogin 
-                ? "Don't have an account? " 
-                : 'Already have an account? '}
-              <span className="text-primary font-medium">
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </span>
+              {isLogin ? "Don't have an account? " : 'Already have an account? '}
+              <span className="text-primary font-medium">{isLogin ? 'Sign up' : 'Log in'}</span>
             </button>
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="flex gap-4 mt-8">
+          <span className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Legal</span>
+          <span className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Resources</span>
+        </div>
       </div>
 
-      {/* Right Panel - Marketing (hidden on mobile) */}
-      <div className="hidden md:flex md:w-1/2 bg-muted flex-col justify-center px-12 lg:px-20">
-        <div className="max-w-lg">
-          {/* Hero Headline */}
-          <h2 className="text-3xl lg:text-4xl font-semibold text-foreground mb-4 leading-tight">
-            Turn Reddit Conversations into Customers
-          </h2>
-          <p className="text-muted-foreground text-lg mb-10">
-            Reddix is the AI-powered lead generation tool that finds high-intent buyers on Reddit and helps you engage authentically.
-          </p>
-
-          {/* Testimonial */}
-          <div className="border-l-4 border-primary pl-6 mb-10">
-            <p className="text-foreground text-lg italic mb-4">
-              "Reddix has completely transformed how I find leads. I'm connecting with potential customers who are actively looking for solutions like mine!"
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-primary font-semibold text-sm">AM</span>
-              </div>
-              <div>
-                <p className="font-medium text-foreground text-sm">Alex M.</p>
-                <p className="text-muted-foreground text-sm">SaaS Founder</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Trust Section */}
-          <div className="flex items-center gap-2 text-muted-foreground mb-4">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
-            <span className="text-sm">Trusted by SaaS founders & agencies</span>
-          </div>
-          <div className="flex items-center gap-4 flex-wrap">
-            {['Acme', 'StartupCo', 'GrowthLabs', 'SaaSify'].map((company) => (
-              <span 
-                key={company} 
-                className="text-muted-foreground/60 font-medium text-sm"
-              >
-                {company}
-              </span>
-            ))}
-          </div>
+      {/* Right Panel - Product Preview */}
+      <div className="hidden lg:flex lg:w-[55%] bg-primary flex-col items-center justify-center p-12 relative overflow-hidden">
+        <div className="w-full max-w-lg space-y-5">
+          <LeadPreviewCard />
+          <LeadPreviewCard className="translate-x-4" />
+          <LeadPreviewCard className="translate-x-8" />
         </div>
       </div>
     </div>
