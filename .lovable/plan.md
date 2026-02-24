@@ -1,52 +1,86 @@
 
-# Remove /setup and Merge Into Onboarding
 
-## What Changes
+# AI-Powered Website Analysis for Onboarding
 
-The `/setup` page currently collects your name, website URL, and business description before onboarding begins. Since the onboarding wizard already asks for similar information (business name, website URL, target audience), we'll fold the name field into the onboarding wizard's first step and eliminate the separate setup page entirely.
+## Overview
 
-## New User Flow
+After the user enters their website URL in Step 1, a "Analyze My Website" button uses Firecrawl to scrape the site and Lovable AI to extract product details. This auto-fills most onboarding fields, letting users review and tweak instead of typing everything from scratch.
+
+## User Experience
+
+1. User enters their name, business name, and website URL
+2. Clicks "Analyze My Website" button (with a sparkle icon)
+3. Loading state shows "Analyzing your website..."
+4. Fields auto-populate: company description, target audience, value proposition, key features, competitors, pricing model, unique differentiators
+5. Steps 3-5 arrive pre-filled -- user can edit or just click Continue through them
+6. Net effect: onboarding goes from ~15 manual fields to ~3 (name, business name, URL) plus review
+
+## Technical Changes
+
+### 1. New Edge Function: `analyze-website`
+
+**File:** `supabase/functions/analyze-website/index.ts`
+
+- Accepts `{ url: string }` in the request body
+- Requires auth (Bearer token)
+- Scrapes the URL using Firecrawl API (`formats: ['markdown', 'links']`)
+- Sends the scraped content to Lovable AI (gemini-2.5-flash) with a structured extraction prompt
+- Uses tool calling to extract a structured JSON with fields: `company_description`, `target_audience`, `value_proposition`, `key_features` (array), `competitor_names` (array), `pricing_model`, `unique_differentiators`, `common_objections` (array), `success_stories`
+- Returns the extracted data to the client
+- Handles errors gracefully (site unreachable, scrape failure, AI parse failure)
+
+**Config:** Add `[functions.analyze-website] verify_jwt = false` to `supabase/config.toml`
+
+### 2. Update `OnboardingWizard.tsx` -- Step 1
+
+- Add an "Analyze My Website" button next to the Website URL field (appears when URL is non-empty)
+- Button shows `Sparkles` icon + loading spinner during analysis
+- On success: auto-fill `company_description`, `target_audience`, and toast "Website analyzed! We've pre-filled your details."
+- Store the full AI result so that Steps 3-5 also arrive pre-filled (`key_features`, `value_proposition`, `competitor_names`, `common_objections`, `pricing_model`, `unique_differentiators`, `success_stories`)
+- On failure: toast with error, user can still fill manually
+- Only overwrite fields that are currently empty (don't clobber user edits)
+
+### 3. Update `src/lib/api/firecrawl.ts`
+
+- Add an `analyzeWebsite(url: string)` method that invokes the `analyze-website` edge function with auth headers
+- Returns typed response with extracted profile fields
+
+### 4. UX Polish
+
+- Steps 3-5 show a small "Auto-filled from your website" badge next to pre-filled fields so users know they can review/edit
+- If no URL is provided, onboarding works exactly as before (fully manual)
+- The analyze button is disabled while loading and shows progress text
+
+## Files Modified
+
+- `supabase/functions/analyze-website/index.ts` -- new edge function
+- `supabase/config.toml` -- add function config (handled automatically)
+- `src/lib/api/firecrawl.ts` -- add `analyzeWebsite` method
+- `src/components/onboarding/OnboardingWizard.tsx` -- add analyze button + auto-fill logic
+
+## Architecture
 
 ```text
-Auth (/auth) --> Onboarding (/onboarding) --> Dashboard
+User enters URL
+      |
+      v
+[Analyze Button] --> firecrawlApi.analyzeWebsite(url)
+      |
+      v
+Edge Function: analyze-website
+      |
+      +---> Firecrawl API (scrape URL, get markdown)
+      |
+      +---> Lovable AI (extract structured product data via tool calling)
+      |
+      v
+Return structured data --> Auto-fill wizard fields
 ```
 
-No more intermediate `/setup` step.
+## Edge Cases
 
-## Technical Details
+- Invalid/unreachable URL: return friendly error, user fills manually
+- Very sparse website (landing page only): AI extracts what it can, leaves rest empty
+- Rate limiting on Firecrawl or AI: surface error with retry suggestion
+- User already typed some fields before analyzing: only fill empty fields
 
-### 1. Update Onboarding Wizard Step 1 (`src/components/onboarding/OnboardingWizard.tsx`)
-- Add a "Your Name" field (required) at the top of Step 1, before Business Name
-- Add a "Describe your product" field (the `company_description` that `/setup` used to collect) -- this can replace or supplement Target Audience
-- Save `full_name` and `initial_setup_completed: true` along with other profile data on wizard completion
-
-### 2. Update `src/pages/Onboarding.tsx`
-- Remove the guard that redirects to `/setup` when `initial_setup_completed` is false
-- Keep only: redirect to `/auth` if not logged in, redirect to `/dashboard` if onboarding already completed
-
-### 3. Update `src/pages/Auth.tsx`
-- Change post-login redirect from `/setup` to `/onboarding`
-
-### 4. Update `src/pages/Index.tsx`
-- Remove the `initial_setup_completed` check that redirects to `/setup`
-- If user is logged in but hasn't completed onboarding, go to `/onboarding`
-
-### 5. Update `src/pages/Dashboard.tsx`
-- Remove the guard that redirects to `/setup` when `initial_setup_completed` is false
-- The onboarding-incomplete check already redirects to `/onboarding`
-
-### 6. Update `src/App.tsx`
-- Remove the `/setup` route and `Setup` import
-- Add a redirect: `/setup` -> `/onboarding` for backward compatibility
-
-### 7. Delete `src/pages/Setup.tsx`
-- No longer needed
-
-### Files Modified
-- `src/components/onboarding/OnboardingWizard.tsx` -- add full_name field, save initial_setup_completed on complete
-- `src/pages/Onboarding.tsx` -- remove setup guard
-- `src/pages/Auth.tsx` -- redirect to /onboarding
-- `src/pages/Index.tsx` -- remove setup redirect
-- `src/pages/Dashboard.tsx` -- remove setup guard
-- `src/App.tsx` -- remove setup route, add redirect
-- `src/pages/Setup.tsx` -- delete
