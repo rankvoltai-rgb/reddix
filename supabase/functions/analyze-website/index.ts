@@ -51,7 +51,7 @@ serve(async (req) => {
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!firecrawlKey) {
       return new Response(JSON.stringify({ success: false, error: 'Firecrawl connector not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -73,14 +73,14 @@ serve(async (req) => {
     if (!scrapeResponse.ok || !scrapeData.success) {
       console.error('Scrape failed:', scrapeData);
       return new Response(JSON.stringify({ success: false, error: 'Could not access that website. Please check the URL and try again.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const markdown = scrapeData.data?.markdown || scrapeData.markdown || '';
     if (!markdown || markdown.length < 50) {
       return new Response(JSON.stringify({ success: false, error: 'Website content was too sparse to analyze. Please fill in the fields manually.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -88,7 +88,7 @@ serve(async (req) => {
     const lovableKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableKey) {
       return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -146,17 +146,17 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ success: false, error: 'AI rate limit reached. Please try again in a moment.' }), {
-          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted. Please try again later.' }), {
-          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       console.error('AI error:', aiResponse.status);
       return new Response(JSON.stringify({ success: false, error: 'AI analysis failed. Please fill in the fields manually.' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -166,7 +166,7 @@ serve(async (req) => {
     if (!toolCall?.function?.arguments) {
       console.error('No tool call in AI response');
       return new Response(JSON.stringify({ success: false, error: 'AI could not extract product data. Please fill in the fields manually.' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -176,7 +176,7 @@ serve(async (req) => {
     } catch {
       console.error('Failed to parse AI tool call arguments');
       return new Response(JSON.stringify({ success: false, error: 'AI response was malformed. Please fill in the fields manually.' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
