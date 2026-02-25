@@ -1,51 +1,35 @@
 
-
-# Achievement Badges on the Dashboard
+# Celebratory Animation for Newly Unlocked Badges
 
 ## What This Does
 
-Adds a badge/achievement section directly on the `/dashboard` page (below the stats cards, above the leads section). Badges unlock at milestone thresholds based on the number of leads the user has engaged with (status = "engaged"). No new pages or sidebar items are added.
+Adds a visual celebration effect when a badge is unlocked for the first time. Previously seen (acknowledged) badges are tracked in `localStorage`, so the animation only plays once per milestone -- not every time the dashboard loads.
 
-## Badge Milestones
+## How It Works
 
-| Threshold | Icon | Name |
-|-----------|------|------|
-| 1 | Flame | First Contact |
-| 10 | Sparkles | Lead Hunter |
-| 25 | Star | Rising Star |
-| 50 | Zap | Power Player |
-| 100 | Trophy | Lead Legend |
+1. **Track seen badges** -- Store which badges the user has already seen as unlocked in `localStorage` (keyed by user ID)
+2. **Detect newly unlocked** -- Compare current unlocked badges against the stored list to find "new" unlocks
+3. **Play animation** -- Newly unlocked badges get a pulse + glow animation with particle-like sparkle effects
+4. **Show toast** -- A celebratory toast notification appears congratulating the user
+5. **Mark as seen** -- After the animation plays, update `localStorage` so it won't repeat
 
-Unlocked badges show with a vibrant coral/red background. Locked badges are greyed out with reduced opacity and a lock overlay.
+## Visual Effect
 
-## Visual Layout
-
-```text
-+--------------------------------------------------+
-| Stats Cards (unchanged)                          |
-+--------------------------------------------------+
-| Achievements              X/5 unlocked           |
-| [Badge] [Badge] [Badge] [Badge] [Badge]         |
-+--------------------------------------------------+
-| Recent Leads / Empty State (unchanged)           |
-+--------------------------------------------------+
-```
-
-## Files to Create
-
-- **src/hooks/useBadges.ts** -- Hook that queries count of leads with `status = 'engaged'` and computes which badges are unlocked
-- **src/components/badges/BadgeCard.tsx** -- Single badge card (icon, name, threshold, locked/unlocked state)
-- **src/components/badges/BadgesSection.tsx** -- Horizontal row of badge cards with a header showing progress (e.g. "2/5 unlocked")
+- A scaling pulse animation (badge briefly grows and shrinks back)
+- A glowing ring/shadow effect radiating outward from the badge
+- A subtle shimmer overlay
+- A sonner toast: "Badge Unlocked! You earned 'First Contact'"
 
 ## Files to Modify
 
-- **src/pages/Dashboard.tsx** -- Import and render `BadgesSection` between the stats grid and the dynamic content section
+- **`src/components/badges/BadgeCard.tsx`** -- Accept a `isNew` prop; when true, apply the celebratory CSS animation classes
+- **`src/components/badges/BadgesSection.tsx`** -- Add logic to compare unlocked badges against localStorage, pass `isNew` to BadgeCard, show toast, and update localStorage after render
+- **`src/index.css`** -- Add the `@keyframes` for the celebration pulse/glow animation
 
 ## Technical Details
 
-- Badge data is derived from a single count query: leads where `user_id = current user` and `status = 'engaged'`
-- Uses `@tanstack/react-query` consistent with existing hooks
-- No new database tables or migrations needed
-- Locked badges use `opacity-40 grayscale` with a Lock icon overlay
-- Unlocked badges use `bg-red-400` / `bg-red-500` background matching the reference image
-- The dashboard layout, stats, and leads sections remain completely unchanged
+- localStorage key: `badges-seen-{userId}` storing a JSON array of threshold numbers
+- Animation: a CSS keyframe (`badge-celebrate`) combining scale bounce + box-shadow glow, ~1.5s duration
+- Uses `useEffect` to detect new badges and fire the toast via `sonner`
+- After a short delay (matching animation duration), the new badges are marked as seen in localStorage
+- No database changes needed -- localStorage is sufficient since this is a cosmetic-only feature
