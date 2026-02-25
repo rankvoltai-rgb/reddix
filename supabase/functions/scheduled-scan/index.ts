@@ -52,15 +52,17 @@ serve(async (req) => {
       console.log(`Processing user: ${user.id} (${user.product_name || 'unnamed'})`);
       
       try {
-        // Check if user has subreddits and keywords configured
-        const [subredditsRes, keywordsRes] = await Promise.all([
-          supabase.from('monitored_subreddits').select('id').eq('user_id', user.id).eq('is_active', true).limit(1),
-          supabase.from('keywords').select('id').eq('user_id', user.id).eq('is_active', true).limit(1),
-        ]);
+        // Check if user has subreddits configured (keywords not required — autonomous scanner generates terms dynamically)
+        const { data: subredditsRes } = await supabase
+          .from('monitored_subreddits')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1);
 
-        if (!subredditsRes.data?.length || !keywordsRes.data?.length) {
-          console.log(`User ${user.id} not fully configured, skipping`);
-          results.push({ userId: user.id, success: false, error: 'Not configured' });
+        if (!subredditsRes?.length) {
+          console.log(`User ${user.id} has no subreddits configured, skipping`);
+          results.push({ userId: user.id, success: false, error: 'No subreddits configured' });
           continue;
         }
 
