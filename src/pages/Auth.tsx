@@ -24,15 +24,26 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
-function LeadPreviewCard({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
+interface LeadPreviewCardProps {
+  className?: string;
+  style?: React.CSSProperties;
+  title: string;
+  body: string;
+  subreddit: string;
+  score: number;
+  intentLabel: string;
+  intentColor: string;
+}
+
+function LeadPreviewCard({ className = '', style, title, body, subreddit, score, intentLabel, intentColor }: LeadPreviewCardProps) {
   return (
     <div className={`bg-white rounded-xl p-5 shadow-lg ${className}`} style={style}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
-            🔥 Hot
+          <span className={`inline-flex items-center gap-1 ${intentColor} text-xs font-semibold px-2.5 py-1 rounded-full`}>
+            {intentLabel}
           </span>
-          <span className="text-xs text-gray-500 font-medium">Score: 95</span>
+          <span className="text-xs text-gray-500 font-medium">Score: {score}</span>
           <span className="inline-flex items-center bg-emerald-50 text-emerald-600 text-xs font-medium px-2.5 py-1 rounded-full">
             Engaged
           </span>
@@ -48,19 +59,15 @@ function LeadPreviewCard({ className = '', style }: { className?: string; style?
       </div>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <h4 className="text-sm font-semibold text-gray-900 mb-1">
-            Any Affordable reddit post monitoring tool? : r/microsaas
-          </h4>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            I know that there are lots monitoring sites but they are kinda expensive for me so I'm looking for an affordable option to get alerts by tracking the...
-          </p>
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">{title}</h4>
+          <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
         </div>
         <button className="inline-flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg shrink-0">
           <Sparkles className="h-3 w-3" /> Reply
         </button>
       </div>
       <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
-        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">r/microsaas</span>
+        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">{subreddit}</span>
         <span className="text-xs text-gray-400">u/unknown</span>
         <span className="text-xs text-gray-400">2 day ago</span>
       </div>
@@ -288,9 +295,36 @@ export default function Auth() {
       {/* Right Panel - Product Preview */}
       <div className="hidden lg:flex lg:w-[55%] bg-primary flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="w-full max-w-lg space-y-5">
-          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in" style={{ animationDelay: '0.2s' }} />
-          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in translate-x-4" style={{ animationDelay: '0.4s' }} />
-          <LeadPreviewCard className="opacity-0 animate-stagger-fade-in translate-x-8" style={{ animationDelay: '0.6s' }} />
+          <LeadPreviewCard
+            className="opacity-0 animate-stagger-fade-in"
+            style={{ animationDelay: '0.2s' }}
+            title="Any Affordable reddit post monitoring tool? : r/microsaas"
+            body="I know that there are lots monitoring sites but they are kinda expensive for me so I'm looking for an affordable option to get alerts by tracking the..."
+            subreddit="r/microsaas"
+            score={95}
+            intentLabel="🔥 Hot"
+            intentColor="bg-red-50 text-red-600"
+          />
+          <LeadPreviewCard
+            className="opacity-0 animate-stagger-fade-in translate-x-4"
+            style={{ animationDelay: '0.4s' }}
+            title="Best way to find potential customers on Reddit? : r/startups"
+            body="I've been trying to manually search Reddit for people who might need my product but it takes forever. Is there a smarter way to automate finding..."
+            subreddit="r/startups"
+            score={88}
+            intentLabel="🌡️ Warm"
+            intentColor="bg-amber-50 text-amber-600"
+          />
+          <LeadPreviewCard
+            className="opacity-0 animate-stagger-fade-in translate-x-8"
+            style={{ animationDelay: '0.6s' }}
+            title="How do you monitor brand mentions across subreddits? : r/SaaS"
+            body="We recently launched our product and want to track when people mention problems we solve. Currently checking manually every day but it's not scalab..."
+            subreddit="r/SaaS"
+            score={91}
+            intentLabel="🔥 Hot"
+            intentColor="bg-red-50 text-red-600"
+          />
         </div>
       </div>
       </div>
