@@ -57,6 +57,21 @@ const Scanner = () => {
     refetchInterval: 30000,
   });
 
+  // Fetch subreddits — must be before any early return to respect Rules of Hooks
+  const { data: subreddits = [], isLoading: subredditsLoading } = useQuery({
+    queryKey: ['subreddits', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('monitored_subreddits')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/auth");
@@ -79,21 +94,6 @@ const Scanner = () => {
       </div>
     );
   }
-
-  // Fetch subreddits
-  const { data: subreddits = [], isLoading: subredditsLoading } = useQuery({
-    queryKey: ['subreddits', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('monitored_subreddits')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
 
   // Mutations
   const addSubreddit = useMutation({
