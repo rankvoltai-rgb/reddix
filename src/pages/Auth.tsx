@@ -178,7 +178,7 @@ export default function Auth() {
 
         {/* Form */}
         <div className="flex-1 flex flex-col justify-center max-w-sm w-full">
-          <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-8 tracking-tight" style={{ fontFamily: "'Open Sans', sans-serif" }}>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-8 tracking-tight" style={{ fontFamily: "'Open Sans', sans-serif" }}>
             {isLogin ? 'Your leads are waiting' : 'Your next customer is on Reddit'}
           </h1>
 
