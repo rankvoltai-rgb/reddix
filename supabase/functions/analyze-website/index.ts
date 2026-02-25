@@ -132,6 +132,7 @@ serve(async (req) => {
                   unique_differentiators: { type: 'string', description: 'What makes this product unique compared to alternatives' },
                   common_objections: { type: 'array', items: { type: 'string' }, description: 'Potential customer objections the website addresses' },
                   success_stories: { type: 'string', description: 'Any case studies, testimonials, or success metrics mentioned' },
+                  tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty'], description: 'The best reply tone inferred from the website voice and brand personality' },
                 },
                 required: ['company_description', 'target_audience', 'value_proposition', 'key_features'],
                 additionalProperties: false,
@@ -194,6 +195,7 @@ serve(async (req) => {
         unique_differentiators: extracted.unique_differentiators || '',
         common_objections: (extracted.common_objections || []).slice(0, 5),
         success_stories: extracted.success_stories || '',
+        tone: extracted.tone || '',
       },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
