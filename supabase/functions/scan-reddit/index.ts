@@ -8,35 +8,16 @@ const corsHeaders = {
   'X-Frame-Options': 'DENY',
 };
 
-// Rate limit: 1 scan per 5 minutes
 const RATE_LIMIT_MINUTES = 5;
+const BATCH_SIZE = 6; // Posts per AI batch call
+const PASS1_THRESHOLD = 25; // Minimum score to proceed to deep analysis
 
-// High-intent modifiers - automatically combined with user's topic keywords
 const INTENT_MODIFIERS = [
-  // Direct requests
-  "looking for",
-  "need recommendation",
-  "any suggestions",
-  "what do you use",
-  "best tool for",
-  "best software for",
-  "can anyone recommend",
-  // Comparison shopping
-  "alternative to",
-  "better than",
-  "switching from",
-  "vs",
-  "compared to",
-  // Buying signals
-  "worth it",
-  "pricing",
-  "free trial",
-  "which one should",
-  // Problem signals
-  "struggling with",
-  "frustrated with",
-  "need help with",
-  "how do you handle",
+  "looking for", "need recommendation", "any suggestions", "what do you use",
+  "best tool for", "best software for", "can anyone recommend",
+  "alternative to", "better than", "switching from", "vs", "compared to",
+  "worth it", "pricing", "free trial", "which one should",
+  "struggling with", "frustrated with", "need help with", "how do you handle",
 ];
 
 interface RedditPost {
@@ -58,6 +39,266 @@ interface Lead {
   user_id: string;
 }
 
+// ── Search Term Caching ──
+async function getCachedOrGenerateTerms(
+  supabase: any, userId: string, profile: any, lovableKey: string
+): Promise<string[]> {
+  // Check cache validity (24h, or profile changed)
+  if (profile.cached_search_terms && profile.search_terms_cached_at) {
+    const cachedAt = new Date(profile.search_terms_cached_at);
+    const ageHours = (Date.now() - cachedAt.getTime()) / (1000 * 60 * 60);
+    if (ageHours < 24) {
+      console.log('Using cached search terms (age: ' + Math.round(ageHours) + 'h)');
+      return profile.cached_search_terms as string[];
+    }
+  }
+
+  // Generate fresh terms
+  const terms = await generateSearchTerms(profile, lovableKey);
+
+  // Cache them
+  if (terms.length > 0) {
+    await supabase.from('profiles').update({
+      cached_search_terms: terms,
+      search_terms_cached_at: new Date().toISOString(),
+    }).eq('id', userId);
+  }
+
+  return terms;
+}
+
+async function generateSearchTerms(profile: any, lovableKey: string): Promise<string[]> {
+  try {
+    const genPrompt = `Given this product, generate 5-8 short search terms (2-5 words each) that someone on Reddit would use when looking for this type of solution. Focus on pain points, use cases, and problem descriptions — NOT the product name itself.
+
+Product: ${profile.product_name || 'Unknown'}
+Description: ${profile.company_description || 'Not provided'}
+Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
+Target Audience: ${profile.value_proposition || 'Not specified'}
+Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}
+
+Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
+
+    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: 'Return only valid JSON. No markdown, no explanation.' },
+          { role: 'user', content: genPrompt },
+        ],
+      }),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const terms = JSON.parse(jsonMatch[0]);
+        console.log('AI-generated search terms:', terms);
+        return terms;
+      }
+    }
+  } catch (e) {
+    console.error('AI search term generation failed:', e);
+  }
+
+  // Fallback
+  const fallback = [
+    profile.product_name,
+    ...(profile.company_description || '').split(/[.,;]/).slice(0, 3).map((s: string) => s.trim()).filter(Boolean),
+  ].filter(Boolean) as string[];
+  console.log('Fallback search terms:', fallback);
+  return fallback.slice(0, 5);
+}
+
+// ── Batch AI Analysis (Pass 1 - Fast Filter) ──
+async function batchScorePass1(
+  posts: { index: number; title: string; content: string }[],
+  productContext: string,
+  lovableKey: string
+): Promise<{ post: number; score: number }[]> {
+  const numbered = posts.map(p => `[${p.index}] Title: "${p.title}" | Content: "${p.content.slice(0, 400)}"`).join('\n');
+
+  const prompt = `You are a lead qualification expert. Quickly score these Reddit posts for PURCHASE INTENT related to: ${productContext}
+
+SCORING RUBRIC:
+- 70-100 (Direct Ask): "Can anyone recommend...", "looking for a tool that...", "best software for...", asking for alternatives
+- 40-69 (Problem + Frustration): "I'm struggling with...", mentions competitor pain, complaining about current tool
+- 20-39 (Research): "How do you handle...", comparing approaches, exploring options
+- 0-19 (Casual/Off-topic): General discussion, memes, already solved, self-promotion, very old
+
+NEGATIVE SIGNALS (reduce score): Already found solution, post is self-promotion, "I built this", "check out my", just sharing news
+
+Posts:
+${numbered}
+
+Return ONLY a JSON array: [{"post": 1, "score": 75}, {"post": 2, "score": 12}, ...]`;
+
+  try {
+    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: 'You score Reddit posts for purchase intent. Return only valid JSON arrays.' },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    });
+
+    if (!resp.ok) {
+      console.error('Pass 1 AI error:', resp.status);
+      return posts.map(p => ({ post: p.index, score: 30 })); // Default to passing through
+    }
+
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    console.error('Pass 1 batch error:', e);
+  }
+  return posts.map(p => ({ post: p.index, score: 30 }));
+}
+
+// ── Deep Analysis (Pass 2) ──
+async function deepAnalyzePost(
+  post: RedditPost,
+  profile: any,
+  lovableKey: string
+): Promise<{ score: number; level: string; notes: string; author: string } | null> {
+  const prompt = `You are an expert lead qualifier. Deeply analyze this Reddit post for PURCHASE INTENT.
+
+PRODUCT: ${profile.product_name || 'a SaaS tool'}
+DESCRIPTION: ${profile.company_description || 'Software solution'}
+VALUE PROP: ${profile.value_proposition || 'Solves business problems'}
+KEY FEATURES: ${(profile.key_features || []).join(', ') || 'Not specified'}
+COMPETITORS: ${(profile.competitor_names || []).join(', ') || 'None'}
+
+DETAILED SCORING RUBRIC:
+🔥 HOT (70-100) — Direct buying signals:
+  - Explicitly asking for tool/software recommendations ("can anyone recommend", "best tool for")
+  - Complaining about current solution AND seeking alternatives
+  - Budget/pricing discussions, comparing specific products
+  - "Ready to switch", "need to find something before [deadline]"
+
+🌡️ WARM (40-69) — Strong problem awareness:
+  - Describing a problem the product solves with frustration
+  - Mentioning competitor pain points
+  - "I'm struggling with...", workflow complaints
+  - Asking how others handle a specific challenge
+
+🔍 RESEARCH (25-39) — Early exploration:
+  - "How do you handle...", comparing approaches
+  - General interest in the problem space
+  - Evaluating whether a change is needed
+
+💤 LOW (0-24) — Not actionable:
+  - General discussion, already solved
+  - Self-promotion, news sharing
+  - Memes, jokes, off-topic
+
+NEGATIVE SIGNALS (subtract 10-30 points):
+  - "I already use [solution] and love it" → -20
+  - Post is self-promotion or "I built" → -30
+  - Problem already resolved in comments → -15
+  - Post older than 30 days → -10
+
+POST TITLE: ${post.title}
+POST CONTENT: ${(post.markdown || post.description || '').slice(0, 3000)}
+POST URL: ${post.url}
+
+Respond with valid JSON ONLY:
+{
+  "intent_score": <number 0-100>,
+  "intent_level": "<hot|warm|research|low>",
+  "relevance_notes": "<2-3 sentence analysis explaining WHY this score>",
+  "author": "<reddit username if visible, else 'unknown'>"
+}`;
+
+  try {
+    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'Expert lead qualifier. Return only valid JSON.' },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    });
+
+    if (!resp.ok) {
+      console.error('Pass 2 AI error:', resp.status);
+      return null;
+    }
+
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    console.error('Pass 2 analysis error:', e);
+  }
+  return null;
+}
+
+// ── Search Helper ──
+async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string): Promise<RedditPost[]> {
+  console.log(`[${label}] Query:`, query);
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        limit: 20,
+        tbs: freshness,
+        scrapeOptions: { formats: ['markdown'] },
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`[${label}] Found ${data.data?.length || 0} results`);
+      return (data.data || []).map((item: any) => ({
+        url: item.url,
+        title: item.title || '',
+        description: item.description || '',
+        markdown: item.markdown || '',
+      }));
+    } else {
+      console.error(`[${label}] Error:`, response.status);
+      return [];
+    }
+  } catch (e) {
+    console.error(`[${label}] Search error:`, e);
+    return [];
+  }
+}
+
+// ── Main Handler ──
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -76,31 +317,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body for scan type and user_id (for scheduled scans)
+    // Parse request
     let scanType = 'manual';
     let targetUserId: string | null = null;
     try {
       const body = await req.json();
       scanType = body.scan_type || 'manual';
       targetUserId = body.user_id || null;
-    } catch {
-      // No body, default to manual
-    }
+    } catch { /* no body */ }
 
     let userId: string;
 
-    // For scheduled scans with service role, use the provided user_id
     if (scanType === 'scheduled' && targetUserId && authHeader.includes(supabaseKey)) {
       userId = targetUserId;
       console.log('Scheduled scan for user:', userId);
     } else {
-      // Get user from auth header for manual scans
       const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
       const anonClient = createClient(supabaseUrl, anonKey);
       const { data: { user }, error: userError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-      
       if (userError || !user) {
-        console.error('Auth error:', userError);
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid authorization' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -110,65 +345,46 @@ serve(async (req) => {
       console.log('Manual scan for user:', userId);
     }
 
-    // Create scan history entry
-    const { data: scanRecord, error: scanRecordError } = await supabase
+    // Create scan history
+    const { data: scanRecord } = await supabase
       .from('scan_history')
-      .insert({
-        user_id: userId,
-        scan_type: scanType,
-        status: 'running',
-      })
+      .insert({ user_id: userId, scan_type: scanType, status: 'running' })
       .select()
       .single();
 
-    if (scanRecordError) {
-      console.error('Error creating scan record:', scanRecordError);
-    }
-
-    // Fetch user's profile for rate limiting and context
+    // Fetch profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('product_name, company_description, value_proposition, last_scan_at, key_features, competitor_names')
+      .select('product_name, company_description, value_proposition, last_scan_at, key_features, competitor_names, cached_search_terms, search_terms_cached_at')
       .eq('id', userId)
       .single();
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError);
       return new Response(
         JSON.stringify({ success: false, error: 'Profile not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Rate limiting check (skip for scheduled scans)
+    // Rate limiting (skip for scheduled)
     if (scanType === 'manual' && profile.last_scan_at) {
-      const lastScan = new Date(profile.last_scan_at);
-      const now = new Date();
-      const diffMinutes = (now.getTime() - lastScan.getTime()) / (1000 * 60);
-      
+      const diffMinutes = (Date.now() - new Date(profile.last_scan_at).getTime()) / (1000 * 60);
       if (diffMinutes < RATE_LIMIT_MINUTES) {
         const waitMinutes = Math.ceil(RATE_LIMIT_MINUTES - diffMinutes);
-        
-        // Update scan record as failed
         if (scanRecord) {
           await supabase.from('scan_history').update({
-            status: 'failed',
-            error_message: `Rate limited - wait ${waitMinutes} minutes`,
+            status: 'failed', error_message: `Rate limited - wait ${waitMinutes} minutes`,
             completed_at: new Date().toISOString(),
           }).eq('id', scanRecord.id);
         }
-        
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Rate limit exceeded. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before scanning again.` 
-          }),
+          JSON.stringify({ success: false, error: `Rate limit exceeded. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before scanning again.` }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Fetch user's subreddits
+    // Fetch subreddits
     const { data: subredditsData } = await supabase
       .from('monitored_subreddits')
       .select('subreddit_name')
@@ -176,12 +392,10 @@ serve(async (req) => {
       .eq('is_active', true);
 
     const subreddits = subredditsData || [];
-
     if (subreddits.length === 0) {
       if (scanRecord) {
         await supabase.from('scan_history').update({
-          status: 'failed',
-          error_message: 'No subreddits configured',
+          status: 'failed', error_message: 'No subreddits configured',
           completed_at: new Date().toISOString(),
         }).eq('id', scanRecord.id);
       }
@@ -191,73 +405,16 @@ serve(async (req) => {
       );
     }
 
-    // Update last_scan_at timestamp for rate limiting
-    await supabase
-      .from('profiles')
-      .update({ last_scan_at: new Date().toISOString() })
-      .eq('id', userId);
+    // Update last_scan_at
+    await supabase.from('profiles').update({ last_scan_at: new Date().toISOString() }).eq('id', userId);
 
-    // Dynamically generate search terms from product profile using AI
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    let topics: string[] = [];
-
-    try {
-      const genPrompt = `Given this product, generate 5-8 short search terms (2-5 words each) that someone on Reddit would use when looking for this type of solution. Focus on pain points, use cases, and problem descriptions — NOT the product name itself.
-
-Product: ${profile.product_name || 'Unknown'}
-Description: ${profile.company_description || 'Not provided'}
-Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
-Target Audience: ${profile.value_proposition || 'Not specified'}
-
-Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
-
-      const genResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [
-            { role: 'system', content: 'Return only valid JSON. No markdown, no explanation.' },
-            { role: 'user', content: genPrompt },
-          ],
-        }),
-      });
-
-      if (genResponse.ok) {
-        const genData = await genResponse.json();
-        const content = genData.choices?.[0]?.message?.content || '';
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          topics = JSON.parse(jsonMatch[0]);
-          console.log('AI-generated search terms:', topics);
-        }
-      }
-    } catch (e) {
-      console.error('AI search term generation failed, using fallback:', e);
-    }
-
-    // Fallback: extract terms from profile if AI failed
-    if (topics.length === 0) {
-      const fallbackParts = [
-        profile.product_name,
-        ...(profile.company_description || '').split(/[.,;]/).slice(0, 3).map((s: string) => s.trim()).filter(Boolean),
-      ].filter(Boolean) as string[];
-      topics = fallbackParts.slice(0, 5);
-      console.log('Fallback search terms:', topics);
-    }
-
-    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} dynamic topics`);
-
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY')!;
 
     if (!firecrawlKey || !lovableKey) {
       if (scanRecord) {
         await supabase.from('scan_history').update({
-          status: 'failed',
-          error_message: 'API keys not configured',
+          status: 'failed', error_message: 'API keys not configured',
           completed_at: new Date().toISOString(),
         }).eq('id', scanRecord.id);
       }
@@ -267,96 +424,59 @@ Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
       );
     }
 
-    // Fetch seen posts for deduplication
+    // Get search terms (cached or freshly generated)
+    const topics = await getCachedOrGenerateTerms(supabase, userId, profile, lovableKey);
+    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics`);
+
+    // Fetch seen posts for dedup
     const { data: seenPosts } = await supabase
       .from('seen_posts')
       .select('post_url')
       .eq('user_id', userId);
-    
-    const seenUrls = new Set((seenPosts || []).map(p => p.post_url));
+    const seenUrls = new Set((seenPosts || []).map((p: any) => p.post_url));
     console.log(`User has ${seenUrls.size} previously seen posts`);
 
+    // ── Search Phase ──
     const allPosts: RedditPost[] = [];
-    
-    // Helper function to run a search query
-    const runSearch = async (query: string, label: string, freshness: string = 'qdr:w'): Promise<RedditPost[]> => {
-      console.log(`[${label}] Query:`, query);
-      try {
-        const response = await fetch('https://api.firecrawl.dev/v1/search', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${firecrawlKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query,
-            limit: 20,
-            tbs: freshness, // Use fresher data: qdr:d (day), qdr:w (week)
-            scrapeOptions: { formats: ['markdown'] },
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`[${label}] Found ${data.data?.length || 0} results`);
-          return (data.data || []).map((item: any) => ({
-            url: item.url,
-            title: item.title || '',
-            description: item.description || '',
-            markdown: item.markdown || '',
-          }));
-        } else {
-          const errText = await response.text();
-          console.error(`[${label}] Error:`, response.status, errText);
-          return [];
-        }
-      } catch (e) {
-        console.error(`[${label}] Search error:`, e);
-        return [];
-      }
-    };
-
-    // Optimized search strategy - prioritize fresh content
     const intentPart = INTENT_MODIFIERS.slice(0, 8).map(i => `"${i}"`).join(' OR ');
 
-    // === STRATEGY A: Fresh content (last 24 hours) - highest priority ===
-    console.log('=== Strategy A: Fresh Content (24h) ===');
-    const topicQuery = topics.slice(0, 3).map(t => `"${t}"`).join(' OR ');
-    const freshQuery = `site:reddit.com (${topicQuery}) (${intentPart})`;
-    const freshPosts = await runSearch(freshQuery, 'Fresh:24h', 'qdr:d');
+    // Strategy A: Fresh content (24h)
+    const topicQuery = topics.slice(0, 3).map((t: string) => `"${t}"`).join(' OR ');
+    const freshPosts = await runSearch(
+      `site:reddit.com (${topicQuery}) (${intentPart})`, 'Fresh:24h', 'qdr:d', firecrawlKey
+    );
     allPosts.push(...freshPosts);
 
-    // === STRATEGY B: Competitor-aware searching ===
-    if (profile.competitor_names && profile.competitor_names.length > 0) {
-      console.log('=== Strategy B: Competitor Alternatives ===');
+    // Strategy B: Competitor alternatives
+    if (profile.competitor_names?.length > 0) {
       const competitorQuery = profile.competitor_names
         .slice(0, 3)
         .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
         .join(' OR ');
       const competitorPosts = await runSearch(
-        `site:reddit.com (${competitorQuery})`,
-        'Competitors',
-        'qdr:w'
+        `site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey
       );
       allPosts.push(...competitorPosts);
       await new Promise(r => setTimeout(r, 200));
     }
 
-    // === STRATEGY C: Subreddit-specific with intent (last week) ===
-    console.log('=== Strategy C: Subreddit + Intent Search ===');
+    // Strategy C: Subreddit-specific
     for (const sub of subreddits.slice(0, 5)) {
-      const subredditQuery = `site:reddit.com/r/${sub.subreddit_name} (${intentPart})`;
-      const posts = await runSearch(subredditQuery, `Subreddit:${sub.subreddit_name}`, 'qdr:w');
+      const posts = await runSearch(
+        `site:reddit.com/r/${sub.subreddit_name} (${intentPart})`,
+        `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
+      );
       allPosts.push(...posts);
       await new Promise(r => setTimeout(r, 150));
     }
 
-    // === STRATEGY D: Broad topic search (fallback if needed) ===
+    // Strategy D: Broad fallback
     if (allPosts.length < 10) {
-      console.log('=== Strategy D: Broad Fallback ===');
       for (const topic of topics.slice(0, 2)) {
-        const fallbackQuery = `site:reddit.com "${topic}" recommendation OR help OR suggestion`;
-        const posts = await runSearch(fallbackQuery, `Fallback:${topic}`, 'qdr:m');
+        const posts = await runSearch(
+          `site:reddit.com "${topic}" recommendation OR help OR suggestion`,
+          `Fallback:${topic}`, 'qdr:m', firecrawlKey
+        );
         allPosts.push(...posts);
         await new Promise(r => setTimeout(r, 150));
       }
@@ -364,23 +484,17 @@ Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
 
     console.log(`Found ${allPosts.length} total posts`);
 
-    // Filter duplicates within this scan AND against seen posts
+    // Deduplicate
     const uniquePosts = allPosts.filter((post, index, self) => {
-      // Remove duplicates within this scan
-      const isFirstOccurrence = index === self.findIndex(p => p.url === post.url);
-      // Remove already seen posts
-      const isNew = !seenUrls.has(post.url);
-      return isFirstOccurrence && isNew;
+      return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
     });
 
-    console.log(`${uniquePosts.length} new unique posts to analyze (${allPosts.length - uniquePosts.length} duplicates/seen removed)`);
+    console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes removed)`);
 
     if (uniquePosts.length === 0) {
       if (scanRecord) {
         await supabase.from('scan_history').update({
-          status: 'completed',
-          posts_scanned: 0,
-          leads_found: 0,
+          status: 'completed', posts_scanned: 0, leads_found: 0,
           completed_at: new Date().toISOString(),
         }).eq('id', scanRecord.id);
       }
@@ -390,118 +504,73 @@ Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
       );
     }
 
-    // Mark posts as seen (batch insert)
-    const postsToMark = uniquePosts.map(p => ({
-      user_id: userId,
-      post_url: p.url,
-    }));
-
-    // Insert seen posts in batches to avoid conflicts
+    // Mark as seen
+    const postsToMark = uniquePosts.map(p => ({ user_id: userId, post_url: p.url }));
     for (let i = 0; i < postsToMark.length; i += 50) {
-      const batch = postsToMark.slice(i, i + 50);
-      await supabase.from('seen_posts').upsert(batch, { 
-        onConflict: 'user_id,post_url',
-        ignoreDuplicates: true 
+      await supabase.from('seen_posts').upsert(postsToMark.slice(i, i + 50), {
+        onConflict: 'user_id,post_url', ignoreDuplicates: true,
       });
     }
 
-    // Analyze posts with AI for intent
+    // ── PASS 1: Batch Fast Filter ──
+    console.log('=== PASS 1: Batch Fast Filter ===');
+    const postsToAnalyze = uniquePosts.slice(0, 30);
+    const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
+
+    const pass1Results: Map<number, number> = new Map();
+
+    // Process in batches of BATCH_SIZE
+    for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
+      const batch = postsToAnalyze.slice(i, i + BATCH_SIZE).map((p, j) => ({
+        index: i + j,
+        title: p.title,
+        content: p.markdown || p.description || '',
+      }));
+
+      const scores = await batchScorePass1(batch, productContext, lovableKey);
+      for (const s of scores) {
+        pass1Results.set(s.post, s.score);
+      }
+
+      if (i + BATCH_SIZE < postsToAnalyze.length) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+
+    // Filter: only posts scoring >= PASS1_THRESHOLD proceed
+    const pass1Qualified = postsToAnalyze.filter((_, idx) => (pass1Results.get(idx) || 0) >= PASS1_THRESHOLD);
+    console.log(`Pass 1: ${pass1Qualified.length}/${postsToAnalyze.length} posts scored >= ${PASS1_THRESHOLD}`);
+
+    // ── PASS 2: Deep Analysis ──
+    console.log('=== PASS 2: Deep Analysis ===');
     const leadsToInsert: Lead[] = [];
-    const postsToAnalyze = uniquePosts.slice(0, 30); // Analyze up to 30 posts
 
-    for (const post of postsToAnalyze) {
-      try {
-        const analysisPrompt = `You are a lead qualification expert. Analyze this Reddit post for PURCHASE INTENT.
+    for (const post of pass1Qualified) {
+      const analysis = await deepAnalyzePost(post, profile, lovableKey);
+      if (!analysis) continue;
 
-PRODUCT BEING SOLD: ${profile?.product_name || 'a SaaS tool'}
-PRODUCT DESCRIPTION: ${profile?.company_description || 'Software that helps businesses'}
-VALUE PROPOSITION: ${profile?.value_proposition || 'Solves business problems'}
-KEY FEATURES: ${(profile?.key_features || []).join(', ') || 'Not specified'}
+      console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}`);
 
-HIGH INTENT SIGNALS (score 50-100):
-- Explicitly asking for tool/software recommendations
-- Complaining about current solution and seeking alternatives
-- Asking "what do you use for X?" or "best tool for X?"
-- Budget discussions, comparing pricing
-- Ready to buy/try something new
+      if (analysis.score >= PASS1_THRESHOLD) {
+        const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
+        const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
 
-MEDIUM INTENT SIGNALS (score 20-49):
-- Discussing problems the product solves
-- Showing interest in the problem space
-- Asking how others handle similar challenges
+        let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
+        if (analysis.score >= 70) intentLevel = 'hot';
+        else if (analysis.score >= 40) intentLevel = 'warm';
+        else if (analysis.score >= 25) intentLevel = 'research';
 
-LOW INTENT (score 1-19):
-- General discussion not seeking solutions
-- Already happy with current solution
-- Off-topic or unrelated content
-
-POST TITLE: ${post.title}
-POST CONTENT: ${post.markdown?.slice(0, 2000) || post.description || 'No content available'}
-
-Respond with valid JSON ONLY:
-{
-  "intent_score": <number 1-100>,
-  "intent_level": "<low|medium|high>",
-  "relevance_notes": "<1-2 sentence explanation>",
-  "author": "<reddit username if visible, else 'unknown'>"
-}`;
-
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { role: 'system', content: 'You are an expert at analyzing Reddit posts for purchase intent. Always respond with valid JSON only.' },
-              { role: 'user', content: analysisPrompt }
-            ],
-          }),
+        leadsToInsert.push({
+          thread_url: post.url,
+          thread_title: post.title,
+          thread_content: (post.markdown || post.description || '').slice(0, 5000),
+          subreddit,
+          author: analysis.author || 'unknown',
+          intent_score: analysis.score,
+          intent_level: intentLevel,
+          relevance_notes: analysis.notes,
+          user_id: userId,
         });
-
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error('AI API error:', aiResponse.status, errorText);
-          continue;
-        }
-
-        const aiData = await aiResponse.json();
-        const content = aiData.choices?.[0]?.message?.content || '';
-        
-        // Extract JSON from response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const analysis = JSON.parse(jsonMatch[0]);
-          
-          console.log(`Post: "${post.title.slice(0, 40)}..." => Score: ${analysis.intent_score}`);
-          
-          // Lower threshold to 10 for testing
-          if (analysis.intent_score >= 10) {
-            const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
-            const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
-
-            let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
-            if (analysis.intent_score >= 70) intentLevel = 'hot';
-            else if (analysis.intent_score >= 40) intentLevel = 'warm';
-            else if (analysis.intent_score >= 20) intentLevel = 'research';
-
-            leadsToInsert.push({
-              thread_url: post.url,
-              thread_title: post.title,
-              thread_content: post.markdown?.slice(0, 5000) || post.description || '',
-              subreddit,
-              author: analysis.author || 'unknown',
-              intent_score: analysis.intent_score,
-              intent_level: intentLevel,
-              relevance_notes: analysis.relevance_notes,
-              user_id: userId,
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Analysis error for post:', post.url, e);
       }
 
       await new Promise(r => setTimeout(r, 80));
@@ -509,19 +578,14 @@ Respond with valid JSON ONLY:
 
     console.log(`Inserting ${leadsToInsert.length} qualified leads`);
 
-    // Count intent levels for scan history
     const hotLeads = leadsToInsert.filter(l => l.intent_level === 'hot').length;
     const warmLeads = leadsToInsert.filter(l => l.intent_level === 'warm').length;
 
-    // Insert leads (they accumulate, no deletion of old leads)
     if (leadsToInsert.length > 0) {
       const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
-      if (insertError) {
-        console.error('Insert error:', insertError);
-      }
+      if (insertError) console.error('Insert error:', insertError);
     }
 
-    // Update scan history
     if (scanRecord) {
       await supabase.from('scan_history').update({
         status: 'completed',
@@ -534,13 +598,13 @@ Respond with valid JSON ONLY:
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         leadsFound: leadsToInsert.length,
         postsScanned: postsToAnalyze.length,
         hotLeads,
         warmLeads,
-        message: `Found ${leadsToInsert.length} new leads from ${postsToAnalyze.length} posts`
+        message: `Found ${leadsToInsert.length} leads from ${postsToAnalyze.length} posts (${pass1Qualified.length} passed fast filter)`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

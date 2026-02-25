@@ -122,6 +122,7 @@ export type Database = {
       profiles: {
         Row: {
           auto_pilot_enabled: boolean | null
+          cached_search_terms: Json | null
           common_objections: string[] | null
           company_description: string | null
           competitor_names: string[] | null
@@ -138,6 +139,7 @@ export type Database = {
           product_name: string | null
           product_url: string | null
           scan_frequency_hours: number | null
+          search_terms_cached_at: string | null
           selected_plan: string | null
           success_stories: string | null
           target_audience: string | null
@@ -148,6 +150,7 @@ export type Database = {
         }
         Insert: {
           auto_pilot_enabled?: boolean | null
+          cached_search_terms?: Json | null
           common_objections?: string[] | null
           company_description?: string | null
           competitor_names?: string[] | null
@@ -164,6 +167,7 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           scan_frequency_hours?: number | null
+          search_terms_cached_at?: string | null
           selected_plan?: string | null
           success_stories?: string | null
           target_audience?: string | null
@@ -174,6 +178,7 @@ export type Database = {
         }
         Update: {
           auto_pilot_enabled?: boolean | null
+          cached_search_terms?: Json | null
           common_objections?: string[] | null
           company_description?: string | null
           competitor_names?: string[] | null
@@ -190,6 +195,7 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           scan_frequency_hours?: number | null
+          search_terms_cached_at?: string | null
           selected_plan?: string | null
           success_stories?: string | null
           target_audience?: string | null
