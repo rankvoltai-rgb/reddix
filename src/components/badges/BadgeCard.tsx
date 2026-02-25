@@ -3,9 +3,10 @@ import type { BadgeMilestone } from '@/hooks/useBadges';
 
 interface BadgeCardProps {
   badge: BadgeMilestone;
+  isNew?: boolean;
 }
 
-export function BadgeCard({ badge }: BadgeCardProps) {
+export function BadgeCard({ badge, isNew }: BadgeCardProps) {
   const Icon = badge.icon;
 
   return (
@@ -15,7 +16,7 @@ export function BadgeCard({ badge }: BadgeCardProps) {
           badge.unlocked
             ? 'bg-[hsl(0,80%,65%)] shadow-md'
             : 'bg-muted opacity-40 grayscale'
-        }`}
+        } ${isNew ? 'animate-badge-celebrate badge-glow' : ''}`}
       >
         <Icon className={`w-6 h-6 ${badge.unlocked ? 'text-white' : 'text-muted-foreground'}`} />
         {!badge.unlocked && (
