@@ -54,6 +54,7 @@ type AnalyzeWebsiteResponse = {
     unique_differentiators: string;
     common_objections: string[];
     success_stories: string;
+    tone: string;
   };
 };
 

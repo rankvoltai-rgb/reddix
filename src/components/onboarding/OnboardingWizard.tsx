@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -11,55 +10,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS, SubscriptionPlan } from '@/lib/subscriptionTiers';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, ArrowLeft, Check, Loader2, X, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 interface OnboardingData {
   full_name: string;
   product_name: string;
   product_url: string;
-  company_description: string;
-  target_audience: string;
-  value_proposition: string;
-  key_features: string[];
-  competitor_names: string[];
-  common_objections: string[];
-  success_stories: string;
-  pricing_model: string;
-  unique_differentiators: string;
-  tone: 'professional' | 'casual' | 'friendly' | 'technical' | 'witty';
   selected_plan: SubscriptionPlan | null;
 }
 
-const TONE_OPTIONS = [
-  { value: 'professional', label: 'Professional', description: 'Formal and business-like', icon: '💼' },
-  { value: 'casual', label: 'Casual', description: 'Relaxed and conversational', icon: '😊' },
-  { value: 'friendly', label: 'Friendly', description: 'Warm and approachable', icon: '🤝' },
-  { value: 'technical', label: 'Technical', description: 'Detailed and precise', icon: '⚙️' },
-  { value: 'witty', label: 'Witty', description: 'Clever with personality', icon: '😄' },
-] as const;
-
-const PRICING_OPTIONS = [
-  { value: 'free', label: 'Free', icon: '🆓' },
-  { value: 'freemium', label: 'Freemium', icon: '🎁' },
-  { value: 'free-trial', label: 'Free Trial', icon: '⏱️' },
-  { value: 'paid', label: 'Paid Only', icon: '💰' },
-  { value: 'enterprise', label: 'Enterprise', icon: '🏢' },
-] as const;
-
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 2;
 
 export default function OnboardingWizard() {
   const [searchParams] = useSearchParams();
   const { session } = useAuth();
   const { refreshSubscription } = useSubscription();
   const [step, setStep] = useState(1);
-  const [featureInput, setFeatureInput] = useState('');
-  const [competitorInput, setCompetitorInput] = useState('');
-  const [objectionInput, setObjectionInput] = useState('');
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -67,11 +36,9 @@ export default function OnboardingWizard() {
   // Handle checkout=success redirect from Stripe
   useEffect(() => {
     const checkout = searchParams.get('checkout');
-    const stepParam = searchParams.get('step');
     if (checkout === 'success') {
       refreshSubscription();
-      if (stepParam) setStep(Number(stepParam));
-      else setStep(3);
+      setStep(2);
     }
   }, []);
 
@@ -79,16 +46,6 @@ export default function OnboardingWizard() {
     full_name: '',
     product_name: '',
     product_url: '',
-    company_description: '',
-    target_audience: '',
-    value_proposition: '',
-    key_features: [],
-    competitor_names: [],
-    common_objections: [],
-    success_stories: '',
-    pricing_model: 'freemium',
-    unique_differentiators: '',
-    tone: 'friendly',
     selected_plan: null,
   });
 
@@ -99,87 +56,70 @@ export default function OnboardingWizard() {
         full_name: profile.full_name || prev.full_name,
         product_name: profile.product_name || prev.product_name,
         product_url: profile.product_url || prev.product_url,
-        company_description: profile.company_description || prev.company_description,
-        target_audience: profile.target_audience || prev.target_audience,
-        value_proposition: profile.value_proposition || prev.value_proposition,
-        key_features: profile.key_features || prev.key_features,
-        competitor_names: profile.competitor_names || prev.competitor_names,
-        common_objections: profile.common_objections || prev.common_objections,
-        success_stories: profile.success_stories || prev.success_stories,
-        pricing_model: profile.pricing_model || prev.pricing_model,
-        unique_differentiators: profile.unique_differentiators || prev.unique_differentiators,
-        tone: profile.tone || prev.tone,
       }));
     }
   }, [profile]);
 
   const updateField = <K extends keyof OnboardingData>(field: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [field]: value }));
-    // Clear auto-filled badge when user manually edits
-    setAutoFilledFields(prev => { const next = new Set(prev); next.delete(field); return next; });
   };
 
-  const handleAnalyzeWebsite = async () => {
+  const handleAnalyzeAndContinue = async () => {
     const url = data.product_url.trim();
     if (!url) return;
 
     setIsAnalyzing(true);
+
+    // Prepare base profile data
+    const profileUpdate: Record<string, any> = {
+      full_name: data.full_name,
+      product_name: data.product_name,
+      product_url: url,
+    };
+
     try {
       const { firecrawlApi } = await import('@/lib/api/firecrawl');
       const result = await firecrawlApi.analyzeWebsite(url);
 
-      if (!result.success || !result.data) {
-        toast({ variant: 'destructive', title: 'Analysis failed', description: result.error || 'Could not analyze website' });
-        return;
+      if (result.success && result.data) {
+        const d = result.data;
+        if (d.company_description) profileUpdate.company_description = d.company_description;
+        if (d.target_audience) profileUpdate.target_audience = d.target_audience;
+        if (d.value_proposition) profileUpdate.value_proposition = d.value_proposition;
+        if (d.key_features?.length) profileUpdate.key_features = d.key_features;
+        if (d.competitor_names?.length) profileUpdate.competitor_names = d.competitor_names;
+        if (d.common_objections?.length) profileUpdate.common_objections = d.common_objections;
+        if (d.success_stories) profileUpdate.success_stories = d.success_stories;
+        if (d.pricing_model) profileUpdate.pricing_model = d.pricing_model;
+        if (d.unique_differentiators) profileUpdate.unique_differentiators = d.unique_differentiators;
+        if ((d as any).tone) profileUpdate.tone = (d as any).tone;
+
+        toast({ title: '✨ Website analyzed!', description: 'Your product details have been auto-filled.' });
+      } else {
+        toast({ variant: 'destructive', title: 'Analysis incomplete', description: result.error || 'Could not fully analyze website. You can update details later in Settings.' });
       }
-
-      const d = result.data;
-      const filled = new Set<string>();
-
-      setData(prev => {
-        const next = { ...prev };
-        if (!prev.company_description && d.company_description) { next.company_description = d.company_description; filled.add('company_description'); }
-        if (!prev.target_audience && d.target_audience) { next.target_audience = d.target_audience; filled.add('target_audience'); }
-        if (!prev.value_proposition && d.value_proposition) { next.value_proposition = d.value_proposition; filled.add('value_proposition'); }
-        if (prev.key_features.length === 0 && d.key_features.length > 0) { next.key_features = d.key_features; filled.add('key_features'); }
-        if (prev.competitor_names.length === 0 && d.competitor_names.length > 0) { next.competitor_names = d.competitor_names; filled.add('competitor_names'); }
-        if (prev.common_objections.length === 0 && d.common_objections.length > 0) { next.common_objections = d.common_objections; filled.add('common_objections'); }
-        if (!prev.success_stories && d.success_stories) { next.success_stories = d.success_stories; filled.add('success_stories'); }
-        if (prev.pricing_model === 'freemium' && d.pricing_model && d.pricing_model !== '') { next.pricing_model = d.pricing_model; filled.add('pricing_model'); }
-        if (!prev.unique_differentiators && d.unique_differentiators) { next.unique_differentiators = d.unique_differentiators; filled.add('unique_differentiators'); }
-        return next;
-      });
-
-      setAutoFilledFields(filled);
-      toast({ title: '✨ Website analyzed!', description: "We've pre-filled your details. Review and edit as needed." });
     } catch (error) {
       console.error('Analyze error:', error);
-      toast({ variant: 'destructive', title: 'Analysis failed', description: 'Something went wrong. You can fill in the fields manually.' });
-    } finally {
-      setIsAnalyzing(false);
+      toast({ variant: 'destructive', title: 'Analysis failed', description: 'Proceeding with basic info. You can update details later.' });
     }
-  };
 
-  const addToArray = (field: 'key_features' | 'competitor_names' | 'common_objections', value: string) => {
-    if (value.trim() && data[field].length < 5) {
-      setData((prev) => ({ ...prev, [field]: [...prev[field], value.trim()] }));
-    }
-  };
-
-  const removeFromArray = (field: 'key_features' | 'competitor_names' | 'common_objections', index: number) => {
-    setData((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
+    // Save profile regardless of analysis outcome
+    updateProfile(profileUpdate as any, {
+      onSuccess: () => {
+        setIsAnalyzing(false);
+        setStep(2);
+      },
+      onError: () => {
+        setIsAnalyzing(false);
+        toast({ variant: 'destructive', title: 'Could not save profile', description: 'Please try again.' });
+      },
+    });
   };
 
   const canProceed = () => {
-    switch (step) {
-      case 1: return data.full_name.trim() && data.product_name.trim() && data.company_description.trim().length >= 10 && data.target_audience.trim();
-      case 2: return data.selected_plan !== null;
-      case 3: return data.key_features.length >= 1 && data.value_proposition.trim();
-      case 4: return true;
-      case 5: return true;
-      case 6: return true;
-      default: return false;
-    }
+    if (step === 1) return !!data.full_name.trim() && !!data.product_name.trim() && !!data.product_url.trim();
+    if (step === 2) return data.selected_plan !== null;
+    return false;
   };
 
   const handlePlanSelect = async (planKey: SubscriptionPlan) => {
@@ -209,34 +149,12 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleContinueFromPlan = () => {
-    if (data.selected_plan === 'free') {
-      // Save selected_plan to profile immediately
-      updateProfile(
-        { selected_plan: 'free' } as any,
-        { onSuccess: () => setStep(3) }
-      );
-    }
-  };
-
   const handleComplete = async () => {
     const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
     updateProfile(
       {
-        full_name: data.full_name,
-        product_name: data.product_name,
-        product_url: data.product_url || null,
-        company_description: data.company_description,
-        target_audience: data.target_audience,
-        value_proposition: data.value_proposition,
-        key_features: data.key_features.length > 0 ? data.key_features : null,
-        competitor_names: data.competitor_names.length > 0 ? data.competitor_names : null,
-        common_objections: data.common_objections.length > 0 ? data.common_objections : null,
-        success_stories: data.success_stories || null,
-        pricing_model: data.pricing_model || null,
-        unique_differentiators: data.unique_differentiators || null,
-        tone: data.tone,
+        selected_plan: data.selected_plan,
         initial_setup_completed: true,
         onboarding_completed: true,
         auto_pilot_enabled: true,
@@ -285,12 +203,8 @@ export default function OnboardingWizard() {
   const progressPercentage = Math.round((step / TOTAL_STEPS) * 100);
 
   const stepTitles: Record<number, string> = {
-    1: 'Personalize your lead generation',
+    1: 'Tell us about your business',
     2: 'Choose your lead generation plan',
-    3: 'Key features & value proposition',
-    4: 'Competition & objections',
-    5: 'Social proof & pricing',
-    6: 'Communication tone',
   };
 
   return (
@@ -306,7 +220,7 @@ export default function OnboardingWizard() {
           {/* Content */}
           <div className="px-8 pb-6">
             <div className="min-h-[300px]">
-              {/* Step 1: Personalization */}
+              {/* Step 1: Your Info */}
               {step === 1 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-2">
@@ -318,29 +232,9 @@ export default function OnboardingWizard() {
                     <Input placeholder="e.g., Acme Analytics" value={data.product_name} onChange={(e) => updateField('product_name', e.target.value)} className="h-11" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Website URL <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
-                    <div className="flex gap-2">
-                      <Input placeholder="https://yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
-                      {data.product_url.trim() && (
-                        <Button type="button" variant="secondary" className="h-11 px-4 shrink-0 gap-2" onClick={handleAnalyzeWebsite} disabled={isAnalyzing}>
-                          {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Sparkles className="w-4 h-4" /> Analyze</>}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Describe Your Product <span className="text-primary">*</span>
-                      {autoFilledFields.has('company_description') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}
-                    </label>
-                    <Textarea placeholder="Briefly describe your product or service and the problems it solves..." value={data.company_description} onChange={(e) => updateField('company_description', e.target.value)} rows={3} maxLength={1000} className="resize-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Target Audience <span className="text-primary">*</span>
-                      {autoFilledFields.has('target_audience') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}
-                    </label>
-                    <Textarea placeholder="Describe your ideal customers..." value={data.target_audience} onChange={(e) => updateField('target_audience', e.target.value)} rows={3} className="resize-none" />
+                    <label className="text-sm font-medium text-foreground">Website URL <span className="text-primary">*</span></label>
+                    <Input placeholder="yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
+                    <p className="text-xs text-muted-foreground">We'll analyze your website to auto-fill your product details</p>
                   </div>
                 </div>
               )}
@@ -394,110 +288,6 @@ export default function OnboardingWizard() {
                   <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime</p>
                 </div>
               )}
-
-              {/* Step 3: Features + Value Prop */}
-              {step === 3 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Key Features <span className="text-xs text-muted-foreground font-normal">(up to 5)</span> <span className="text-primary">*</span>{autoFilledFields.has('key_features') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <div className="flex gap-2">
-                      <Input placeholder="e.g., Real-time analytics dashboard" value={featureInput} onChange={(e) => setFeatureInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('key_features', featureInput); setFeatureInput(''); } }} className="h-11" />
-                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('key_features', featureInput); setFeatureInput(''); }} disabled={data.key_features.length >= 5}>Add</Button>
-                    </div>
-                    {data.key_features.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {data.key_features.map((f, i) => (
-                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">
-                            {f}
-                            <button onClick={() => removeFromArray('key_features', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">What Makes You Different? <span className="text-primary">*</span>{autoFilledFields.has('value_proposition') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <Textarea placeholder="Why should someone choose you over alternatives?" value={data.value_proposition} onChange={(e) => updateField('value_proposition', e.target.value)} rows={4} className="resize-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Unique Differentiators <span className="text-xs text-muted-foreground font-normal">(optional)</span>{autoFilledFields.has('unique_differentiators') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <Textarea placeholder="Any patents, proprietary tech, exclusive partnerships?" value={data.unique_differentiators} onChange={(e) => updateField('unique_differentiators', e.target.value)} rows={3} className="resize-none" />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Competition + Objections */}
-              {step === 4 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Competitors <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span>{autoFilledFields.has('competitor_names') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <div className="flex gap-2">
-                      <Input placeholder="e.g., Mixpanel" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('competitor_names', competitorInput); setCompetitorInput(''); } }} className="h-11" />
-                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('competitor_names', competitorInput); setCompetitorInput(''); }} disabled={data.competitor_names.length >= 5}>Add</Button>
-                    </div>
-                    {data.competitor_names.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {data.competitor_names.map((n, i) => (
-                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">{n}<button onClick={() => removeFromArray('competitor_names', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button></Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="h-px bg-border" />
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Common Objections <span className="text-xs text-muted-foreground font-normal">(optional, up to 5)</span>{autoFilledFields.has('common_objections') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <div className="flex gap-2">
-                      <Input placeholder='"Too expensive", "Hard to set up"' value={objectionInput} onChange={(e) => setObjectionInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('common_objections', objectionInput); setObjectionInput(''); } }} className="h-11" />
-                      <Button type="button" variant="secondary" className="h-11 px-4" onClick={() => { addToArray('common_objections', objectionInput); setObjectionInput(''); }} disabled={data.common_objections.length >= 5}>Add</Button>
-                    </div>
-                    {data.common_objections.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {data.common_objections.map((o, i) => (
-                          <Badge key={i} variant="secondary" className="py-1.5 px-3 text-sm">{o}<button onClick={() => removeFromArray('common_objections', i)} className="ml-2 hover:text-destructive"><X className="w-3 h-3" /></button></Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Social Proof + Pricing Model */}
-              {step === 5 && (
-                <div className="space-y-5 animate-fade-in">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Success Stories <span className="text-xs text-muted-foreground font-normal">(optional)</span>{autoFilledFields.has('success_stories') && <Badge variant="secondary" className="ml-2 text-xs py-0">Auto-filled</Badge>}</label>
-                    <Textarea placeholder='"Helped Company X increase conversions by 40%"' value={data.success_stories} onChange={(e) => updateField('success_stories', e.target.value)} rows={4} className="resize-none" />
-                  </div>
-                  <div className="h-px bg-border" />
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Your Pricing Model</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {PRICING_OPTIONS.map((opt) => (
-                        <button key={opt.value} type="button" onClick={() => updateField('pricing_model', opt.value)} className={`p-3 rounded-xl border-2 text-left transition-all ${data.pricing_model === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
-                          <div className="text-lg mb-1">{opt.icon}</div>
-                          <div className="text-sm font-medium text-foreground">{opt.label}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 6: Tone */}
-              {step === 6 && (
-                <div className="space-y-4 animate-fade-in">
-                  <p className="text-sm text-muted-foreground">Select your preferred tone for AI-generated replies</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {TONE_OPTIONS.map((opt) => (
-                      <button key={opt.value} type="button" onClick={() => updateField('tone', opt.value)} className={`p-3 rounded-xl border-2 text-left transition-all ${data.tone === opt.value ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}>
-                        <div className="text-lg mb-1">{opt.icon}</div>
-                        <div className="text-sm font-medium text-foreground">{opt.label}</div>
-                        <div className="text-xs text-muted-foreground">{opt.description}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -508,31 +298,19 @@ export default function OnboardingWizard() {
                 <Progress value={progressPercentage} className="h-2" />
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {step > 1 && step !== 2 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(s => s - 1)}>
-                    <ArrowLeft className="w-4 h-4 mr-1" />
-                    Back
+                {step === 1 ? (
+                  <Button type="button" onClick={handleAnalyzeAndContinue} disabled={!canProceed() || isAnalyzing} className="gap-2">
+                    {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <>Analyze & Continue <ArrowRight className="w-4 h-4" /></>}
                   </Button>
-                )}
-                {step === 2 ? (
-                  data.selected_plan === 'free' ? (
-                    <Button type="button" onClick={handleContinueFromPlan} disabled={isUpdating} className="gap-2">
-                      {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
-                      <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                    </Button>
-                  )
-                ) : step < TOTAL_STEPS ? (
-                  <Button type="button" onClick={() => setStep(s => s + 1)} disabled={!canProceed()} className="gap-2">
-                    Continue <ArrowRight className="w-4 h-4" />
-                  </Button>
-                ) : (
+                ) : step === 2 && data.selected_plan === 'free' ? (
                   <Button type="button" onClick={handleComplete} disabled={isUpdating} className="gap-2">
                     {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Complete Setup</>}
                   </Button>
-                )}
+                ) : step === 2 ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
+                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
