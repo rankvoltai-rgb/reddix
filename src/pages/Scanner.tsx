@@ -11,12 +11,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, X, Search, Sparkles, Zap, Clock } from "lucide-react";
+import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, Crown, Flame } from "lucide-react";
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
-import { formatDistanceToNow, differenceInSeconds, intervalToDuration } from "date-fns";
+import { formatDistanceToNow, differenceInSeconds, intervalToDuration, startOfDay } from "date-fns";
+
+const FREE_DAILY_LIMIT = 10;
+
+async function getTodayHighIntentCount(userId: string): Promise<number> {
+  const todayMidnight = startOfDay(new Date()).toISOString();
+  const { count, error } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .in('intent_level', ['hot', 'warm'])
+    .gte('discovered_at', todayMidnight)
+    .neq('status', 'archived');
+  if (error) throw error;
+  return count ?? 0;
+}
 
 const Scanner = () => {
   const navigate = useNavigate();
@@ -29,6 +45,17 @@ const Scanner = () => {
   const [newSubreddit, setNewSubreddit] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+
+  const isFreePlan = !subscribed && (profile as any)?.selected_plan === 'free';
+
+  // Query today's high-intent lead count for free users
+  const { data: todayLeadCount = 0, refetch: refetchLeadCount } = useQuery({
+    queryKey: ['todayHighIntentCount', user?.id],
+    queryFn: () => getTodayHighIntentCount(user!.id),
+    enabled: !!user && isFreePlan,
+    refetchInterval: 30000,
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -101,7 +128,6 @@ const Scanner = () => {
     },
   });
 
-
   const toggleAutoPilot = async (enabled: boolean) => {
     updateProfile({ auto_pilot_enabled: enabled });
     toast({
@@ -120,6 +146,16 @@ const Scanner = () => {
       return;
     }
 
+    // Free plan limit check
+    if (isFreePlan) {
+      const freshCount = await getTodayHighIntentCount(user!.id);
+      if (freshCount >= FREE_DAILY_LIMIT) {
+        setShowUpgradeDialog(true);
+        refetchLeadCount();
+        return;
+      }
+    }
+
     setIsScanning(true);
     try {
       const result = await firecrawlApi.scanForLeads('manual');
@@ -129,6 +165,7 @@ const Scanner = () => {
           description: `Found ${result.leadsFound || 0} leads from ${result.postsScanned || 0} posts${result.hotLeads ? ` (${result.hotLeads} hot)` : ''}`,
         });
         queryClient.invalidateQueries({ queryKey: ['leads', user?.id] });
+        refetchLeadCount();
       } else {
         toast({ title: "Scan failed", description: result.error || "Something went wrong", variant: "destructive" });
       }
@@ -144,7 +181,6 @@ const Scanner = () => {
   const autoPilotEnabled = profile?.auto_pilot_enabled ?? true;
   const nextScheduledScan = profile?.next_scheduled_scan_at ? new Date(profile.next_scheduled_scan_at) : null;
 
-  // Simple next-scan text
   const getNextScanText = () => {
     if (!nextScheduledScan || !autoPilotEnabled) return null;
     const now = new Date();
@@ -156,6 +192,8 @@ const Scanner = () => {
     if (duration.minutes !== undefined) parts.push(`${duration.minutes}m`);
     return parts.join(' ') || "Soon";
   };
+
+  const leadLimitPercent = Math.min((todayLeadCount / FREE_DAILY_LIMIT) * 100, 100);
 
   return (
     <DashboardLayout>
@@ -189,6 +227,16 @@ const Scanner = () => {
           </div>
 
           <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+            {/* Free plan daily count indicator */}
+            {isFreePlan && (
+              <Badge
+                variant={todayLeadCount >= FREE_DAILY_LIMIT ? "destructive" : "outline"}
+                className="gap-1 text-xs"
+              >
+                <Flame className="h-3 w-3" />
+                {todayLeadCount}/{FREE_DAILY_LIMIT} leads today
+              </Badge>
+            )}
             {lastScan && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -222,7 +270,6 @@ const Scanner = () => {
 
         {/* ── Config Strip ── */}
         <div className="space-y-3 rounded-lg border bg-card p-4">
-          {/* Subreddits row */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-primary">r/</span>
@@ -306,6 +353,60 @@ const Scanner = () => {
         {/* ── Leads (Hero) ── */}
         {user && <LeadsSection userId={user.id} isScanning={isScanning} />}
       </div>
+
+      {/* ── Upgrade Dialog ── */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Crown className="h-6 w-6 text-primary" />
+              Daily Limit Reached
+            </DialogTitle>
+            <DialogDescription>
+              You've discovered {todayLeadCount} high-intent leads today — great work! Upgrade to Premium for unlimited daily scans and leads.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">High-intent leads today</span>
+                <span className="font-semibold">{todayLeadCount}/{FREE_DAILY_LIMIT}</span>
+              </div>
+              <Progress value={leadLimitPercent} className="h-2" />
+            </div>
+
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-1.5">
+              <p className="text-sm font-medium">Premium includes:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> Unlimited high-intent leads</li>
+                <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> Auto-pilot scanning 24/7</li>
+                <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> AI-powered reply generation</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              onClick={() => {
+                setShowUpgradeDialog(false);
+                navigate("/onboarding?step=2");
+              }}
+              className="w-full gap-2"
+            >
+              <Crown className="h-4 w-4" />
+              Upgrade to Premium — $45/mo
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowUpgradeDialog(false)}
+              className="w-full text-muted-foreground"
+            >
+              Maybe Later
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
