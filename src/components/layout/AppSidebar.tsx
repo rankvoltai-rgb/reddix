@@ -1,4 +1,5 @@
 import { LayoutDashboard, Search, Users, MessageSquare, Settings, LogOut } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,12 +46,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50">
-      <SidebarHeader className="p-5 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Ai Co-pilot" className="h-9 w-9 flex-shrink-0" />
+      <SidebarHeader className="p-3 border-b border-border/50">
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3 px-2")}>
+          <img src={logo} alt="Ai Co-pilot" className="h-8 w-8 flex-shrink-0" />
           {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-foreground tracking-tight">Lead Generation</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-foreground tracking-tight text-sm">Lead Generation</span>
               {profile?.product_name && (
                 <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                   {profile.product_name}
