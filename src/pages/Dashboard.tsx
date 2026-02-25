@@ -11,6 +11,7 @@ import { Loader2, Search, MessageSquare, Users, TrendingUp, ExternalLink, Clock,
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { BadgesSection } from '@/components/badges/BadgesSection';
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -131,6 +132,9 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Achievement Badges */}
+      <BadgesSection />
 
       {/* Dynamic Content Based on State */}
       {statsLoading ? (
