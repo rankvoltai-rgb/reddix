@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff, Flame, Bookmark, ExternalLink, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { lovable } from '@/integrations/lovable/index';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -184,7 +185,18 @@ export default function Auth() {
 
           {/* OAuth Buttons */}
           <div className="flex gap-3 mb-8">
-            <button className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg border border-border bg-background hover:bg-muted transition-colors text-sm font-medium text-foreground">
+            <button
+              type="button"
+              onClick={async () => {
+                const { error } = await lovable.auth.signInWithOAuth("google", {
+                  redirect_uri: window.location.origin,
+                });
+                if (error) {
+                  toast({ variant: 'destructive', title: 'Google sign-in failed', description: error.message });
+                }
+              }}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg border border-border bg-background hover:bg-muted transition-colors text-sm font-medium text-foreground"
+            >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
