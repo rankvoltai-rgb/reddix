@@ -90,7 +90,7 @@ export default function Dashboard() {
       {/* Welcome */}
       <div className="mb-10 animate-fade-in">
         <h2 className="text-3xl font-semibold text-foreground tracking-tight">
-          Welcome back{profile?.product_name ? `, ${profile.product_name}` : ''}
+          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}
         </h2>
         <p className="text-muted-foreground mt-2 text-base">
           Your Reddit lead generation dashboard is ready.

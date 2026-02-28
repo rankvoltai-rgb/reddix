@@ -136,7 +136,7 @@ export default function Index() {
       <footer className="border-t border-border py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-sm text-muted-foreground text-center">
-            © 2024 Reddix. Built for founders who want warm conversations, not cold outreach.
+            © {new Date().getFullYear()} Reddix. Built for founders who want warm conversations, not cold outreach.
           </p>
         </div>
       </footer>
