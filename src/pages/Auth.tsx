@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,11 +90,13 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const { profile } = useProfile();
+
   useEffect(() => {
-    if (user) {
-      navigate('/onboarding');
+    if (user && profile) {
+      navigate(profile.onboarding_completed ? '/dashboard' : '/onboarding');
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const validateForm = () => {
     try {

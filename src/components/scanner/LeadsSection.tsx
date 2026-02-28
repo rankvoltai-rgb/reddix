@@ -111,7 +111,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     if (counts.hot > 0 && activeFilter === "all") {
       setActiveFilter("hot");
     }
-  }, [counts.hot]); // only on first load / when hot count changes
+  }, [counts.hot, activeFilter]);
 
   const filteredLeads = useMemo(() => {
     if (activeFilter === "all") return leads;

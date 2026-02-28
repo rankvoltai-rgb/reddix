@@ -87,15 +87,7 @@ const Scanner = () => {
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
 
-  if (authLoading || profileLoading || subLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Mutations
+  // Mutations — must be before any early return (Rules of Hooks)
   const addSubreddit = useMutation({
     mutationFn: async (name: string) => {
       const cleanName = name.replace(/^r\//, '').trim().toLowerCase();
@@ -127,6 +119,14 @@ const Scanner = () => {
       toast({ title: "Subreddit removed" });
     },
   });
+
+  if (authLoading || profileLoading || subLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const toggleAutoPilot = async (enabled: boolean) => {
     updateProfile({ auto_pilot_enabled: enabled });
