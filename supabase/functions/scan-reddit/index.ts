@@ -9,16 +9,9 @@ const corsHeaders = {
 };
 
 const RATE_LIMIT_MINUTES = 5;
-const BATCH_SIZE = 6; // Posts per AI batch call
-const PASS1_THRESHOLD = 25; // Minimum score to proceed to deep analysis
-
-const INTENT_MODIFIERS = [
-  "looking for", "need recommendation", "any suggestions", "what do you use",
-  "best tool for", "best software for", "can anyone recommend",
-  "alternative to", "better than", "switching from", "vs", "compared to",
-  "worth it", "pricing", "free trial", "which one should",
-  "struggling with", "frustrated with", "need help with", "how do you handle",
-];
+const BATCH_SIZE = 6;
+const PASS1_THRESHOLD = 25;
+const MIN_CONTENT_LENGTH = 50;
 
 interface RedditPost {
   url: string;
@@ -39,11 +32,14 @@ interface Lead {
   user_id: string;
 }
 
+// ── URL Validation ──
+const isRedditPost = (url: string): boolean =>
+  /reddit\.com\/r\/\w+\/comments\//.test(url);
+
 // ── Search Term Caching ──
 async function getCachedOrGenerateTerms(
   supabase: any, userId: string, profile: any, lovableKey: string
 ): Promise<string[]> {
-  // Check cache validity (24h, or profile changed)
   if (profile.cached_search_terms && profile.search_terms_cached_at) {
     const cachedAt = new Date(profile.search_terms_cached_at);
     const ageHours = (Date.now() - cachedAt.getTime()) / (1000 * 60 * 60);
@@ -53,10 +49,8 @@ async function getCachedOrGenerateTerms(
     }
   }
 
-  // Generate fresh terms
   const terms = await generateSearchTerms(profile, lovableKey);
 
-  // Cache them
   if (terms.length > 0) {
     await supabase.from('profiles').update({
       cached_search_terms: terms,
@@ -75,9 +69,7 @@ Product: ${profile.product_name || 'Unknown'}
 Description: ${profile.company_description || 'Not provided'}
 Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
 Target Audience: ${profile.value_proposition || 'Not specified'}
-Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}
-
-Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
+Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}`;
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -88,14 +80,37 @@ Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash-lite',
         messages: [
-          { role: 'system', content: 'Return only valid JSON. No markdown, no explanation.' },
+          { role: 'system', content: 'Return only a valid JSON array of strings. No markdown, no explanation.' },
           { role: 'user', content: genPrompt },
         ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'return_search_terms',
+            description: 'Return generated search terms',
+            parameters: {
+              type: 'object',
+              properties: {
+                terms: { type: 'array', items: { type: 'string' }, description: 'Search terms array' },
+              },
+              required: ['terms'],
+            },
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'return_search_terms' } },
       }),
     });
 
     if (resp.ok) {
       const data = await resp.json();
+      // Try tool call first
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        console.log('AI-generated search terms (tool call):', parsed.terms);
+        return parsed.terms;
+      }
+      // Fallback to content parsing
       const content = data.choices?.[0]?.message?.content || '';
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
@@ -117,7 +132,7 @@ Return ONLY a JSON array of strings, e.g. ["term one", "term two"]`;
   return fallback.slice(0, 5);
 }
 
-// ── Batch AI Analysis (Pass 1 - Fast Filter) ──
+// ── Batch AI Analysis (Pass 1 - Fast Filter) with Tool Calling ──
 async function batchScorePass1(
   posts: { index: number; title: string; content: string }[],
   productContext: string,
@@ -125,7 +140,7 @@ async function batchScorePass1(
 ): Promise<{ post: number; score: number }[]> {
   const numbered = posts.map(p => `[${p.index}] Title: "${p.title}" | Content: "${p.content.slice(0, 400)}"`).join('\n');
 
-  const prompt = `You are a lead qualification expert. Quickly score these Reddit posts for PURCHASE INTENT related to: ${productContext}
+  const prompt = `Score these Reddit posts for PURCHASE INTENT related to: ${productContext}
 
 SCORING RUBRIC:
 - 70-100 (Direct Ask): "Can anyone recommend...", "looking for a tool that...", "best software for...", asking for alternatives
@@ -136,9 +151,7 @@ SCORING RUBRIC:
 NEGATIVE SIGNALS (reduce score): Already found solution, post is self-promotion, "I built this", "check out my", just sharing news
 
 Posts:
-${numbered}
-
-Return ONLY a JSON array: [{"post": 1, "score": 75}, {"post": 2, "score": 12}, ...]`;
+${numbered}`;
 
   try {
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -150,18 +163,50 @@ Return ONLY a JSON array: [{"post": 1, "score": 75}, {"post": 2, "score": 12}, .
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash-lite',
         messages: [
-          { role: 'system', content: 'You score Reddit posts for purchase intent. Return only valid JSON arrays.' },
+          { role: 'system', content: 'You score Reddit posts for purchase intent.' },
           { role: 'user', content: prompt },
         ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'return_scores',
+            description: 'Return scored posts',
+            parameters: {
+              type: 'object',
+              properties: {
+                scores: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      post: { type: 'number', description: 'Post index number' },
+                      score: { type: 'number', description: 'Intent score 0-100' },
+                    },
+                    required: ['post', 'score'],
+                  },
+                },
+              },
+              required: ['scores'],
+            },
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'return_scores' } },
       }),
     });
 
     if (!resp.ok) {
       console.error('Pass 1 AI error:', resp.status);
-      return posts.map(p => ({ post: p.index, score: 30 })); // Default to passing through
+      return posts.map(p => ({ post: p.index, score: 30 }));
     }
 
     const data = await resp.json();
+    // Try tool call first
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return parsed.scores || [];
+    }
+    // Fallback to content parsing
     const content = data.choices?.[0]?.message?.content || '';
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
@@ -173,13 +218,13 @@ Return ONLY a JSON array: [{"post": 1, "score": 75}, {"post": 2, "score": 12}, .
   return posts.map(p => ({ post: p.index, score: 30 }));
 }
 
-// ── Deep Analysis (Pass 2) ──
+// ── Deep Analysis (Pass 2) with Tool Calling ──
 async function deepAnalyzePost(
   post: RedditPost,
   profile: any,
   lovableKey: string
 ): Promise<{ score: number; level: string; notes: string; author: string } | null> {
-  const prompt = `You are an expert lead qualifier. Deeply analyze this Reddit post for PURCHASE INTENT.
+  const prompt = `Deeply analyze this Reddit post for PURCHASE INTENT.
 
 PRODUCT: ${profile.product_name || 'a SaaS tool'}
 DESCRIPTION: ${profile.company_description || 'Software solution'}
@@ -187,46 +232,23 @@ VALUE PROP: ${profile.value_proposition || 'Solves business problems'}
 KEY FEATURES: ${(profile.key_features || []).join(', ') || 'Not specified'}
 COMPETITORS: ${(profile.competitor_names || []).join(', ') || 'None'}
 
-DETAILED SCORING RUBRIC:
-🔥 HOT (70-100) — Direct buying signals:
-  - Explicitly asking for tool/software recommendations ("can anyone recommend", "best tool for")
-  - Complaining about current solution AND seeking alternatives
-  - Budget/pricing discussions, comparing specific products
-  - "Ready to switch", "need to find something before [deadline]"
+SCORING RUBRIC:
+🔥 HOT (70-100) — Direct buying signals: asking for recommendations, complaining about current solution AND seeking alternatives, budget/pricing discussions, "ready to switch"
+🌡️ WARM (40-69) — Strong problem awareness: describing a problem the product solves, mentioning competitor pain points, workflow complaints
+🔍 RESEARCH (25-39) — Early exploration: comparing approaches, general interest in the problem space
+💤 LOW (0-24) — Not actionable: general discussion, already solved, self-promotion, news sharing
 
-🌡️ WARM (40-69) — Strong problem awareness:
-  - Describing a problem the product solves with frustration
-  - Mentioning competitor pain points
-  - "I'm struggling with...", workflow complaints
-  - Asking how others handle a specific challenge
+NEGATIVE SIGNALS (subtract points):
+- "I already use [solution] and love it" → -20
+- Post is self-promotion or "I built" → -30
+- Problem already resolved in comments → -15
+- Post appears older than 30 days (check for date signals in content) → -15
 
-🔍 RESEARCH (25-39) — Early exploration:
-  - "How do you handle...", comparing approaches
-  - General interest in the problem space
-  - Evaluating whether a change is needed
-
-💤 LOW (0-24) — Not actionable:
-  - General discussion, already solved
-  - Self-promotion, news sharing
-  - Memes, jokes, off-topic
-
-NEGATIVE SIGNALS (subtract 10-30 points):
-  - "I already use [solution] and love it" → -20
-  - Post is self-promotion or "I built" → -30
-  - Problem already resolved in comments → -15
-  - Post older than 30 days → -10
+FRESHNESS: If you detect date signals showing the post is more than 2 weeks old, reduce the score by 10-15 points. Recent posts are more valuable for engagement.
 
 POST TITLE: ${post.title}
 POST CONTENT: ${(post.markdown || post.description || '').slice(0, 3000)}
-POST URL: ${post.url}
-
-Respond with valid JSON ONLY:
-{
-  "intent_score": <number 0-100>,
-  "intent_level": "<hot|warm|research|low>",
-  "relevance_notes": "<2-3 sentence analysis explaining WHY this score>",
-  "author": "<reddit username if visible, else 'unknown'>"
-}`;
+POST URL: ${post.url}`;
 
   try {
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -238,9 +260,27 @@ Respond with valid JSON ONLY:
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'Expert lead qualifier. Return only valid JSON.' },
+          { role: 'system', content: 'Expert lead qualifier. Analyze and score Reddit posts.' },
           { role: 'user', content: prompt },
         ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'return_analysis',
+            description: 'Return lead analysis result',
+            parameters: {
+              type: 'object',
+              properties: {
+                intent_score: { type: 'number', description: 'Intent score 0-100' },
+                intent_level: { type: 'string', enum: ['hot', 'warm', 'research', 'low'] },
+                relevance_notes: { type: 'string', description: '2-3 sentence analysis' },
+                author: { type: 'string', description: 'Reddit username or unknown' },
+              },
+              required: ['intent_score', 'intent_level', 'relevance_notes', 'author'],
+            },
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'return_analysis' } },
       }),
     });
 
@@ -250,10 +290,30 @@ Respond with valid JSON ONLY:
     }
 
     const data = await resp.json();
+
+    // Try tool call first (preferred — guaranteed structured output)
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return {
+        score: parsed.intent_score ?? 0,
+        level: parsed.intent_level ?? 'low',
+        notes: parsed.relevance_notes ?? '',
+        author: parsed.author ?? 'unknown',
+      };
+    }
+
+    // Fallback: parse from content (handles both field naming conventions)
     const content = data.choices?.[0]?.message?.content || '';
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        score: parsed.intent_score ?? parsed.score ?? 0,
+        level: parsed.intent_level ?? parsed.level ?? 'low',
+        notes: parsed.relevance_notes ?? parsed.notes ?? '',
+        author: parsed.author ?? 'unknown',
+      };
     }
   } catch (e) {
     console.error('Pass 2 analysis error:', e);
@@ -263,7 +323,7 @@ Respond with valid JSON ONLY:
 
 // ── Search Helper ──
 async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string): Promise<RedditPost[]> {
-  console.log(`[${label}] Query:`, query);
+  console.log(`[${label}] Query:`, query.slice(0, 120));
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
@@ -273,7 +333,7 @@ async function runSearch(query: string, label: string, freshness: string, firecr
       },
       body: JSON.stringify({
         query,
-        limit: 20,
+        limit: 15,
         tbs: freshness,
         scrapeOptions: { formats: ['markdown'] },
       }),
@@ -281,13 +341,16 @@ async function runSearch(query: string, label: string, freshness: string, firecr
 
     if (response.ok) {
       const data = await response.json();
-      console.log(`[${label}] Found ${data.data?.length || 0} results`);
-      return (data.data || []).map((item: any) => ({
+      const results = (data.data || []).map((item: any) => ({
         url: item.url,
         title: item.title || '',
         description: item.description || '',
         markdown: item.markdown || '',
       }));
+      // Filter to actual Reddit post URLs only
+      const validPosts = results.filter((p: RedditPost) => isRedditPost(p.url));
+      console.log(`[${label}] Found ${results.length} results, ${validPosts.length} valid Reddit posts`);
+      return validPosts;
     } else {
       console.error(`[${label}] Error:`, response.status);
       return [];
@@ -317,7 +380,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request
     let scanType = 'manual';
     let targetUserId: string | null = null;
     try {
@@ -436,21 +498,21 @@ serve(async (req) => {
     const seenUrls = new Set((seenPosts || []).map((p: any) => p.post_url));
     console.log(`User has ${seenUrls.size} previously seen posts`);
 
-    // ── Search Phase ──
+    // ── Search Phase (Focused Strategies) ──
     const allPosts: RedditPost[] = [];
-    const intentPart = INTENT_MODIFIERS.slice(0, 8).map(i => `"${i}"`).join(' OR ');
 
-    // Strategy A: Fresh content (24h)
+    // Strategy A: Fresh content — AI terms + subreddit scoping, NO intent modifiers
     const topicQuery = topics.slice(0, 3).map((t: string) => `"${t}"`).join(' OR ');
+    const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
     const freshPosts = await runSearch(
-      `site:reddit.com (${topicQuery}) (${intentPart})`, 'Fresh:24h', 'qdr:d', firecrawlKey
+      `site:reddit.com (${topicQuery}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey
     );
     allPosts.push(...freshPosts);
 
-    // Strategy B: Competitor alternatives
+    // Strategy B: Competitor alternatives (max 2 competitors)
     if (profile.competitor_names?.length > 0) {
       const competitorQuery = profile.competitor_names
-        .slice(0, 3)
+        .slice(0, 2)
         .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
         .join(' OR ');
       const competitorPosts = await runSearch(
@@ -460,22 +522,23 @@ serve(async (req) => {
       await new Promise(r => setTimeout(r, 200));
     }
 
-    // Strategy C: Subreddit-specific
+    // Strategy C: Subreddit-specific with top 2 AI terms only
+    const topTerms = topics.slice(0, 2).map((t: string) => `"${t}"`).join(' OR ');
     for (const sub of subreddits.slice(0, 5)) {
       const posts = await runSearch(
-        `site:reddit.com/r/${sub.subreddit_name} (${intentPart})`,
+        `site:reddit.com/r/${sub.subreddit_name} (${topTerms})`,
         `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
       );
       allPosts.push(...posts);
       await new Promise(r => setTimeout(r, 150));
     }
 
-    // Strategy D: Broad fallback
-    if (allPosts.length < 10) {
+    // Strategy D: Broad fallback (only if very few results, use weekly window)
+    if (allPosts.length < 8) {
       for (const topic of topics.slice(0, 2)) {
         const posts = await runSearch(
           `site:reddit.com "${topic}" recommendation OR help OR suggestion`,
-          `Fallback:${topic}`, 'qdr:m', firecrawlKey
+          `Fallback:${topic}`, 'qdr:w', firecrawlKey
         );
         allPosts.push(...posts);
         await new Promise(r => setTimeout(r, 150));
@@ -489,7 +552,7 @@ serve(async (req) => {
       return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
     });
 
-    console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes removed)`);
+    console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes/seen removed)`);
 
     if (uniquePosts.length === 0) {
       if (scanRecord) {
@@ -514,12 +577,16 @@ serve(async (req) => {
 
     // ── PASS 1: Batch Fast Filter ──
     console.log('=== PASS 1: Batch Fast Filter ===');
-    const postsToAnalyze = uniquePosts.slice(0, 30);
-    const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
+    // Apply minimum content threshold — skip title-only posts
+    const postsToAnalyze = uniquePosts
+      .filter(p => (p.markdown || p.description || '').length >= MIN_CONTENT_LENGTH)
+      .slice(0, 30);
 
+    console.log(`${postsToAnalyze.length} posts pass content threshold (>= ${MIN_CONTENT_LENGTH} chars)`);
+
+    const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
     const pass1Results: Map<number, number> = new Map();
 
-    // Process in batches of BATCH_SIZE
     for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
       const batch = postsToAnalyze.slice(i, i + BATCH_SIZE).map((p, j) => ({
         index: i + j,
@@ -549,7 +616,7 @@ serve(async (req) => {
       const analysis = await deepAnalyzePost(post, profile, lovableKey);
       if (!analysis) continue;
 
-      console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}`);
+      console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}, Level: ${analysis.level}`);
 
       if (analysis.score >= PASS1_THRESHOLD) {
         const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
