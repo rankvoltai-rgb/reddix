@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Check, Sparkles, MessageSquare, BookOpen, Zap, RefreshCw } from "lucide-react";
+import { Copy, Check, Sparkles, MessageSquare, BookOpen, Zap, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
@@ -51,9 +51,9 @@ const variantIcons = {
 };
 
 const variantLabels = {
-  direct: 'Direct Helper',
-  story: 'Story Approach',
-  expert: 'Expert Advisor',
+  direct: 'Direct',
+  story: 'Story',
+  expert: 'Expert',
 };
 
 function ConversionBadge({ score }: { score: number }) {
@@ -62,9 +62,9 @@ function ConversionBadge({ score }: { score: number }) {
     : 'bg-muted text-muted-foreground';
   
   return (
-    <Badge variant="outline" className={`${color} gap-1`}>
+    <Badge variant="outline" className={`${color} gap-1 text-xs`}>
       <Sparkles className="h-3 w-3" />
-      {score}/10 conversion
+      {score}/10
     </Badge>
   );
 }
@@ -76,7 +76,6 @@ export function ReplyDialog({
   reply, 
   onReplyChange,
   variants = [],
-  analysis,
   onRegenerate,
   isRegenerating = false,
 }: ReplyDialogProps) {
@@ -91,17 +90,7 @@ export function ReplyDialog({
       toast({ title: "Copied to clipboard!" });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ 
-        title: "Failed to copy", 
-        description: "Please select and copy manually",
-        variant: "destructive" 
-      });
-    }
-  };
-
-  const handleOpenReddit = () => {
-    if (lead?.thread_url) {
-      window.open(lead.thread_url, '_blank');
+      toast({ title: "Failed to copy", variant: "destructive" });
     }
   };
 
@@ -127,71 +116,48 @@ export function ReplyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="pr-8 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI-Generated Reply
+          <DialogTitle className="pr-8 flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" />
+            AI Reply
           </DialogTitle>
-          <DialogDescription className="line-clamp-2">
+          <DialogDescription className="line-clamp-1 text-xs">
             {lead?.thread_title}
           </DialogDescription>
         </DialogHeader>
-
-        {/* Analysis Summary */}
-        {analysis && (
-          <div className="flex flex-wrap gap-2 py-2 border-b border-border">
-            <Badge variant="outline" className="text-xs">
-              Pain: {analysis.painLevel}/10
-            </Badge>
-            <Badge variant="outline" className="text-xs capitalize">
-              {analysis.technicalLevel}
-            </Badge>
-            <Badge variant="outline" className="text-xs capitalize">
-              {analysis.buyingStage}
-            </Badge>
-            <Badge variant="outline" className="text-xs capitalize">
-              {analysis.emotionalState}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              Fit: {analysis.productRelevance}/10
-            </Badge>
-          </div>
-        )}
         
-        <div className="flex-1 min-h-0 py-4 overflow-hidden flex flex-col">
+        <div className="py-3">
           {hasVariants ? (
-            <Tabs defaultValue="direct" className="flex-1 flex flex-col" onValueChange={setSelectedVariant}>
-              <TabsList className="grid grid-cols-3 mb-4">
-                {variants.map((variant) => {
-                  const Icon = variantIcons[variant.type];
-                  return (
-                    <TabsTrigger 
-                      key={variant.type} 
-                      value={variant.type}
-                      className="gap-2 text-xs sm:text-sm"
-                      onClick={() => handleSelectVariant(variant)}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{variantLabels[variant.type]}</span>
-                      <span className="sm:hidden">{variant.type}</span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+            <Tabs defaultValue="direct" onValueChange={setSelectedVariant}>
+              <div className="flex items-center gap-2 mb-3">
+                <TabsList className="h-8">
+                  {variants.map((variant) => {
+                    const Icon = variantIcons[variant.type];
+                    return (
+                      <TabsTrigger 
+                        key={variant.type} 
+                        value={variant.type}
+                        className="gap-1.5 text-xs px-3 h-7"
+                        onClick={() => handleSelectVariant(variant)}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {variantLabels[variant.type]}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+                {variants.find(v => v.type === selectedVariant) && (
+                  <ConversionBadge score={variants.find(v => v.type === selectedVariant)!.conversionScore} />
+                )}
+              </div>
 
               {variants.map((variant) => (
                 <TabsContent 
                   key={variant.type} 
                   value={variant.type} 
-                  className="flex-1 flex flex-col gap-3 mt-0 data-[state=active]:flex"
+                  className="mt-0"
                 >
-                  <div className="flex items-center justify-between">
-                    <ConversionBadge score={variant.conversionScore} />
-                    <p className="text-xs text-muted-foreground max-w-[60%] text-right">
-                      {variant.reasoning}
-                    </p>
-                  </div>
                   <Textarea
                     value={selectedVariant === variant.type ? reply : variant.content}
                     onChange={(e) => {
@@ -199,7 +165,7 @@ export function ReplyDialog({
                         onReplyChange(e.target.value);
                       }
                     }}
-                    className="flex-1 min-h-[200px] resize-none text-sm"
+                    className="min-h-[100px] resize-none text-sm"
                     placeholder="Your reply will appear here..."
                   />
                 </TabsContent>
@@ -209,54 +175,27 @@ export function ReplyDialog({
             <Textarea
               value={reply}
               onChange={(e) => onReplyChange(e.target.value)}
-              className="min-h-[200px] h-full resize-none text-sm"
+              className="min-h-[100px] resize-none text-sm"
               placeholder="Your reply will appear here..."
             />
           )}
+          <p className="text-xs text-muted-foreground mt-1.5 text-right tabular-nums">
+            {reply.length} chars
+          </p>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+        <DialogFooter className="gap-2 sm:gap-0">
           {onRegenerate && (
-            <Button
-              variant="ghost"
-              onClick={onRegenerate}
-              disabled={isRegenerating}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+            <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={isRegenerating} className="gap-1.5">
+              <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
               Regenerate
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={handleCopy}
-            className="gap-2"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy Reply
-              </>
-            )}
+          <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
+            {copied ? <><Check className="h-3.5 w-3.5" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy</>}
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleOpenReddit}
-            className="gap-2"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open Thread
-          </Button>
-          <Button
-            onClick={handleCopyAndGo}
-            className="gap-2"
-          >
-            <Copy className="h-4 w-4" />
+          <Button size="sm" onClick={handleCopyAndGo} className="gap-1.5">
+            <Copy className="h-3.5 w-3.5" />
             Copy & Go
           </Button>
         </DialogFooter>

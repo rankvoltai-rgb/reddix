@@ -185,10 +185,11 @@ ${ctaStrategy}
 2. Mirror their language style and technical level
 3. If mentioning product, do it NATURALLY ("I use X for this..." or "X helped me with...")
 4. Never be salesy - Reddit users will downvote
-5. Keep replies 2-4 paragraphs
+5. Keep replies 120-250 characters MAX (excluding the URL). Be concise - one short paragraph only.
 6. Match subreddit culture
 7. NEVER reveal you're AI-generated
 8. Add specific value based on their pain points
+9. ALWAYS end the reply with the product URL on its own line: ${profile.product_url || 'the product website'}. The URL does NOT count toward the character limit.
 
 Generate 3 variants:
 1. DIRECT HELPER: Answers their question head-on, practical advice
