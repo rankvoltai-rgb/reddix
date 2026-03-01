@@ -1,90 +1,81 @@
 
 
-# Bug Fix + Lead Quality Upgrade Plan
+# Fix: Scan Finding Zero Leads for New Users
 
-## Bug 1 (CRITICAL): Deep Analysis Scores are Always `undefined`
+## Root Cause Analysis
 
-**File:** `supabase/functions/scan-reddit/index.ts`
+From the live logs, here's exactly what's happening:
 
-The `deepAnalyzePost` function prompts the AI to return JSON with field `intent_score`, but the return type and all consuming code reference `.score`. The AI responds with `{"intent_score": 75, "intent_level": "hot", "relevance_notes": "...", "author": "..."}`, but the code reads `.score` which is `undefined`.
+1. **AI generates bad search terms**: The prompt asks for terms users would search, but the AI returns terms *about* the product ("Reddit lead generation", "AI Reddit marketing") instead of what the product's *customers* would say ("need help with social media", "looking for marketing tool")
+2. **Overly specific quoted searches return 0 results**: Queries like `site:reddit.com/r/saas ("Reddit lead generation" OR "AI Reddit marketing")` are too narrow -- almost no Reddit posts contain these exact phrases
+3. **No "latest posts" strategy**: The scan ONLY uses Firecrawl search (Google-indexed results). It never fetches the *newest posts* from monitored subreddits directly. For time-sensitive lead gen, this is the biggest gap
+4. **Edge function times out**: The sequential search strategy (5 subreddit searches + 2 fallbacks) with `await` delays causes the function to exceed the timeout before reaching Pass 1/2
 
-Evidence from logs:
+## Proposed Fixes
+
+### Fix 1: Add a "Latest Posts" Strategy (Most Important)
+
+Add a new Strategy 0 that fetches the most recent posts from each subreddit by scraping the subreddit's "new" page directly via Firecrawl scrape (not search). This guarantees fresh content regardless of search term quality.
+
 ```
-Deep: "Practice owners — how often do you revie..." => Score: undefined
-Deep: "How are you handling professional headsh..." => Score: undefined
-Inserting 0 qualified leads   <-- everything dropped!
-```
-
-**Fix:** Map the AI response fields to the expected return shape:
-```typescript
-const parsed = JSON.parse(jsonMatch[0]);
-return {
-  score: parsed.intent_score ?? parsed.score ?? 0,
-  level: parsed.intent_level ?? parsed.level ?? 'low',
-  notes: parsed.relevance_notes ?? parsed.notes ?? '',
-  author: parsed.author ?? 'unknown',
-};
+For each monitored subreddit:
+  Scrape reddit.com/r/{subreddit}/new -> extract post links
+  Scrape top 5-10 posts for content
 ```
 
-## Bug 2 (HIGH): `seen_posts` upsert fails silently
+This uses Firecrawl's `scrape` endpoint on `reddit.com/r/{subreddit}/new` to get the latest post URLs, then processes them through the same Pass 1/2 pipeline. This ensures time-sensitive leads are caught even when search terms are suboptimal.
 
-The upsert uses `onConflict: 'user_id,post_url'` but there is no unique constraint on `(user_id, post_url)` in the `seen_posts` table. This means deduplication doesn't work -- the same posts get re-analyzed on every scan, wasting API credits.
+### Fix 2: Fix the Search Term Prompt
 
-**Fix:** Add a unique index via migration:
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS seen_posts_user_url_unique
-ON public.seen_posts (user_id, post_url);
-```
+The current prompt says "generate search terms that someone on Reddit would use when looking for this type of solution" -- but the AI interprets this as terms *describing* the product. 
 
-## Improvement 1: Smarter Search Queries
+Change to explicitly instruct: "Generate pain-point phrases and questions that a potential CUSTOMER would write in a Reddit post. These are NOT about the product, they are about the PROBLEM the product solves. Examples: 'struggling with email deliverability', 'need better project management', 'how to automate invoicing'."
 
-Currently the intent modifier list is static and bloated (8 quoted phrases ORed together makes the Firecrawl query too broad). The search often returns irrelevant Reddit threads.
+### Fix 3: Remove Exact-Match Quoting from Subreddit Searches
 
-**Fix:** Instead of cramming all modifiers into one query, run **focused search strategies**:
-- Strategy A (Fresh): Use AI-generated terms + subreddit scoping, no intent modifiers (let the AI scoring handle relevance)
-- Strategy B (Competitor): Keep as-is but limit to 2 competitors max
-- Strategy C (Subreddit): Search within each subreddit using the top 2 AI terms only
-- Remove the broad intent modifier concatenation that dilutes results
+Currently Strategy C wraps terms in quotes: `"Reddit lead generation"`. This requires an exact phrase match which almost never hits. Change to unquoted terms so partial matches work:
 
-## Improvement 2: Filter Non-Reddit URLs
+Before: `site:reddit.com/r/saas ("Reddit lead generation" OR "AI Reddit marketing")`
+After: `site:reddit.com/r/saas Reddit lead generation OR AI Reddit marketing`
 
-Firecrawl `site:reddit.com` sometimes returns non-Reddit URLs or Reddit URLs that aren't actual posts (e.g., subreddit homepages, wiki pages, user profiles). These waste AI credits in Pass 1/2.
+### Fix 4: Run Searches in Parallel
 
-**Fix:** Add a URL validation step after search:
-```typescript
-const isRedditPost = (url: string) =>
-  /reddit\.com\/r\/\w+\/comments\//.test(url);
+Currently all searches run sequentially with delays between them. Run Strategy A, B, and all Strategy C searches concurrently using `Promise.all` to stay well within the edge function timeout.
 
-const validPosts = uniquePosts.filter(p => isRedditPost(p.url));
-```
+### Fix 5: Clear Stale Cached Terms on Profile Update
 
-## Improvement 3: Post Freshness Signal
+When a user updates their product info (name, description, features), invalidate the cached search terms so the next scan generates fresh, relevant ones. Currently bad terms persist for 24 hours.
 
-Currently there's no way to know if a post is 1 hour old or 6 months old. Old posts are worthless for engagement but still get scored and inserted as leads.
-
-**Fix:** Add freshness detection in the deep analysis prompt. Instruct the AI to check for date signals in the post content and penalize old posts. Also reduce the fallback search window from `qdr:m` (month) to `qdr:w` (week).
-
-## Improvement 4: Minimum Content Threshold
-
-Posts with no content (title only, or very short descriptions) produce unreliable scores. The AI hallucinates intent from vague titles.
-
-**Fix:** Skip posts with less than 50 characters of content in Pass 1:
-```typescript
-const postsToAnalyze = uniquePosts
-  .filter(p => (p.markdown || p.description || '').length >= 50)
-  .slice(0, 30);
-```
-
-## Improvement 5: Use Tool Calling for Structured Output
-
-The current approach of asking the AI to "return only JSON" and then regex-parsing `\{[\s\S]*\}` is fragile. It sometimes fails when the AI wraps JSON in markdown code fences or adds explanatory text.
-
-**Fix:** Switch both Pass 1 and Pass 2 to use tool calling (function calling) for structured output extraction. This guarantees valid JSON and eliminates parsing failures.
-
-## Summary of Changes
+## Technical Changes
 
 | File | Change |
 |------|--------|
-| `supabase/functions/scan-reddit/index.ts` | Fix score field mapping, add URL validation, content threshold, tighter searches, tool calling |
-| Database migration | Add unique index on `seen_posts(user_id, post_url)` |
+| `supabase/functions/scan-reddit/index.ts` | Add latest-posts scraping strategy, fix search term prompt, remove excessive quoting, parallelize searches |
+| `src/hooks/useProfile.tsx` | Clear `cached_search_terms` when profile product info changes |
+
+## Implementation Details
+
+### Latest Posts Strategy (new `fetchLatestPosts` function)
+
+```text
+1. Scrape reddit.com/r/{subreddit}/new via Firecrawl scrape (markdown format)
+2. Extract post URLs from the scraped markdown using regex
+3. For each URL not in seen_posts, scrape the individual post
+4. Feed into the same Pass 1 -> Pass 2 pipeline
+5. Run for up to 3 subreddits in parallel
+```
+
+### Parallelized Search
+
+```text
+Before (sequential, ~8s):
+  Fresh -> wait -> Competitor -> wait -> Sub1 -> wait -> Sub2 -> ...
+
+After (parallel, ~2s):
+  Promise.all([Fresh, Competitor, Sub1, Sub2, Sub3])
+```
+
+### Search Term Prompt Fix
+
+Add explicit negative examples and reframe the prompt to focus on customer pain points, not product features. Also add a guard: if any generated term contains the product name, filter it out.
 
