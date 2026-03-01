@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
 };
@@ -12,6 +12,8 @@ const RATE_LIMIT_MINUTES = 5;
 const BATCH_SIZE = 6;
 const PASS1_THRESHOLD = 25;
 const MIN_CONTENT_LENGTH = 50;
+const TIMEOUT_MS = 50_000; // 50s guard — return partial results before edge function dies
+const MAX_FIRECRAWL_CALLS = 7;
 
 interface RedditPost {
   url: string;
@@ -36,90 +38,48 @@ interface Lead {
 const isRedditPost = (url: string): boolean =>
   /reddit\.com\/r\/\w+\/comments\//.test(url);
 
-// ── Strategy 0: Scrape Latest Posts from Subreddit /new ──
-async function fetchLatestPosts(
-  subredditName: string,
-  firecrawlKey: string,
-  seenUrls: Set<string>
-): Promise<RedditPost[]> {
-  console.log(`[Latest:${subredditName}] Scraping /new page`);
+// ── Search Helper ──
+let firecrawlCallCount = 0;
+
+async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string): Promise<RedditPost[]> {
+  if (firecrawlCallCount >= MAX_FIRECRAWL_CALLS) {
+    console.log(`[${label}] SKIPPED — API call cap reached (${MAX_FIRECRAWL_CALLS})`);
+    return [];
+  }
+  firecrawlCallCount++;
+  console.log(`[${label}] Query:`, query.slice(0, 120));
   try {
-    // Step 1: Scrape the subreddit's /new page to get post links
-    const scrapeResp = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${firecrawlKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: `https://www.reddit.com/r/${subredditName}/new/`,
-        formats: ['markdown', 'links'],
-        onlyMainContent: true,
+        query,
+        limit: 15,
+        tbs: freshness,
+        scrapeOptions: { formats: ['markdown'] },
       }),
     });
 
-    if (!scrapeResp.ok) {
-      console.error(`[Latest:${subredditName}] Scrape failed:`, scrapeResp.status);
+    if (response.ok) {
+      const data = await response.json();
+      const results = (data.data || []).map((item: any) => ({
+        url: item.url,
+        title: item.title || '',
+        description: item.description || '',
+        markdown: item.markdown || '',
+      }));
+      const validPosts = results.filter((p: RedditPost) => isRedditPost(p.url));
+      console.log(`[${label}] Found ${results.length} results, ${validPosts.length} valid Reddit posts`);
+      return validPosts;
+    } else {
+      console.error(`[${label}] Error:`, response.status);
       return [];
     }
-
-    const scrapeData = await scrapeResp.json();
-    const links: string[] = scrapeData.data?.links || scrapeData.links || [];
-    const markdown: string = scrapeData.data?.markdown || scrapeData.markdown || '';
-
-    // Extract post URLs from links array and markdown content
-    const postUrlRegex = /https?:\/\/(?:www\.)?reddit\.com\/r\/\w+\/comments\/[a-z0-9]+/gi;
-    const fromLinks = links.filter((l: string) => isRedditPost(l));
-    const fromMarkdown = (markdown.match(postUrlRegex) || []);
-    
-    const allPostUrls = [...new Set([...fromLinks, ...fromMarkdown])];
-    const newPostUrls = allPostUrls
-      .filter(url => !seenUrls.has(url))
-      .slice(0, 8); // Limit to 8 newest unseen posts
-
-    console.log(`[Latest:${subredditName}] Found ${allPostUrls.length} post URLs, ${newPostUrls.length} unseen`);
-
-    if (newPostUrls.length === 0) return [];
-
-    // Step 2: Scrape individual posts in parallel (max 4 at a time)
-    const posts: RedditPost[] = [];
-    const batchSize = 4;
-    for (let i = 0; i < newPostUrls.length; i += batchSize) {
-      const batch = newPostUrls.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map(async (postUrl) => {
-          try {
-            const resp = await fetch('https://api.firecrawl.dev/v1/scrape', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${firecrawlKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                url: postUrl,
-                formats: ['markdown'],
-                onlyMainContent: true,
-              }),
-            });
-            if (resp.ok) {
-              const data = await resp.json();
-              const md = data.data?.markdown || data.markdown || '';
-              const title = data.data?.metadata?.title || data.metadata?.title || '';
-              return { url: postUrl, title, markdown: md, description: '' } as RedditPost;
-            }
-          } catch (e) {
-            console.error(`[Latest] Failed to scrape ${postUrl}:`, e);
-          }
-          return null;
-        })
-      );
-      posts.push(...results.filter((p): p is RedditPost => p !== null));
-    }
-
-    console.log(`[Latest:${subredditName}] Scraped ${posts.length} post contents`);
-    return posts;
   } catch (e) {
-    console.error(`[Latest:${subredditName}] Error:`, e);
+    console.error(`[${label}] Search error:`, e);
     return [];
   }
 }
@@ -151,7 +111,7 @@ async function getCachedOrGenerateTerms(
 
 async function generateSearchTerms(profile: any, lovableKey: string): Promise<string[]> {
   const productName = (profile.product_name || '').toLowerCase();
-  
+
   try {
     const genPrompt = `You are helping find Reddit posts from potential CUSTOMERS who have a PROBLEM that this product solves.
 
@@ -217,8 +177,7 @@ BAD examples (product/marketing terms - DO NOT generate these):
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall?.function?.arguments) {
         const parsed = JSON.parse(toolCall.function.arguments);
-        // Filter out any terms that contain the product name
-        const filtered = (parsed.terms || []).filter((t: string) => 
+        const filtered = (parsed.terms || []).filter((t: string) =>
           !t.toLowerCase().includes(productName) || productName.length < 3
         );
         console.log('AI-generated search terms (filtered):', filtered);
@@ -228,10 +187,9 @@ BAD examples (product/marketing terms - DO NOT generate these):
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const terms = JSON.parse(jsonMatch[0]);
-        const filtered = terms.filter((t: string) => 
+        const filtered = terms.filter((t: string) =>
           !t.toLowerCase().includes(productName) || productName.length < 3
         );
-        console.log('AI-generated search terms:', filtered);
         return filtered.length > 0 ? filtered : terms;
       }
     }
@@ -239,7 +197,6 @@ BAD examples (product/marketing terms - DO NOT generate these):
     console.error('AI search term generation failed:', e);
   }
 
-  // Fallback
   const fallback = [
     ...(profile.company_description || '').split(/[.,;]/).slice(0, 3).map((s: string) => s.trim()).filter(Boolean),
   ].filter(Boolean) as string[];
@@ -355,9 +312,7 @@ NEGATIVE SIGNALS (subtract points):
 - "I already use [solution] and love it" → -20
 - Post is self-promotion or "I built" → -30
 - Problem already resolved in comments → -15
-- Post appears older than 30 days (check for date signals in content) → -15
-
-FRESHNESS: If you detect date signals showing the post is more than 2 weeks old, reduce the score by 10-15 points. Recent posts are more valuable for engagement.
+- Post appears older than 30 days → -15
 
 POST TITLE: ${post.title}
 POST CONTENT: ${(post.markdown || post.description || '').slice(0, 3000)}
@@ -403,7 +358,6 @@ POST URL: ${post.url}`;
     }
 
     const data = await resp.json();
-
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
@@ -432,43 +386,31 @@ POST URL: ${post.url}`;
   return null;
 }
 
-// ── Search Helper ──
-async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string): Promise<RedditPost[]> {
-  console.log(`[${label}] Query:`, query.slice(0, 120));
-  try {
-    const response = await fetch('https://api.firecrawl.dev/v1/search', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        limit: 15,
-        tbs: freshness,
-        scrapeOptions: { formats: ['markdown'] },
-      }),
-    });
+// ── Helper: complete scan record ──
+async function completeScan(
+  supabase: any, scanId: string | undefined,
+  postsScanned: number, leadsToInsert: Lead[], userId: string
+) {
+  const hotLeads = leadsToInsert.filter(l => l.intent_level === 'hot').length;
+  const warmLeads = leadsToInsert.filter(l => l.intent_level === 'warm').length;
 
-    if (response.ok) {
-      const data = await response.json();
-      const results = (data.data || []).map((item: any) => ({
-        url: item.url,
-        title: item.title || '',
-        description: item.description || '',
-        markdown: item.markdown || '',
-      }));
-      const validPosts = results.filter((p: RedditPost) => isRedditPost(p.url));
-      console.log(`[${label}] Found ${results.length} results, ${validPosts.length} valid Reddit posts`);
-      return validPosts;
-    } else {
-      console.error(`[${label}] Error:`, response.status);
-      return [];
-    }
-  } catch (e) {
-    console.error(`[${label}] Search error:`, e);
-    return [];
+  if (leadsToInsert.length > 0) {
+    const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
+    if (insertError) console.error('Insert error:', insertError);
   }
+
+  if (scanId) {
+    await supabase.from('scan_history').update({
+      status: 'completed',
+      posts_scanned: postsScanned,
+      leads_found: leadsToInsert.length,
+      hot_leads: hotLeads,
+      warm_leads: warmLeads,
+      completed_at: new Date().toISOString(),
+    }).eq('id', scanId);
+  }
+
+  return { hotLeads, warmLeads };
 }
 
 // ── Main Handler ──
@@ -476,6 +418,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Reset per-request counter
+  firecrawlCallCount = 0;
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -524,6 +469,8 @@ serve(async (req) => {
       .select()
       .single();
 
+    const scanId = scanRecord?.id;
+
     // Fetch profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -543,11 +490,11 @@ serve(async (req) => {
       const diffMinutes = (Date.now() - new Date(profile.last_scan_at).getTime()) / (1000 * 60);
       if (diffMinutes < RATE_LIMIT_MINUTES) {
         const waitMinutes = Math.ceil(RATE_LIMIT_MINUTES - diffMinutes);
-        if (scanRecord) {
+        if (scanId) {
           await supabase.from('scan_history').update({
             status: 'failed', error_message: `Rate limited - wait ${waitMinutes} minutes`,
             completed_at: new Date().toISOString(),
-          }).eq('id', scanRecord.id);
+          }).eq('id', scanId);
         }
         return new Response(
           JSON.stringify({ success: false, error: `Rate limit exceeded. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before scanning again.` }),
@@ -565,11 +512,11 @@ serve(async (req) => {
 
     const subreddits = subredditsData || [];
     if (subreddits.length === 0) {
-      if (scanRecord) {
+      if (scanId) {
         await supabase.from('scan_history').update({
           status: 'failed', error_message: 'No subreddits configured',
           completed_at: new Date().toISOString(),
-        }).eq('id', scanRecord.id);
+        }).eq('id', scanId);
       }
       return new Response(
         JSON.stringify({ success: false, error: 'No subreddits configured. Add subreddits to scan.' }),
@@ -584,11 +531,11 @@ serve(async (req) => {
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY')!;
 
     if (!firecrawlKey || !lovableKey) {
-      if (scanRecord) {
+      if (scanId) {
         await supabase.from('scan_history').update({
           status: 'failed', error_message: 'API keys not configured',
           completed_at: new Date().toISOString(),
-        }).eq('id', scanRecord.id);
+        }).eq('id', scanId);
       }
       return new Response(
         JSON.stringify({ success: false, error: 'Services not configured' }),
@@ -596,157 +543,160 @@ serve(async (req) => {
       );
     }
 
-    // Get search terms (cached or freshly generated) — runs in parallel with seen posts fetch
-    const [topics, seenPostsResult] = await Promise.all([
-      getCachedOrGenerateTerms(supabase, userId, profile, lovableKey),
-      supabase.from('seen_posts').select('post_url').eq('user_id', userId),
-    ]);
+    // ── Timeout guard: race the entire processing against a 50s timer ──
+    const startTime = Date.now();
+    const leadsCollected: Lead[] = [];
+    let postsScannedCount = 0;
+    let timedOut = false;
 
-    const seenUrls = new Set((seenPostsResult.data || []).map((p: any) => p.post_url));
-    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts`);
+    const doScan = async () => {
+      // Get search terms + seen posts (7-day window only) in parallel
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const [topics, seenPostsResult] = await Promise.all([
+        getCachedOrGenerateTerms(supabase, userId, profile, lovableKey),
+        supabase.from('seen_posts').select('post_url').eq('user_id', userId).gte('last_seen_at', sevenDaysAgo),
+      ]);
 
-    // ── Search Phase: ALL strategies run in PARALLEL ──
-    const allPosts: RedditPost[] = [];
+      const seenUrls = new Set((seenPostsResult.data || []).map((p: any) => p.post_url));
+      console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts (7-day window)`);
 
-    // Build all search promises
-    const searchPromises: Promise<RedditPost[]>[] = [];
+      // ── Search Phase: ALL strategies in PARALLEL ──
+      const searchPromises: Promise<RedditPost[]>[] = [];
 
-    // Strategy 0: Latest Posts — scrape /new from top 3 subreddits
-    const latestPostsPromises = subreddits.slice(0, 3).map((s: any) =>
-      fetchLatestPosts(s.subreddit_name, firecrawlKey, seenUrls)
-    );
-    searchPromises.push(...latestPostsPromises);
-
-    // Strategy A: Fresh content — AI terms + subreddit scoping, NO quotes (partial match)
-    const topicTerms = topics.slice(0, 3).join(' OR ');
-    const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
-    searchPromises.push(
-      runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey)
-    );
-
-    // Strategy B: Competitor alternatives (max 2 competitors)
-    if (profile.competitor_names?.length > 0) {
-      const competitorQuery = profile.competitor_names
-        .slice(0, 2)
-        .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
-        .join(' OR ');
-      searchPromises.push(
-        runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey)
-      );
-    }
-
-    // Strategy C: Subreddit-specific with top 2 AI terms — NO quotes
-    const topTermsUnquoted = topics.slice(0, 2).join(' OR ');
-    for (const sub of subreddits.slice(0, 5)) {
-      searchPromises.push(
-        runSearch(
-          `site:reddit.com/r/${sub.subreddit_name} ${topTermsUnquoted}`,
-          `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
-        )
-      );
-    }
-
-    // Run ALL strategies in parallel
-    const searchResults = await Promise.all(searchPromises);
-    for (const posts of searchResults) {
-      allPosts.push(...posts);
-    }
-
-    console.log(`Found ${allPosts.length} total posts from all strategies`);
-
-    // Strategy D: Broad fallback (only if very few results)
-    if (allPosts.length < 8) {
-      console.log('Few results, running fallback searches...');
-      const fallbackResults = await Promise.all(
-        topics.slice(0, 2).map((topic: string) =>
+      // Strategy 0: Latest Posts via search (NOT scrape) — last 24 hours, capped at 2 subreddits
+      for (const sub of subreddits.slice(0, 2)) {
+        searchPromises.push(
           runSearch(
-            `site:reddit.com ${topic} recommendation OR help OR suggestion`,
-            `Fallback:${topic}`, 'qdr:w', firecrawlKey
+            `site:reddit.com/r/${sub.subreddit_name}`,
+            `Latest:${sub.subreddit_name}`, 'qdr:d', firecrawlKey
           )
-        )
+        );
+      }
+
+      // Strategy A: Fresh content — AI terms + subreddit scoping, NO quotes
+      const topicTerms = topics.slice(0, 3).join(' OR ');
+      const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
+      searchPromises.push(
+        runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey)
       );
-      for (const posts of fallbackResults) {
+
+      // Strategy B: Competitor alternatives (max 2 competitors)
+      if (profile.competitor_names?.length > 0) {
+        const competitorQuery = profile.competitor_names
+          .slice(0, 2)
+          .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
+          .join(' OR ');
+        searchPromises.push(
+          runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey)
+        );
+      }
+
+      // Strategy C: Subreddit-specific — capped at 3 subreddits
+      const topTermsUnquoted = topics.slice(0, 2).join(' OR ');
+      for (const sub of subreddits.slice(0, 3)) {
+        searchPromises.push(
+          runSearch(
+            `site:reddit.com/r/${sub.subreddit_name} ${topTermsUnquoted}`,
+            `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
+          )
+        );
+      }
+
+      // Run ALL strategies in parallel
+      const searchResults = await Promise.all(searchPromises);
+      const allPosts: RedditPost[] = [];
+      for (const posts of searchResults) {
         allPosts.push(...posts);
       }
-    }
 
-    console.log(`Total posts after all strategies: ${allPosts.length}`);
+      console.log(`Found ${allPosts.length} total posts from all strategies`);
 
-    // Deduplicate
-    const uniquePosts = allPosts.filter((post, index, self) => {
-      return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
-    });
-
-    console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes/seen removed)`);
-
-    if (uniquePosts.length === 0) {
-      if (scanRecord) {
-        await supabase.from('scan_history').update({
-          status: 'completed', posts_scanned: 0, leads_found: 0,
-          completed_at: new Date().toISOString(),
-        }).eq('id', scanRecord.id);
+      // Strategy D: Broad fallback (only if very few results AND we have API call budget)
+      if (allPosts.length < 8 && firecrawlCallCount < MAX_FIRECRAWL_CALLS) {
+        console.log('Few results, running fallback search...');
+        const fallbackPosts = await runSearch(
+          `site:reddit.com ${topics[0] || 'help'} recommendation OR help OR suggestion`,
+          'Fallback', 'qdr:w', firecrawlKey
+        );
+        allPosts.push(...fallbackPosts);
       }
-      return new Response(
-        JSON.stringify({ success: true, leadsFound: 0, postsScanned: 0, message: 'No new posts found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
-    // Mark as seen
-    const postsToMark = uniquePosts.map(p => ({ user_id: userId, post_url: p.url }));
-    for (let i = 0; i < postsToMark.length; i += 50) {
-      await supabase.from('seen_posts').upsert(postsToMark.slice(i, i + 50), {
-        onConflict: 'user_id,post_url', ignoreDuplicates: true,
+      console.log(`Total posts after all strategies: ${allPosts.length}`);
+
+      // Deduplicate
+      const uniquePosts = allPosts.filter((post, index, self) => {
+        return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
       });
-    }
 
-    // ── PASS 1: Batch Fast Filter ──
-    console.log('=== PASS 1: Batch Fast Filter ===');
-    const postsToAnalyze = uniquePosts
-      .filter(p => (p.markdown || p.description || '').length >= MIN_CONTENT_LENGTH)
-      .slice(0, 30);
+      console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes/seen removed)`);
 
-    console.log(`${postsToAnalyze.length} posts pass content threshold (>= ${MIN_CONTENT_LENGTH} chars)`);
+      if (uniquePosts.length === 0) return;
 
-    const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
-    const pass1Results: Map<number, number> = new Map();
-
-    // Run Pass 1 batches in parallel too
-    const pass1Promises: Promise<{ post: number; score: number }[]>[] = [];
-    for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
-      const batch = postsToAnalyze.slice(i, i + BATCH_SIZE).map((p, j) => ({
-        index: i + j,
-        title: p.title,
-        content: p.markdown || p.description || '',
+      // Mark as seen (update last_seen_at for existing, insert new)
+      const now = new Date().toISOString();
+      const postsToMark = uniquePosts.map(p => ({
+        user_id: userId,
+        post_url: p.url,
+        last_seen_at: now,
       }));
-      pass1Promises.push(batchScorePass1(batch, productContext, lovableKey));
-    }
-
-    const pass1BatchResults = await Promise.all(pass1Promises);
-    for (const scores of pass1BatchResults) {
-      for (const s of scores) {
-        pass1Results.set(s.post, s.score);
+      for (let i = 0; i < postsToMark.length; i += 50) {
+        await supabase.from('seen_posts').upsert(postsToMark.slice(i, i + 50), {
+          onConflict: 'user_id,post_url', ignoreDuplicates: false,
+        });
       }
-    }
 
-    // Filter: only posts scoring >= PASS1_THRESHOLD proceed
-    const pass1Qualified = postsToAnalyze.filter((_, idx) => (pass1Results.get(idx) || 0) >= PASS1_THRESHOLD);
-    console.log(`Pass 1: ${pass1Qualified.length}/${postsToAnalyze.length} posts scored >= ${PASS1_THRESHOLD}`);
+      // Check time budget before AI passes
+      if (Date.now() - startTime > TIMEOUT_MS - 10_000) {
+        console.log('TIMEOUT WARNING: Skipping AI analysis — not enough time');
+        return;
+      }
 
-    // ── PASS 2: Deep Analysis ──
-    console.log('=== PASS 2: Deep Analysis ===');
-    const leadsToInsert: Lead[] = [];
+      // ── PASS 1: Batch Fast Filter ──
+      console.log('=== PASS 1: Batch Fast Filter ===');
+      const postsToAnalyze = uniquePosts
+        .filter(p => (p.markdown || p.description || '').length >= MIN_CONTENT_LENGTH)
+        .slice(0, 30);
 
-    // Run Pass 2 in parallel (max 3 concurrent)
-    const pass2BatchSize = 3;
-    for (let i = 0; i < pass1Qualified.length; i += pass2BatchSize) {
-      const batch = pass1Qualified.slice(i, i + pass2BatchSize);
+      postsScannedCount = postsToAnalyze.length;
+      console.log(`${postsToAnalyze.length} posts pass content threshold`);
+
+      const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
+      const pass1Results: Map<number, number> = new Map();
+
+      const pass1Promises: Promise<{ post: number; score: number }[]>[] = [];
+      for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
+        const batch = postsToAnalyze.slice(i, i + BATCH_SIZE).map((p, j) => ({
+          index: i + j,
+          title: p.title,
+          content: p.markdown || p.description || '',
+        }));
+        pass1Promises.push(batchScorePass1(batch, productContext, lovableKey));
+      }
+
+      const pass1BatchResults = await Promise.all(pass1Promises);
+      for (const scores of pass1BatchResults) {
+        for (const s of scores) {
+          pass1Results.set(s.post, s.score);
+        }
+      }
+
+      const pass1Qualified = postsToAnalyze.filter((_, idx) => (pass1Results.get(idx) || 0) >= PASS1_THRESHOLD);
+      console.log(`Pass 1: ${pass1Qualified.length}/${postsToAnalyze.length} posts scored >= ${PASS1_THRESHOLD}`);
+
+      // Check time budget before Pass 2
+      if (Date.now() - startTime > TIMEOUT_MS - 5_000) {
+        console.log('TIMEOUT WARNING: Skipping Pass 2 — not enough time');
+        return;
+      }
+
+      // ── PASS 2: Deep Analysis (all in parallel) ──
+      console.log('=== PASS 2: Deep Analysis ===');
       const analyses = await Promise.all(
-        batch.map(post => deepAnalyzePost(post, profile, lovableKey))
+        pass1Qualified.map(post => deepAnalyzePost(post, profile, lovableKey))
       );
 
-      for (let j = 0; j < batch.length; j++) {
-        const post = batch[j];
+      for (let j = 0; j < pass1Qualified.length; j++) {
+        const post = pass1Qualified[j];
         const analysis = analyses[j];
         if (!analysis) continue;
 
@@ -761,7 +711,7 @@ serve(async (req) => {
           else if (analysis.score >= 40) intentLevel = 'warm';
           else if (analysis.score >= 25) intentLevel = 'research';
 
-          leadsToInsert.push({
+          leadsCollected.push({
             thread_url: post.url,
             thread_title: post.title,
             thread_content: (post.markdown || post.description || '').slice(0, 5000),
@@ -774,37 +724,39 @@ serve(async (req) => {
           });
         }
       }
+    };
+
+    // Race the scan against the timeout
+    try {
+      await Promise.race([
+        doScan(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), TIMEOUT_MS)),
+      ]);
+    } catch (e) {
+      if (e instanceof Error && e.message === 'TIMEOUT') {
+        console.warn('⏰ Scan hit 50s timeout — returning partial results');
+        timedOut = true;
+      } else {
+        throw e; // re-throw non-timeout errors
+      }
     }
 
-    console.log(`Inserting ${leadsToInsert.length} qualified leads`);
+    // Always save whatever we collected
+    const { hotLeads, warmLeads } = await completeScan(supabase, scanId, postsScannedCount, leadsCollected, userId);
 
-    const hotLeads = leadsToInsert.filter(l => l.intent_level === 'hot').length;
-    const warmLeads = leadsToInsert.filter(l => l.intent_level === 'warm').length;
-
-    if (leadsToInsert.length > 0) {
-      const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
-      if (insertError) console.error('Insert error:', insertError);
-    }
-
-    if (scanRecord) {
-      await supabase.from('scan_history').update({
-        status: 'completed',
-        posts_scanned: postsToAnalyze.length,
-        leads_found: leadsToInsert.length,
-        hot_leads: hotLeads,
-        warm_leads: warmLeads,
-        completed_at: new Date().toISOString(),
-      }).eq('id', scanRecord.id);
-    }
+    const message = timedOut
+      ? `Partial results: found ${leadsCollected.length} leads before timeout`
+      : `Found ${leadsCollected.length} leads from ${postsScannedCount} posts`;
 
     return new Response(
       JSON.stringify({
         success: true,
-        leadsFound: leadsToInsert.length,
-        postsScanned: postsToAnalyze.length,
+        leadsFound: leadsCollected.length,
+        postsScanned: postsScannedCount,
         hotLeads,
         warmLeads,
-        message: `Found ${leadsToInsert.length} leads from ${postsToAnalyze.length} posts (${pass1Qualified.length} passed fast filter)`,
+        message,
+        timedOut,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
