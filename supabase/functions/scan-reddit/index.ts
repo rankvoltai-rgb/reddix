@@ -36,6 +36,94 @@ interface Lead {
 const isRedditPost = (url: string): boolean =>
   /reddit\.com\/r\/\w+\/comments\//.test(url);
 
+// ── Strategy 0: Scrape Latest Posts from Subreddit /new ──
+async function fetchLatestPosts(
+  subredditName: string,
+  firecrawlKey: string,
+  seenUrls: Set<string>
+): Promise<RedditPost[]> {
+  console.log(`[Latest:${subredditName}] Scraping /new page`);
+  try {
+    // Step 1: Scrape the subreddit's /new page to get post links
+    const scrapeResp = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: `https://www.reddit.com/r/${subredditName}/new/`,
+        formats: ['markdown', 'links'],
+        onlyMainContent: true,
+      }),
+    });
+
+    if (!scrapeResp.ok) {
+      console.error(`[Latest:${subredditName}] Scrape failed:`, scrapeResp.status);
+      return [];
+    }
+
+    const scrapeData = await scrapeResp.json();
+    const links: string[] = scrapeData.data?.links || scrapeData.links || [];
+    const markdown: string = scrapeData.data?.markdown || scrapeData.markdown || '';
+
+    // Extract post URLs from links array and markdown content
+    const postUrlRegex = /https?:\/\/(?:www\.)?reddit\.com\/r\/\w+\/comments\/[a-z0-9]+/gi;
+    const fromLinks = links.filter((l: string) => isRedditPost(l));
+    const fromMarkdown = (markdown.match(postUrlRegex) || []);
+    
+    const allPostUrls = [...new Set([...fromLinks, ...fromMarkdown])];
+    const newPostUrls = allPostUrls
+      .filter(url => !seenUrls.has(url))
+      .slice(0, 8); // Limit to 8 newest unseen posts
+
+    console.log(`[Latest:${subredditName}] Found ${allPostUrls.length} post URLs, ${newPostUrls.length} unseen`);
+
+    if (newPostUrls.length === 0) return [];
+
+    // Step 2: Scrape individual posts in parallel (max 4 at a time)
+    const posts: RedditPost[] = [];
+    const batchSize = 4;
+    for (let i = 0; i < newPostUrls.length; i += batchSize) {
+      const batch = newPostUrls.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (postUrl) => {
+          try {
+            const resp = await fetch('https://api.firecrawl.dev/v1/scrape', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${firecrawlKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                url: postUrl,
+                formats: ['markdown'],
+                onlyMainContent: true,
+              }),
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              const md = data.data?.markdown || data.markdown || '';
+              const title = data.data?.metadata?.title || data.metadata?.title || '';
+              return { url: postUrl, title, markdown: md, description: '' } as RedditPost;
+            }
+          } catch (e) {
+            console.error(`[Latest] Failed to scrape ${postUrl}:`, e);
+          }
+          return null;
+        })
+      );
+      posts.push(...results.filter((p): p is RedditPost => p !== null));
+    }
+
+    console.log(`[Latest:${subredditName}] Scraped ${posts.length} post contents`);
+    return posts;
+  } catch (e) {
+    console.error(`[Latest:${subredditName}] Error:`, e);
+    return [];
+  }
+}
+
 // ── Search Term Caching ──
 async function getCachedOrGenerateTerms(
   supabase: any, userId: string, profile: any, lovableKey: string
@@ -62,14 +150,37 @@ async function getCachedOrGenerateTerms(
 }
 
 async function generateSearchTerms(profile: any, lovableKey: string): Promise<string[]> {
+  const productName = (profile.product_name || '').toLowerCase();
+  
   try {
-    const genPrompt = `Given this product, generate 5-8 short search terms (2-5 words each) that someone on Reddit would use when looking for this type of solution. Focus on pain points, use cases, and problem descriptions — NOT the product name itself.
+    const genPrompt = `You are helping find Reddit posts from potential CUSTOMERS who have a PROBLEM that this product solves.
 
 Product: ${profile.product_name || 'Unknown'}
 Description: ${profile.company_description || 'Not provided'}
 Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
-Target Audience: ${profile.value_proposition || 'Not specified'}
-Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}`;
+Target Audience: ${profile.target_audience || profile.value_proposition || 'Not specified'}
+Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}
+
+Generate 6-8 search phrases (3-6 words each) that a POTENTIAL CUSTOMER would write in a Reddit post when they have the PROBLEM this product solves.
+
+CRITICAL RULES:
+- These must be PAIN POINTS and QUESTIONS from the customer's perspective
+- Do NOT include the product name "${profile.product_name || ''}" in any term
+- Do NOT include marketing buzzwords or product category names
+- Focus on the SYMPTOMS and FRUSTRATIONS the customer experiences
+
+GOOD examples (pain-point phrasing):
+- "struggling with email deliverability"
+- "need better way to track invoices"
+- "how to automate social media posting"
+- "tired of manually updating spreadsheets"
+- "looking for alternative to [competitor]"
+
+BAD examples (product/marketing terms - DO NOT generate these):
+- "best SaaS lead generation tool"
+- "AI-powered marketing automation"
+- "Reddit marketing software"
+- "${profile.product_name || 'ProductName'} review"`;
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -80,7 +191,7 @@ Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash-lite',
         messages: [
-          { role: 'system', content: 'Return only a valid JSON array of strings. No markdown, no explanation.' },
+          { role: 'system', content: 'Return only search terms via the tool call. No explanation.' },
           { role: 'user', content: genPrompt },
         ],
         tools: [{
@@ -103,20 +214,25 @@ Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}`;
 
     if (resp.ok) {
       const data = await resp.json();
-      // Try tool call first
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall?.function?.arguments) {
         const parsed = JSON.parse(toolCall.function.arguments);
-        console.log('AI-generated search terms (tool call):', parsed.terms);
-        return parsed.terms;
+        // Filter out any terms that contain the product name
+        const filtered = (parsed.terms || []).filter((t: string) => 
+          !t.toLowerCase().includes(productName) || productName.length < 3
+        );
+        console.log('AI-generated search terms (filtered):', filtered);
+        return filtered.length > 0 ? filtered : parsed.terms || [];
       }
-      // Fallback to content parsing
       const content = data.choices?.[0]?.message?.content || '';
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const terms = JSON.parse(jsonMatch[0]);
-        console.log('AI-generated search terms:', terms);
-        return terms;
+        const filtered = terms.filter((t: string) => 
+          !t.toLowerCase().includes(productName) || productName.length < 3
+        );
+        console.log('AI-generated search terms:', filtered);
+        return filtered.length > 0 ? filtered : terms;
       }
     }
   } catch (e) {
@@ -125,7 +241,6 @@ Competitors: ${(profile.competitor_names || []).join(', ') || 'None listed'}`;
 
   // Fallback
   const fallback = [
-    profile.product_name,
     ...(profile.company_description || '').split(/[.,;]/).slice(0, 3).map((s: string) => s.trim()).filter(Boolean),
   ].filter(Boolean) as string[];
   console.log('Fallback search terms:', fallback);
@@ -200,13 +315,11 @@ ${numbered}`;
     }
 
     const data = await resp.json();
-    // Try tool call first
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
       return parsed.scores || [];
     }
-    // Fallback to content parsing
     const content = data.choices?.[0]?.message?.content || '';
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
@@ -291,7 +404,6 @@ POST URL: ${post.url}`;
 
     const data = await resp.json();
 
-    // Try tool call first (preferred — guaranteed structured output)
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
@@ -303,7 +415,6 @@ POST URL: ${post.url}`;
       };
     }
 
-    // Fallback: parse from content (handles both field naming conventions)
     const content = data.choices?.[0]?.message?.content || '';
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -347,7 +458,6 @@ async function runSearch(query: string, label: string, freshness: string, firecr
         description: item.description || '',
         markdown: item.markdown || '',
       }));
-      // Filter to actual Reddit post URLs only
       const validPosts = results.filter((p: RedditPost) => isRedditPost(p.url));
       console.log(`[${label}] Found ${results.length} results, ${validPosts.length} valid Reddit posts`);
       return validPosts;
@@ -417,7 +527,7 @@ serve(async (req) => {
     // Fetch profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('product_name, company_description, value_proposition, last_scan_at, key_features, competitor_names, cached_search_terms, search_terms_cached_at')
+      .select('product_name, company_description, value_proposition, target_audience, last_scan_at, key_features, competitor_names, cached_search_terms, search_terms_cached_at')
       .eq('id', userId)
       .single();
 
@@ -486,28 +596,33 @@ serve(async (req) => {
       );
     }
 
-    // Get search terms (cached or freshly generated)
-    const topics = await getCachedOrGenerateTerms(supabase, userId, profile, lovableKey);
-    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics`);
+    // Get search terms (cached or freshly generated) — runs in parallel with seen posts fetch
+    const [topics, seenPostsResult] = await Promise.all([
+      getCachedOrGenerateTerms(supabase, userId, profile, lovableKey),
+      supabase.from('seen_posts').select('post_url').eq('user_id', userId),
+    ]);
 
-    // Fetch seen posts for dedup
-    const { data: seenPosts } = await supabase
-      .from('seen_posts')
-      .select('post_url')
-      .eq('user_id', userId);
-    const seenUrls = new Set((seenPosts || []).map((p: any) => p.post_url));
-    console.log(`User has ${seenUrls.size} previously seen posts`);
+    const seenUrls = new Set((seenPostsResult.data || []).map((p: any) => p.post_url));
+    console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts`);
 
-    // ── Search Phase (Focused Strategies) ──
+    // ── Search Phase: ALL strategies run in PARALLEL ──
     const allPosts: RedditPost[] = [];
 
-    // Strategy A: Fresh content — AI terms + subreddit scoping, NO intent modifiers
-    const topicQuery = topics.slice(0, 3).map((t: string) => `"${t}"`).join(' OR ');
-    const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
-    const freshPosts = await runSearch(
-      `site:reddit.com (${topicQuery}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey
+    // Build all search promises
+    const searchPromises: Promise<RedditPost[]>[] = [];
+
+    // Strategy 0: Latest Posts — scrape /new from top 3 subreddits
+    const latestPostsPromises = subreddits.slice(0, 3).map((s: any) =>
+      fetchLatestPosts(s.subreddit_name, firecrawlKey, seenUrls)
     );
-    allPosts.push(...freshPosts);
+    searchPromises.push(...latestPostsPromises);
+
+    // Strategy A: Fresh content — AI terms + subreddit scoping, NO quotes (partial match)
+    const topicTerms = topics.slice(0, 3).join(' OR ');
+    const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
+    searchPromises.push(
+      runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey)
+    );
 
     // Strategy B: Competitor alternatives (max 2 competitors)
     if (profile.competitor_names?.length > 0) {
@@ -515,37 +630,47 @@ serve(async (req) => {
         .slice(0, 2)
         .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
         .join(' OR ');
-      const competitorPosts = await runSearch(
-        `site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey
+      searchPromises.push(
+        runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey)
       );
-      allPosts.push(...competitorPosts);
-      await new Promise(r => setTimeout(r, 200));
     }
 
-    // Strategy C: Subreddit-specific with top 2 AI terms only
-    const topTerms = topics.slice(0, 2).map((t: string) => `"${t}"`).join(' OR ');
+    // Strategy C: Subreddit-specific with top 2 AI terms — NO quotes
+    const topTermsUnquoted = topics.slice(0, 2).join(' OR ');
     for (const sub of subreddits.slice(0, 5)) {
-      const posts = await runSearch(
-        `site:reddit.com/r/${sub.subreddit_name} (${topTerms})`,
-        `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
+      searchPromises.push(
+        runSearch(
+          `site:reddit.com/r/${sub.subreddit_name} ${topTermsUnquoted}`,
+          `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
+        )
       );
-      allPosts.push(...posts);
-      await new Promise(r => setTimeout(r, 150));
     }
 
-    // Strategy D: Broad fallback (only if very few results, use weekly window)
+    // Run ALL strategies in parallel
+    const searchResults = await Promise.all(searchPromises);
+    for (const posts of searchResults) {
+      allPosts.push(...posts);
+    }
+
+    console.log(`Found ${allPosts.length} total posts from all strategies`);
+
+    // Strategy D: Broad fallback (only if very few results)
     if (allPosts.length < 8) {
-      for (const topic of topics.slice(0, 2)) {
-        const posts = await runSearch(
-          `site:reddit.com "${topic}" recommendation OR help OR suggestion`,
-          `Fallback:${topic}`, 'qdr:w', firecrawlKey
-        );
+      console.log('Few results, running fallback searches...');
+      const fallbackResults = await Promise.all(
+        topics.slice(0, 2).map((topic: string) =>
+          runSearch(
+            `site:reddit.com ${topic} recommendation OR help OR suggestion`,
+            `Fallback:${topic}`, 'qdr:w', firecrawlKey
+          )
+        )
+      );
+      for (const posts of fallbackResults) {
         allPosts.push(...posts);
-        await new Promise(r => setTimeout(r, 150));
       }
     }
 
-    console.log(`Found ${allPosts.length} total posts`);
+    console.log(`Total posts after all strategies: ${allPosts.length}`);
 
     // Deduplicate
     const uniquePosts = allPosts.filter((post, index, self) => {
@@ -577,7 +702,6 @@ serve(async (req) => {
 
     // ── PASS 1: Batch Fast Filter ──
     console.log('=== PASS 1: Batch Fast Filter ===');
-    // Apply minimum content threshold — skip title-only posts
     const postsToAnalyze = uniquePosts
       .filter(p => (p.markdown || p.description || '').length >= MIN_CONTENT_LENGTH)
       .slice(0, 30);
@@ -587,20 +711,21 @@ serve(async (req) => {
     const productContext = `${profile.product_name || 'SaaS'}: ${profile.company_description || 'software solution'}`;
     const pass1Results: Map<number, number> = new Map();
 
+    // Run Pass 1 batches in parallel too
+    const pass1Promises: Promise<{ post: number; score: number }[]>[] = [];
     for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
       const batch = postsToAnalyze.slice(i, i + BATCH_SIZE).map((p, j) => ({
         index: i + j,
         title: p.title,
         content: p.markdown || p.description || '',
       }));
+      pass1Promises.push(batchScorePass1(batch, productContext, lovableKey));
+    }
 
-      const scores = await batchScorePass1(batch, productContext, lovableKey);
+    const pass1BatchResults = await Promise.all(pass1Promises);
+    for (const scores of pass1BatchResults) {
       for (const s of scores) {
         pass1Results.set(s.post, s.score);
-      }
-
-      if (i + BATCH_SIZE < postsToAnalyze.length) {
-        await new Promise(r => setTimeout(r, 100));
       }
     }
 
@@ -612,35 +737,43 @@ serve(async (req) => {
     console.log('=== PASS 2: Deep Analysis ===');
     const leadsToInsert: Lead[] = [];
 
-    for (const post of pass1Qualified) {
-      const analysis = await deepAnalyzePost(post, profile, lovableKey);
-      if (!analysis) continue;
+    // Run Pass 2 in parallel (max 3 concurrent)
+    const pass2BatchSize = 3;
+    for (let i = 0; i < pass1Qualified.length; i += pass2BatchSize) {
+      const batch = pass1Qualified.slice(i, i + pass2BatchSize);
+      const analyses = await Promise.all(
+        batch.map(post => deepAnalyzePost(post, profile, lovableKey))
+      );
 
-      console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}, Level: ${analysis.level}`);
+      for (let j = 0; j < batch.length; j++) {
+        const post = batch[j];
+        const analysis = analyses[j];
+        if (!analysis) continue;
 
-      if (analysis.score >= PASS1_THRESHOLD) {
-        const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
-        const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
+        console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}, Level: ${analysis.level}`);
 
-        let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
-        if (analysis.score >= 70) intentLevel = 'hot';
-        else if (analysis.score >= 40) intentLevel = 'warm';
-        else if (analysis.score >= 25) intentLevel = 'research';
+        if (analysis.score >= PASS1_THRESHOLD) {
+          const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
+          const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
 
-        leadsToInsert.push({
-          thread_url: post.url,
-          thread_title: post.title,
-          thread_content: (post.markdown || post.description || '').slice(0, 5000),
-          subreddit,
-          author: analysis.author || 'unknown',
-          intent_score: analysis.score,
-          intent_level: intentLevel,
-          relevance_notes: analysis.notes,
-          user_id: userId,
-        });
+          let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
+          if (analysis.score >= 70) intentLevel = 'hot';
+          else if (analysis.score >= 40) intentLevel = 'warm';
+          else if (analysis.score >= 25) intentLevel = 'research';
+
+          leadsToInsert.push({
+            thread_url: post.url,
+            thread_title: post.title,
+            thread_content: (post.markdown || post.description || '').slice(0, 5000),
+            subreddit,
+            author: analysis.author || 'unknown',
+            intent_score: analysis.score,
+            intent_level: intentLevel,
+            relevance_notes: analysis.notes,
+            user_id: userId,
+          });
+        }
       }
-
-      await new Promise(r => setTimeout(r, 80));
     }
 
     console.log(`Inserting ${leadsToInsert.length} qualified leads`);
