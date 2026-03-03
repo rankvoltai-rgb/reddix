@@ -39,14 +39,12 @@ const isRedditPost = (url: string): boolean =>
   /reddit\.com\/r\/\w+\/comments\//.test(url);
 
 // ── Search Helper ──
-let firecrawlCallCount = 0;
-
-async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string): Promise<RedditPost[]> {
-  if (firecrawlCallCount >= MAX_FIRECRAWL_CALLS) {
+async function runSearch(query: string, label: string, freshness: string, firecrawlKey: string, callCounter: { count: number }): Promise<RedditPost[]> {
+  if (callCounter.count >= MAX_FIRECRAWL_CALLS) {
     console.log(`[${label}] SKIPPED — API call cap reached (${MAX_FIRECRAWL_CALLS})`);
     return [];
   }
-  firecrawlCallCount++;
+  callCounter.count++;
   console.log(`[${label}] Query:`, query.slice(0, 120));
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/search', {
@@ -419,8 +417,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Reset per-request counter
-  firecrawlCallCount = 0;
+  // Request-scoped counter — prevents concurrency bugs across isolate reuse
+  const callCounter = { count: 0 };
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -498,7 +496,7 @@ serve(async (req) => {
         }
         return new Response(
           JSON.stringify({ success: false, error: `Rate limit exceeded. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before scanning again.` }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -568,7 +566,7 @@ serve(async (req) => {
         searchPromises.push(
           runSearch(
             `site:reddit.com/r/${sub.subreddit_name}`,
-            `Latest:${sub.subreddit_name}`, 'qdr:d', firecrawlKey
+            `Latest:${sub.subreddit_name}`, 'qdr:d', firecrawlKey, callCounter
           )
         );
       }
@@ -577,7 +575,7 @@ serve(async (req) => {
       const topicTerms = topics.slice(0, 3).join(' OR ');
       const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
       searchPromises.push(
-        runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey)
+        runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey, callCounter)
       );
 
       // Strategy B: Competitor alternatives (max 2 competitors)
@@ -587,7 +585,7 @@ serve(async (req) => {
           .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
           .join(' OR ');
         searchPromises.push(
-          runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey)
+          runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey, callCounter)
         );
       }
 
@@ -597,7 +595,7 @@ serve(async (req) => {
         searchPromises.push(
           runSearch(
             `site:reddit.com/r/${sub.subreddit_name} ${topTermsUnquoted}`,
-            `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey
+            `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey, callCounter
           )
         );
       }
@@ -612,11 +610,11 @@ serve(async (req) => {
       console.log(`Found ${allPosts.length} total posts from all strategies`);
 
       // Strategy D: Broad fallback (only if very few results AND we have API call budget)
-      if (allPosts.length < 8 && firecrawlCallCount < MAX_FIRECRAWL_CALLS) {
+      if (allPosts.length < 8 && callCounter.count < MAX_FIRECRAWL_CALLS) {
         console.log('Few results, running fallback search...');
         const fallbackPosts = await runSearch(
           `site:reddit.com ${topics[0] || 'help'} recommendation OR help OR suggestion`,
-          'Fallback', 'qdr:w', firecrawlKey
+          'Fallback', 'qdr:w', firecrawlKey, callCounter
         );
         allPosts.push(...fallbackPosts);
       }

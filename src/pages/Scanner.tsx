@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +46,10 @@ const Scanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [scanCooldown, setScanCooldown] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isFreePlan = !subscribed && (profile as any)?.selected_plan === 'free';
 
@@ -173,6 +177,22 @@ const Scanner = () => {
       toast({ title: "Scan error", description: error.message, variant: "destructive" });
     } finally {
       setIsScanning(false);
+      // Start 10s cooldown
+      setScanCooldown(true);
+      setCooldownSeconds(10);
+      cooldownIntervalRef.current = setInterval(() => {
+        setCooldownSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(cooldownIntervalRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      cooldownTimerRef.current = setTimeout(() => {
+        setScanCooldown(false);
+        setCooldownSeconds(0);
+      }, 10000);
     }
   };
 
@@ -202,13 +222,18 @@ const Scanner = () => {
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
           <Button
             onClick={handleScan}
-            disabled={isScanning || !isConfigured}
+            disabled={isScanning || !isConfigured || scanCooldown}
             className="gap-2"
           >
             {isScanning ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Scanning…
+              </>
+            ) : scanCooldown ? (
+              <>
+                <Clock className="h-4 w-4" />
+                Wait {cooldownSeconds}s
               </>
             ) : (
               <>
