@@ -1,13 +1,13 @@
-import { Zap, Target, Compass, BarChart3, Shield, MessageSquare, Clock, Bell, Filter } from 'lucide-react';
+import { Zap, Target, Compass, BarChart3, Shield, MessageSquare, Clock, Bell, Filter, Radar, TrendingUp } from 'lucide-react';
 
 const showcases = [
   {
     tag: 'Intent Detection',
     icon: Zap,
-    title: 'Know exactly who's ready to buy',
-    desc: 'Our AI doesn't just find mentions — it detects genuine buying signals. When someone asks "what tool should I use for X?" or "looking for alternatives to Y," Reddix catches it and scores the lead instantly.',
+    title: "Know exactly who's ready to buy",
+    desc: "Our AI doesn't just find mentions — it detects genuine buying signals. When someone asks \"what tool should I use for X?\" or \"looking for alternatives to Y,\" Reddix catches it and scores the lead instantly.",
     features: [
-      { icon: Target, text: 'Buying intent scoring from 0–100' },
+      { icon: Target, text: 'Buying intent scoring from 0-100' },
       { icon: Filter, text: 'Smart filtering removes noise' },
       { icon: Bell, text: 'Instant alerts for hot leads' },
     ],
@@ -16,7 +16,7 @@ const showcases = [
     tag: 'AI Replies',
     icon: MessageSquare,
     title: 'Replies that feel human, not spammy',
-    desc: 'Every reply is crafted to match the subreddit's tone and culture. Reddix reads the full thread context, understands the conversation, and generates a response that adds genuine value while naturally mentioning your product.',
+    desc: "Every reply is crafted to match the subreddit's tone and culture. Reddix reads the full thread context, understands the conversation, and generates a response that adds genuine value while naturally mentioning your product.",
     features: [
       { icon: Shield, text: 'Tone-matched to each subreddit' },
       { icon: Compass, text: 'Context-aware thread analysis' },
@@ -35,8 +35,6 @@ const showcases = [
     ],
   },
 ];
-
-import { Radar, TrendingUp } from 'lucide-react';
 
 export function FeatureShowcase() {
   return (
@@ -57,7 +55,6 @@ export function FeatureShowcase() {
           {showcases.map((s, i) => (
             <div key={i} className={`reveal reveal-delay-${Math.min(i + 1, 3)}`}>
               <div className={`flex flex-col ${i % 2 === 1 ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-10 lg:gap-16 items-start`}>
-                {/* Text */}
                 <div className="flex-1">
                   <div className="tag-pill border-primary/15 bg-primary/[0.04] text-primary mb-5">
                     <s.icon className="w-3.5 h-3.5" />
@@ -81,7 +78,6 @@ export function FeatureShowcase() {
                   </div>
                 </div>
 
-                {/* Visual card */}
                 <div className="flex-1 w-full">
                   <div className="bento-card h-[280px] sm:h-[320px] bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center">
                     <s.icon className="w-16 h-16 text-primary/15" />
