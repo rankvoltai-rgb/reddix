@@ -4,77 +4,66 @@ const features = [
   {
     icon: Zap,
     title: 'Intent Detection',
-    description:
-      'AI identifies posts where users are actively looking for solutions like yours — not just mentions.',
-    tint: 'stat-tint-primary',
+    desc: 'AI identifies posts where users are actively searching for solutions — not just mentions.',
   },
   {
     icon: Target,
     title: 'Lead Scoring',
-    description:
-      'Automatically ranks leads by buying intent so you focus on the hottest opportunities first.',
-    tint: 'stat-tint-destructive',
+    desc: 'Leads ranked by buying intent so you always focus on the hottest opportunities.',
   },
   {
     icon: MessageSquare,
     title: 'AI Replies',
-    description:
-      'Generate context-aware responses that match Reddit culture and feel natural, not spammy.',
-    tint: 'stat-tint-success',
+    desc: 'Context-aware responses that match Reddit culture. Natural, not spammy.',
   },
   {
     icon: Compass,
     title: 'Subreddit Discovery',
-    description:
-      'AI suggests the best subreddits where your target customers are actively discussing problems.',
-    tint: 'stat-tint-warning',
+    desc: 'AI suggests the best subreddits where your target audience hangs out.',
   },
   {
     icon: BarChart3,
     title: 'Built-in CRM',
-    description:
-      'Track every lead from discovery to conversion in one clean dashboard with status tracking.',
-    tint: 'stat-tint-primary',
+    desc: 'Track every lead from discovery to conversion in one clean dashboard.',
   },
   {
     icon: Clock,
     title: 'Scheduled Scans',
-    description:
-      'Set it and forget it. Auto-pilot scans Reddit on your schedule and surfaces new leads daily.',
-    tint: 'stat-tint-success',
+    desc: 'Auto-pilot monitors Reddit on your schedule. New leads, daily, zero effort.',
   },
 ];
 
 export function FeaturesGrid() {
   return (
-    <section id="features" className="py-20 sm:py-28 bg-muted/30">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-24 sm:py-32 bg-muted/25">
+      <div className="max-w-[1100px] mx-auto px-6">
         <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-primary mb-2 uppercase tracking-wider">
+          <p className="text-[13px] font-medium text-primary mb-3 tracking-wide uppercase">
             Features
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
-            Everything you need to find qualified leads
+          <h2 className="text-3xl sm:text-[40px] font-semibold tracking-[-0.02em] leading-tight">
+            Built for{' '}
+            <span className="font-display italic font-normal">SaaS founders</span>
           </h2>
-          <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
-            Built by SaaS founders, for SaaS founders. Every feature is designed to save you
-            hours of manual Reddit browsing.
+          <p className="mt-4 text-[15px] text-muted-foreground max-w-md mx-auto">
+            Every feature saves you hours of manual Reddit browsing.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {features.map((feature, i) => (
+        {/* Bento grid: 2 large + 4 small */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {features.map((f, i) => (
             <div
               key={i}
-              className={`${feature.tint} shine-effect rounded-xl border border-border p-6 card-hover animate-fade-in`}
+              className={`bento-card shine-effect reveal reveal-delay-${Math.min(i + 1, 5)} ${
+                i < 2 ? 'lg:row-span-1' : ''
+              }`}
             >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <feature.icon className="w-5 h-5 text-primary" />
+              <div className="w-9 h-9 rounded-lg bg-primary/[0.06] flex items-center justify-center mb-4">
+                <f.icon className="w-[18px] h-[18px] text-primary" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {feature.description}
-              </p>
+              <h3 className="text-[15px] font-semibold text-foreground mb-1.5">{f.title}</h3>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>

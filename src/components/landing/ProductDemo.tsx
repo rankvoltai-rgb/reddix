@@ -1,111 +1,110 @@
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { MessageSquare, TrendingUp, ExternalLink } from 'lucide-react';
+import { MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
 
-const sampleLeads = [
+const leads = [
   {
     title: 'Looking for a tool to find leads on Reddit automatically',
-    subreddit: 'r/SaaS',
-    intent: 'hot' as const,
+    sub: 'r/SaaS',
+    intent: 'hot',
     score: 92,
-    time: '2h ago',
+    time: '2h',
   },
   {
     title: 'Best way to monitor Reddit for product mentions?',
-    subreddit: 'r/startups',
-    intent: 'warm' as const,
+    sub: 'r/startups',
+    intent: 'warm',
     score: 78,
-    time: '4h ago',
+    time: '4h',
   },
   {
     title: 'Anyone using AI to generate Reddit replies for outreach?',
-    subreddit: 'r/Entrepreneur',
-    intent: 'hot' as const,
+    sub: 'r/Entrepreneur',
+    intent: 'hot',
     score: 88,
-    time: '1h ago',
+    time: '1h',
   },
 ];
 
-const intentStyles: Record<string, string> = {
-  hot: 'intent-hot',
-  warm: 'intent-warm',
-};
-
 export function ProductDemo() {
   return (
-    <section className="py-16 sm:py-24">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="animate-fade-in">
-          {/* Browser chrome */}
-          <div className="rounded-xl border border-border overflow-hidden shadow-2xl shadow-foreground/5">
-            {/* Title bar */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-muted/60 border-b border-border">
+    <section className="py-8 sm:py-16">
+      <div className="max-w-[980px] mx-auto px-6">
+        <div className="reveal">
+          {/* Browser frame */}
+          <div className="rounded-2xl border border-border/60 overflow-hidden shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)]">
+            {/* Chrome */}
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b border-border/40">
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-[hsl(0,70%,65%)]" />
-                <div className="w-3 h-3 rounded-full bg-[hsl(45,80%,60%)]" />
-                <div className="w-3 h-3 rounded-full bg-[hsl(130,50%,55%)]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               </div>
-              <div className="flex-1 mx-8">
-                <div className="max-w-md mx-auto bg-background rounded-md px-3 py-1 text-xs text-muted-foreground text-center border border-border">
+              <div className="flex-1 mx-12">
+                <div className="max-w-[280px] mx-auto bg-background/80 rounded-md px-3 py-1 text-[11px] text-muted-foreground text-center border border-border/40">
                   app.reddix.io/scanner
                 </div>
               </div>
             </div>
 
-            {/* App content */}
-            <div className="bg-background p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
+            {/* Content */}
+            <div className="bg-background p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Lead Scanner</h3>
-                  <p className="text-xs text-muted-foreground">3 new leads found</p>
+                  <h3 className="text-[13px] font-semibold text-foreground">Lead Scanner</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">3 new leads · Last scan 5m ago</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    Live
-                  </Badge>
-                </div>
+                <Badge variant="secondary" className="text-[11px] h-6 px-2.5 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--success))] mr-1.5" />
+                  Live
+                </Badge>
               </div>
 
-              <div className="space-y-2">
-                {sampleLeads.map((lead, i) => (
-                  <Card
+              <div className="space-y-1">
+                {leads.map((lead, i) => (
+                  <div
                     key={i}
-                    className="p-3 flex items-start justify-between gap-3 hover:bg-muted/50 transition-colors cursor-default"
+                    className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors"
                   >
+                    {/* Score pip */}
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                        lead.intent === 'hot'
+                          ? 'bg-red-50 text-red-500'
+                          : 'bg-amber-50 text-amber-500'
+                      }`}
+                    >
+                      {lead.score}
+                    </div>
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[11px] text-muted-foreground font-medium">
-                          {lead.subreddit}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">·</span>
-                        <span className="text-[11px] text-muted-foreground">{lead.time}</span>
-                      </div>
-                      <p className="text-sm text-foreground font-medium truncate">
+                      <p className="text-[13px] text-foreground font-medium truncate leading-snug">
                         {lead.title}
                       </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {lead.sub} · {lead.time} ago
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${intentStyles[lead.intent]}`}
-                      >
-                        {lead.score}% match
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button className="p-1.5 rounded-md hover:bg-muted">
+                        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 rounded-md hover:bg-muted">
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
 
               {/* AI Reply preview */}
-              <div className="mt-4 p-3 rounded-lg bg-muted/40 border border-border">
-                <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
-                  ✨ AI-generated reply
-                </p>
-                <p className="text-sm text-foreground leading-relaxed">
-                  "Check out Reddix — it monitors Reddit 24/7 and surfaces posts where people
-                  are actively looking for tools like yours. reddix.io"
+              <div className="mt-4 rounded-xl bg-muted/30 border border-border/40 p-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                  <span className="text-[11px] font-medium text-muted-foreground">AI-drafted reply</span>
+                </div>
+                <p className="text-[13px] text-foreground leading-relaxed">
+                  "Check out Reddix — it monitors Reddit 24/7 and surfaces posts where people are actively looking for tools like yours. reddix.io"
                 </p>
               </div>
             </div>

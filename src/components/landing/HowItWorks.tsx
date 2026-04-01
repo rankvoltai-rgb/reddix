@@ -1,58 +1,56 @@
-import { FileText, Radar, MessageSquare } from 'lucide-react';
+import { Globe, Radar, MessageCircle } from 'lucide-react';
 
 const steps = [
   {
-    icon: FileText,
-    number: '01',
-    title: 'Describe your product',
-    description:
-      'Enter your website URL. Our AI analyzes your product to understand what you sell and who you serve.',
+    icon: Globe,
+    num: '01',
+    title: 'Drop in your URL',
+    body: 'We analyze your product, audience, and positioning in seconds.',
   },
   {
     icon: Radar,
-    number: '02',
+    num: '02',
     title: 'AI scans Reddit 24/7',
-    description:
-      'Reddix continuously monitors relevant subreddits for posts that signal buying intent for your product.',
+    body: 'Relevant subreddits are monitored for high-intent buying signals.',
   },
   {
-    icon: MessageSquare,
-    number: '03',
-    title: 'Get warm leads with AI replies',
-    description:
-      'Each lead comes with an AI-drafted reply that blends into the conversation naturally. Copy, tweak, post.',
+    icon: MessageCircle,
+    num: '03',
+    title: 'Reply & convert',
+    body: 'Each lead arrives with a context-aware AI reply you can post instantly.',
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-28">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-primary mb-2 uppercase tracking-wider">
+    <section id="how-it-works" className="py-24 sm:py-32">
+      <div className="max-w-[1100px] mx-auto px-6">
+        <div className="text-center mb-20">
+          <p className="text-[13px] font-medium text-primary mb-3 tracking-wide uppercase">
             How it works
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
-            From zero to warm leads in 2 minutes
+          <h2 className="text-3xl sm:text-[40px] font-semibold tracking-[-0.02em] leading-tight">
+            Three steps to{' '}
+            <span className="font-display italic font-normal">warm leads</span>
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connector line (desktop only) */}
-          <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px border-t-2 border-dashed border-border" />
-
+        <div className="grid md:grid-cols-3 gap-6">
           {steps.map((step, i) => (
-            <div key={i} className="relative text-center animate-fade-in">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-muted/60 border border-border mb-6 relative">
-                <step.icon className="w-10 h-10 text-primary" />
-                <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                  {step.number}
+            <div
+              key={i}
+              className={`bento-card flex flex-col reveal reveal-delay-${i + 1}`}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
+                  <step.icon className="w-5 h-5 text-foreground" />
+                </div>
+                <span className="text-[12px] font-mono text-muted-foreground/50">
+                  {step.num}
                 </span>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                {step.description}
-              </p>
+              <h3 className="text-[17px] font-semibold text-foreground mb-2">{step.title}</h3>
+              <p className="text-[14px] text-muted-foreground leading-relaxed">{step.body}</p>
             </div>
           ))}
         </div>
