@@ -19,6 +19,14 @@ export function Navbar() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const links = [
+    { label: 'Features', id: 'features' },
+    { label: 'How it works', id: 'how-it-works' },
+    { label: 'Testimonials', id: 'testimonials' },
+    { label: 'Pricing', id: 'pricing' },
+    { label: 'FAQ', id: 'faq' },
+  ];
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -33,24 +41,19 @@ export function Navbar() {
             Reddix
           </span>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {[
-              { label: 'Features', id: 'features' },
-              { label: 'How it works', id: 'how-it-works' },
-              { label: 'Pricing', id: 'pricing' },
-            ].map((item) => (
+          <nav className="hidden lg:flex items-center gap-0.5">
+            {links.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollTo(item.id)}
-                className="px-3.5 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/60 transition-all duration-200"
+                className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/60 transition-all duration-200"
               >
                 {item.label}
               </button>
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -64,13 +67,12 @@ export function Navbar() {
               onClick={() => navigate('/auth')}
               className="text-[13px] h-8 px-4 rounded-lg"
             >
-              Get started
+              Get started free
             </Button>
           </div>
 
-          {/* Mobile toggle */}
           <button
-            className="md:hidden p-1.5 text-muted-foreground"
+            className="lg:hidden p-1.5 text-muted-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -78,16 +80,15 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-background/95 backdrop-blur-2xl border-b border-border px-6 py-4 space-y-1">
-          {['Features', 'How it works', 'Pricing'].map((label) => (
+        <div className="lg:hidden bg-background/95 backdrop-blur-2xl border-b border-border px-6 py-4 space-y-1">
+          {links.map((item) => (
             <button
-              key={label}
-              onClick={() => scrollTo(label.toLowerCase().replace(/ /g, '-'))}
+              key={item.id}
+              onClick={() => scrollTo(item.id)}
               className="block w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg"
             >
-              {label}
+              {item.label}
             </button>
           ))}
           <div className="pt-3 flex gap-2">

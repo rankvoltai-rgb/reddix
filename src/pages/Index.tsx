@@ -6,12 +6,18 @@ import { Loader2 } from 'lucide-react';
 
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { LogoBar } from '@/components/landing/LogoBar';
 import { ProductDemo } from '@/components/landing/ProductDemo';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { FeaturesGrid } from '@/components/landing/FeaturesGrid';
 import { StatsBar } from '@/components/landing/StatsBar';
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { FeatureShowcase } from '@/components/landing/FeatureShowcase';
+import { FeaturesGrid } from '@/components/landing/FeaturesGrid';
+import { Testimonials } from '@/components/landing/Testimonials';
+import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { FinalCTA } from '@/components/landing/FinalCTA';
+import { Footer } from '@/components/landing/Footer';
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -34,25 +40,21 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <HeroSection />
+      <LogoBar />
       <ProductDemo />
       <StatsBar />
       <HowItWorks />
+      <FeatureShowcase />
       <FeaturesGrid />
+      <Testimonials />
+      <ComparisonSection />
       <PricingSection />
+      <FAQSection />
       <FinalCTA />
-
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8">
-        <div className="max-w-[1100px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-[13px] font-semibold text-foreground">Reddix</span>
-          <p className="text-[12px] text-muted-foreground">
-            © {new Date().getFullYear()} Reddix · Built for founders who prefer warm conversations over cold outreach.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
