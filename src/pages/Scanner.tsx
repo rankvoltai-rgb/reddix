@@ -48,8 +48,8 @@ const Scanner = () => {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [scanCooldown, setScanCooldown] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isFreePlan = !subscribed && (profile as any)?.selected_plan === 'free';
 
