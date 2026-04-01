@@ -21,18 +21,14 @@ export default function Index() {
   useEffect(() => {
     if (authLoading || profileLoading) return;
     if (user) {
-      if (!profile?.onboarding_completed) {
-        navigate('/onboarding');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(!profile?.onboarding_completed ? '/onboarding' : '/dashboard');
     }
   }, [user, authLoading, profile, profileLoading, navigate]);
 
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -49,11 +45,11 @@ export default function Index() {
       <FinalCTA />
 
       {/* Footer */}
-      <footer className="border-t border-border py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-sm font-semibold text-foreground">Reddix</span>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Reddix. Built for founders who want warm conversations, not cold outreach.
+      <footer className="border-t border-border/40 py-8">
+        <div className="max-w-[1100px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-[13px] font-semibold text-foreground">Reddix</span>
+          <p className="text-[12px] text-muted-foreground">
+            © {new Date().getFullYear()} Reddix · Built for founders who prefer warm conversations over cold outreach.
           </p>
         </div>
       </footer>
