@@ -6,29 +6,35 @@ export function FinalCTA() {
   const navigate = useNavigate();
 
   return (
-    <section className="relative py-28 sm:py-36 overflow-hidden">
-      {/* Background */}
+    <section className="relative py-28 sm:py-40 overflow-hidden">
       <div className="absolute inset-0 bg-foreground" />
-      <div className="orb w-[500px] h-[500px] bg-[hsl(var(--primary)/0.25)] top-[-100px] right-[-100px]" style={{ filter: 'blur(120px)' }} />
-      <div className="orb w-[400px] h-[400px] bg-[hsl(350,70%,50%,0.15)] bottom-[-150px] left-[-50px]" style={{ filter: 'blur(120px)', animationDelay: '-6s' }} />
+      <div className="orb w-[600px] h-[600px] bg-[hsl(var(--primary)/0.2)] top-[-200px] right-[-100px]" style={{ filter: 'blur(140px)' }} />
+      <div className="orb w-[500px] h-[500px] bg-[hsl(350,70%,50%,0.12)] bottom-[-200px] left-[-100px]" style={{ filter: 'blur(140px)', animationDelay: '-6s' }} />
 
-      <div className="relative max-w-[600px] mx-auto px-6 text-center">
-        <h2 className="text-3xl sm:text-[42px] font-semibold text-background tracking-[-0.02em] leading-tight">
-          Ready to find your next{' '}
-          <span className="font-display italic font-normal opacity-80">100 customers</span>
-          ?
-        </h2>
-        <p className="mt-5 text-[16px] text-background/50">
-          Set up in under 2 minutes. No credit card required.
+      <div className="relative max-w-[650px] mx-auto px-6 text-center">
+        <p className="text-[13px] font-medium text-background/40 mb-4 tracking-wide uppercase">
+          Get started today
         </p>
-        <Button
-          size="lg"
-          onClick={() => navigate('/auth')}
-          className="mt-9 h-12 px-8 rounded-xl text-[14px] bg-background text-foreground hover:bg-background/90 shadow-2xl"
-        >
-          Get started for free
-          <ArrowRight className="w-4 h-4 ml-1.5" />
-        </Button>
+        <h2 className="text-[32px] sm:text-[48px] font-semibold text-background tracking-[-0.03em] leading-[1.1]">
+          Your next 100 customers are{' '}
+          <span className="font-display italic font-normal text-background/70">already on Reddit</span>
+        </h2>
+        <p className="mt-6 text-[16px] text-background/40 leading-relaxed max-w-md mx-auto">
+          They're asking for tools like yours right now. Reddix helps you show up in the conversation.
+        </p>
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            size="lg"
+            onClick={() => navigate('/auth')}
+            className="h-[52px] px-8 rounded-xl text-[15px] bg-background text-foreground hover:bg-background/90 shadow-2xl"
+          >
+            Start for free
+            <ArrowRight className="w-4 h-4 ml-1.5" />
+          </Button>
+        </div>
+        <p className="mt-5 text-[12px] text-background/25">
+          No credit card · 2 min setup · Cancel anytime
+        </p>
       </div>
     </section>
   );
