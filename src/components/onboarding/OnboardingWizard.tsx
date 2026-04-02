@@ -33,12 +33,29 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Handle checkout=success redirect from Stripe
+  // Handle checkout=success redirect from Stripe — auto-complete onboarding
   useEffect(() => {
     const checkout = searchParams.get('checkout');
     if (checkout === 'success') {
-      refreshSubscription();
-      setStep(2);
+      refreshSubscription().then(() => {
+        // Auto-complete onboarding after successful payment
+        const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
+        updateProfile(
+          {
+            initial_setup_completed: true,
+            onboarding_completed: true,
+            auto_pilot_enabled: true,
+            next_scheduled_scan_at: nextScan.toISOString(),
+          } as any,
+          {
+            onSuccess: () => {
+              toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
+              triggerAutoSetup();
+              navigate('/dashboard');
+            },
+          }
+        );
+      });
     }
   }, []);
 
@@ -123,29 +140,31 @@ export default function OnboardingWizard() {
   };
 
   const handlePlanSelect = async (planKey: SubscriptionPlan) => {
-    if (planKey === 'free') {
-      updateField('selected_plan', 'free');
-    } else if (planKey === 'premium') {
-      if (!session?.access_token) {
-        toast({ variant: 'destructive', title: 'Please sign in to continue' });
-        return;
-      }
-      setLoadingPlan('premium');
-      try {
-        const tier = SUBSCRIPTION_TIERS.premium;
-        const { data: checkoutData, error } = await supabase.functions.invoke('create-checkout', {
-          body: { priceId: tier.price_id },
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (error) throw error;
-        if (checkoutData?.url) window.location.href = checkoutData.url;
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
-      } finally {
-        setLoadingPlan(null);
-      }
-    } else if (planKey === 'enterprise') {
+    if (planKey === 'enterprise') {
       window.location.href = 'mailto:support@reddix.app?subject=Enterprise%20Plan%20Inquiry';
+      return;
+    }
+
+    const tier = SUBSCRIPTION_TIERS[planKey];
+    if (!tier.price_id) return;
+
+    if (!session?.access_token) {
+      toast({ variant: 'destructive', title: 'Please sign in to continue' });
+      return;
+    }
+
+    setLoadingPlan(planKey);
+    try {
+      const { data: checkoutData, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId: tier.price_id, mode: tier.mode },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error) throw error;
+      if (checkoutData?.url) window.location.href = checkoutData.url;
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
+    } finally {
+      setLoadingPlan(null);
     }
   };
 
@@ -263,8 +282,9 @@ export default function OnboardingWizard() {
                           )}
                           <span className="text-base font-bold text-foreground">{tier.name}</span>
                           <span className="text-2xl font-bold text-foreground mt-1">
-                            {tier.price !== null ? `$${tier.price.toFixed(2)}` : 'Custom'}
-                            {tier.price !== null && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                            {tier.price !== null ? `$${tier.price}` : 'Custom'}
+                            {tier.price !== null && tier.mode === 'subscription' && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                            {tier.price !== null && tier.mode === 'payment' && <span className="text-sm font-normal text-muted-foreground"> one-time</span>}
                           </span>
                           <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                             {tier.features.map((f, i) => (
@@ -285,7 +305,7 @@ export default function OnboardingWizard() {
                       );
                     })}
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime</p>
+                  <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime · Lifetime is a one-time payment</p>
                 </div>
               )}
             </div>
@@ -301,10 +321,6 @@ export default function OnboardingWizard() {
                 {step === 1 ? (
                   <Button type="button" onClick={handleAnalyzeAndContinue} disabled={!canProceed() || isAnalyzing} className="gap-2">
                     {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <>Analyze & Continue <ArrowRight className="w-4 h-4" /></>}
-                  </Button>
-                ) : step === 2 && data.selected_plan === 'free' ? (
-                  <Button type="button" onClick={handleComplete} disabled={isUpdating} className="gap-2">
-                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Complete Setup</>}
                   </Button>
                 ) : step === 2 ? (
                   <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>

@@ -51,7 +51,7 @@ const Scanner = () => {
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isFreePlan = !subscribed && (profile as any)?.selected_plan === 'free';
+  const isFreePlan = false;
 
   // Query today's high-intent lead count for free users
   const { data: todayLeadCount = 0, refetch: refetchLeadCount } = useQuery({
@@ -85,8 +85,7 @@ const Scanner = () => {
       navigate("/onboarding");
       return;
     }
-    const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
-    if (!subLoading && !hasAccess && profile?.onboarding_completed) {
+    if (!subLoading && !subscribed && profile?.onboarding_completed) {
       navigate("/onboarding");
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);

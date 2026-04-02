@@ -75,8 +75,7 @@ export default function Leads() {
       return;
     }
 
-    const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
-    if (!subLoading && !hasAccess && profile?.onboarding_completed) {
+    if (!subLoading && !subscribed && profile?.onboarding_completed) {
       navigate("/onboarding");
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);

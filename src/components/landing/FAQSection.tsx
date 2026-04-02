@@ -19,8 +19,8 @@ const faqs = [
     a: 'Extremely. We analyze post content, context, subreddit norms, and engagement patterns. Hot leads (80+ score) have a 3–5x higher reply engagement rate compared to generic mentions. You can filter by score to focus on the highest-value opportunities.',
   },
   {
-    q: 'What do I get on the free plan?',
-    a: "10 leads per day across 4 subreddits with full AI reply generation. It's enough to validate the tool and start seeing results. Upgrade to Premium for unlimited leads, unlimited subreddits, and priority scanning.",
+    q: 'What is the Lifetime plan?',
+    a: "For $150 one-time, you get lifetime access to all premium features: unlimited leads, unlimited subreddits, priority scanning, advanced analytics, team collaboration, and priority support. No recurring charges ever.",
   },
   {
     q: 'Can I cancel anytime?',

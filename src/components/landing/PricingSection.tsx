@@ -22,7 +22,7 @@ export function PricingSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/[0.06] border border-primary/10 text-[12px] font-medium text-primary mb-5">
             <Sparkles className="w-3.5 h-3.5" />
-            Start free. Scale when ready.
+            Pay once. Or subscribe monthly.
           </div>
           <h2 className="text-3xl sm:text-[44px] font-semibold tracking-[-0.03em] leading-[1.1]">
             Pricing that{' '}
@@ -75,18 +75,18 @@ export function PricingSection() {
                         <span className="text-[48px] font-bold tracking-[-0.04em] text-foreground leading-none">
                           ${tier.price}
                         </span>
-                        {tier.price > 0 && (
+                        {'mode' in tier && tier.mode === 'subscription' && (
                           <span className="text-[15px] text-muted-foreground font-medium">/mo</span>
                         )}
                       </div>
                     ) : (
                       <span className="text-[36px] font-bold text-foreground tracking-tight">Custom</span>
                     )}
-                    {tier.price === 0 && (
-                      <p className="text-[13px] text-muted-foreground mt-1.5">Free forever — no credit card</p>
+                    {'mode' in tier && tier.mode === 'payment' && (
+                      <p className="text-[13px] text-muted-foreground mt-1.5">One-time payment · Lifetime access</p>
                     )}
-                    {tier.price !== null && tier.price > 0 && (
-                      <p className="text-[13px] text-muted-foreground mt-1.5">Billed monthly · Cancel anytime</p>
+                    {'mode' in tier && tier.mode === 'subscription' && (
+                      <p className="text-[13px] text-muted-foreground mt-1.5">7-day free trial · Cancel anytime</p>
                     )}
                   </div>
 
