@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar } from 'lucide-react';
+import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar, Rocket, Users, User, Code, ShoppingCart, Briefcase, PenTool, TrendingUp } from 'lucide-react';
 import { competitors } from '@/lib/alternatives';
 import { DropdownPanel, type DropdownConfig, type DropdownItem } from './DropdownPanel';
 
@@ -22,6 +22,17 @@ const featureItems: DropdownItem[] = [
   { label: 'Deduplication', desc: 'Never see the same post twice', icon: Repeat, route: '/features/deduplication' },
   { label: 'Website Analysis', desc: 'Auto-extract keywords from your URL', icon: Globe, route: '/features/website-analysis' },
   { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, route: '/features/natural-tone' },
+];
+
+const useCaseItems: DropdownItem[] = [
+  { label: 'SaaS Founders', desc: 'Find users searching for your category', icon: Rocket, route: '/use-cases/saas-founders' },
+  { label: 'Marketing Agencies', desc: 'Scale across multiple clients', icon: Users, route: '/use-cases/marketing-agencies' },
+  { label: 'Solopreneurs', desc: 'Warm leads on autopilot', icon: User, route: '/use-cases/solopreneurs' },
+  { label: 'Developer Tools', desc: 'Reach devs where they hang out', icon: Code, route: '/use-cases/developer-tools' },
+  { label: 'E-commerce', desc: 'Product recommendation threads', icon: ShoppingCart, route: '/use-cases/ecommerce' },
+  { label: 'B2B Sales', desc: 'Enterprise buying signals', icon: Briefcase, route: '/use-cases/b2b-sales' },
+  { label: 'Content Marketers', desc: 'Content gaps & distribution', icon: PenTool, route: '/use-cases/content-marketers' },
+  { label: 'Startup Growth', desc: 'Early traction on Reddit', icon: TrendingUp, route: '/use-cases/startup-growth' },
 ];
 
 const resourceItems: DropdownItem[] = [
@@ -45,6 +56,14 @@ const navItems: NavItem[] = [
   },
   { label: 'How it works', scrollId: 'how-it-works' },
   { label: 'Pricing', scrollId: 'pricing' },
+  {
+    label: 'Use Cases',
+    route: '/use-cases/saas-founders',
+    dropdown: {
+      items: useCaseItems,
+      footer: { label: 'View all use cases', route: '/#features' },
+    },
+  },
   {
     label: 'Resources',
     route: '/alternatives',
