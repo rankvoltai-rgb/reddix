@@ -61,6 +61,12 @@ Reddix scans Reddit 24/7 to find high-intent leads mentioning your product categ
 - [Reddix vs CommunityTracker](https://reddix.info/alternatives/communitytracker)
 - [Reddix vs ReplyAgent](https://reddix.info/alternatives/replyagent)
 - [Reddix vs ReddLeads](https://reddix.info/alternatives/reddleads)
+- [Reddix vs F5Bot](https://reddix.info/alternatives/f5bot)
+- [Reddix vs Syften](https://reddix.info/alternatives/syften)
+- [Reddix vs CatchIntent](https://reddix.info/alternatives/catchintent)
+- [Reddix vs Brandwatch](https://reddix.info/alternatives/brandwatch)
+- [Reddix vs ReplyDaddy](https://reddix.info/alternatives/replydaddy)
+- [Reddix vs Promotee](https://reddix.info/alternatives/promotee)
 
 ### Glossary
 - [Reddit & Lead Gen Glossary](https://reddix.info/glossary)
