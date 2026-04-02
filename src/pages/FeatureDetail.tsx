@@ -44,18 +44,18 @@ export default function FeatureDetail() {
     "@type": "WebPage",
     "name": feature.metaTitle,
     "description": feature.metaDescription,
-    "url": `https://www.reddix.info/features/${feature.slug}`,
+    "url": `https://reddix.info/features/${feature.slug}`,
     "isPartOf": {
       "@type": "SoftwareApplication",
       "name": "Reddix",
-      "url": "https://www.reddix.info"
+      "url": "https://reddix.info"
     },
     "breadcrumb": {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.reddix.info" },
-        { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://www.reddix.info/#features" },
-        { "@type": "ListItem", "position": 3, "name": feature.title, "item": `https://www.reddix.info/features/${feature.slug}` }
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://reddix.info" },
+        { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://reddix.info/#features" },
+        { "@type": "ListItem", "position": 3, "name": feature.title, "item": `https://reddix.info/features/${feature.slug}` }
       ]
     }
   };
