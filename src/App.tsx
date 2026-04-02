@@ -46,6 +46,8 @@ const App = () => (
               <Route path="/glossary" element={<Glossary />} />
               <Route path="/glossary/:slug" element={<GlossaryTerm />} />
               <Route path="/features/:slug" element={<FeatureDetail />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/terms" element={<Terms />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
