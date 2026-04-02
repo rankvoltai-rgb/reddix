@@ -36,6 +36,8 @@ const App = () => (
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/alternatives" element={<Alternatives />} />
+              <Route path="/alternatives/:slug" element={<AlternativeDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

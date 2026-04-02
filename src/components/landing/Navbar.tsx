@@ -95,7 +95,7 @@ export function Navbar() {
           {links.map((item) => (
             <button
               key={item.id}
-              onClick={() => scrollTo(item.id)}
+              onClick={() => (item as any).isRoute ? navigate(`/${item.id}`) : scrollTo(item.id)}
               className="block w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg"
             >
               {item.label}
