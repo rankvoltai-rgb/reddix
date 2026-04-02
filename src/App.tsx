@@ -18,6 +18,8 @@ import Glossary from "./pages/Glossary";
 import GlossaryTerm from "./pages/GlossaryTerm";
 import NotFound from "./pages/NotFound";
 import FeatureDetail from "./pages/FeatureDetail";
+import RefundPolicy from "./pages/RefundPolicy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
               <Route path="/glossary" element={<Glossary />} />
               <Route path="/glossary/:slug" element={<GlossaryTerm />} />
               <Route path="/features/:slug" element={<FeatureDetail />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/terms" element={<Terms />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

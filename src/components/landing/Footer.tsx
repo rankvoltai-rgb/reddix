@@ -82,10 +82,15 @@ export function Footer() {
               Legal
             </h4>
             <ul className="space-y-3">
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((label) => (
-                <li key={label}>
-                  <button className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
-                    {label}
+              {[
+                { label: 'Privacy Policy', action: () => {} },
+                { label: 'Terms of Service', action: () => navigate('/terms') },
+                { label: 'Refund Policy', action: () => navigate('/refund-policy') },
+                { label: 'Cookie Policy', action: () => {} },
+              ].map((item) => (
+                <li key={item.label}>
+                  <button onClick={item.action} className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+                    {item.label}
                   </button>
                 </li>
               ))}
