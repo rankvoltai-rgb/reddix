@@ -27,7 +27,7 @@ export function PricingSection() {
           <h2 className="text-3xl sm:text-[44px] font-semibold tracking-[-0.03em] leading-[1.1]">
             Pricing that{' '}
             <span
-              className="font-normal text-primary"
+              className="inline-flex items-center font-normal text-primary px-4 py-0.5 rounded-2xl border border-primary/[0.15] bg-primary/[0.04]"
               style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
             >
               makes sense

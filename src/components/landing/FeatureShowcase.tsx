@@ -145,7 +145,7 @@ export function FeatureShowcase() {
             Not another monitoring tool —
             <br />
             <span
-              className="font-normal text-primary"
+              className="inline-flex items-center font-normal text-primary px-4 py-0.5 rounded-2xl border border-primary/[0.15] bg-primary/[0.04]"
               style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
             >
               your Reddit revenue engine

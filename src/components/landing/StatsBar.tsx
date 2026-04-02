@@ -23,7 +23,7 @@ export function StatsBar() {
           <h2 className="text-2xl sm:text-[36px] font-semibold tracking-[-0.025em] leading-tight">
             Founders don't guess —{' '}
             <span
-              className="font-normal text-primary"
+              className="inline-flex items-center font-normal text-primary px-4 py-0.5 rounded-2xl border border-primary/[0.15] bg-primary/[0.04]"
               style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
             >
               they measure
