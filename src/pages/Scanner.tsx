@@ -58,7 +58,7 @@ const Scanner = () => {
     queryKey: ['todayHighIntentCount', user?.id],
     queryFn: () => getTodayHighIntentCount(user!.id),
     enabled: !!user && isFreePlan,
-    refetchInterval: 30000,
+    
   });
 
   // Fetch subreddits — must be before any early return to respect Rules of Hooks

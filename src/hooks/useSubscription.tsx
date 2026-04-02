@@ -112,16 +112,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     checkSubscription();
   }, [checkSubscription]);
 
-  // Periodic refresh every 60 seconds
-  useEffect(() => {
-    if (!user) return;
-    
-    const interval = setInterval(() => {
-      checkSubscription();
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [user, checkSubscription]);
 
   return (
     <SubscriptionContext.Provider value={{ subscribed, plan, subscriptionEnd, isLoading, refreshSubscription }}>
