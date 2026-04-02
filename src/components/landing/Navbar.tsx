@@ -45,7 +45,7 @@ export function Navbar() {
             {links.map((item) => (
               <button
                 key={item.id}
-                onClick={() => scrollTo(item.id)}
+                onClick={() => (item as any).isRoute ? navigate(`/${item.id}`) : scrollTo(item.id)}
                 className={`px-3.5 py-1.5 text-[13px] rounded-lg transition-all duration-200 ${
                   scrolled
                     ? 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
