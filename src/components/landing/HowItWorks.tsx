@@ -53,7 +53,7 @@ export function HowItWorks() {
             From zero to warm leads
             <br />
             <span
-              className="font-normal text-primary"
+              className="inline-flex items-center font-normal text-primary px-4 py-0.5 rounded-2xl border border-primary/[0.15] bg-primary/[0.04]"
               style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
             >
               before your coffee gets cold

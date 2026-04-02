@@ -29,7 +29,7 @@ export function FinalCTA() {
         <h2 className="text-[34px] sm:text-[52px] font-bold text-white tracking-[-0.04em] leading-[1.08] reveal reveal-delay-1">
           Your next 100 customers are{' '}
           <span
-            className="font-normal text-white/70"
+            className="inline-flex items-center font-normal text-white/70 px-5 py-1 rounded-2xl border border-white/[0.15] bg-white/[0.06]"
             style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
           >
             posting on Reddit right now
