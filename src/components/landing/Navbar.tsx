@@ -13,15 +13,15 @@ interface NavItem {
 }
 
 const featureItems: DropdownItem[] = [
-  { label: 'Intent Detection', desc: 'AI spots genuine buying signals', icon: Zap, scrollId: 'features' },
-  { label: 'Lead Scoring', desc: 'Every lead scored 0–100', icon: Target, scrollId: 'features' },
-  { label: 'AI Replies', desc: 'Context-aware reply drafts', icon: MessageSquare, scrollId: 'features' },
-  { label: 'Subreddit Discovery', desc: 'Find communities where your ICP lives', icon: Compass, scrollId: 'features' },
-  { label: 'Analytics Dashboard', desc: 'Track leads and conversions', icon: BarChart3, scrollId: 'features' },
-  { label: 'Scheduled Scans', desc: 'Set it and forget it — 24/7', icon: Clock, scrollId: 'features' },
-  { label: 'Deduplication', desc: 'Never see the same post twice', icon: Repeat, scrollId: 'features' },
-  { label: 'Website Analysis', desc: 'Auto-extract keywords from your URL', icon: Globe, scrollId: 'features' },
-  { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, scrollId: 'features' },
+  { label: 'Intent Detection', desc: 'AI spots genuine buying signals', icon: Zap, route: '/features/intent-detection' },
+  { label: 'Lead Scoring', desc: 'Every lead scored 0–100', icon: Target, route: '/features/lead-scoring' },
+  { label: 'AI Replies', desc: 'Context-aware reply drafts', icon: MessageSquare, route: '/features/ai-replies' },
+  { label: 'Subreddit Discovery', desc: 'Find communities where your ICP lives', icon: Compass, route: '/features/subreddit-discovery' },
+  { label: 'Analytics Dashboard', desc: 'Track leads and conversions', icon: BarChart3, route: '/features/analytics-dashboard' },
+  { label: 'Scheduled Scans', desc: 'Set it and forget it — 24/7', icon: Clock, route: '/features/scheduled-scans' },
+  { label: 'Deduplication', desc: 'Never see the same post twice', icon: Repeat, route: '/features/deduplication' },
+  { label: 'Website Analysis', desc: 'Auto-extract keywords from your URL', icon: Globe, route: '/features/website-analysis' },
+  { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, route: '/features/natural-tone' },
 ];
 
 const resourceItems: DropdownItem[] = [
