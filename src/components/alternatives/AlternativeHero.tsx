@@ -30,11 +30,11 @@ export function AlternativeHero({ title, subtitle, pill, showBack }: Alternative
       <div className="relative flex-1 flex flex-col items-center justify-center px-6 pt-[120px] pb-20">
         {showBack && (
           <button
-            onClick={() => navigate('/alternatives')}
+            onClick={() => window.history.back()}
             className="flex items-center gap-1.5 text-[13px] text-white/60 hover:text-white mb-8 transition-colors reveal"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            All alternatives
+            Back
           </button>
         )}
 
