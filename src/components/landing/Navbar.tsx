@@ -1,25 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, Radar } from 'lucide-react';
+import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar } from 'lucide-react';
 import { competitors } from '@/lib/alternatives';
-
-interface DropdownItem {
-  label: string;
-  desc: string;
-  icon: React.ElementType;
-  route?: string;
-  scrollId?: string;
-}
+import { DropdownPanel, type DropdownConfig, type DropdownItem } from './DropdownPanel';
 
 interface NavItem {
   label: string;
   scrollId?: string;
   route?: string;
-  dropdown?: {
-    items: DropdownItem[];
-    footer?: { label: string; route: string };
-  };
+  dropdown?: DropdownConfig;
 }
 
 const featureItems: DropdownItem[] = [
@@ -34,12 +24,15 @@ const featureItems: DropdownItem[] = [
   { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, scrollId: 'features' },
 ];
 
-const altItems: DropdownItem[] = competitors.map((c) => ({
-  label: `vs ${c.name}`,
-  desc: c.weakness,
-  icon: ArrowUpRight,
-  route: `/alternatives/${c.slug}`,
-}));
+const resourceItems: DropdownItem[] = [
+  ...competitors.map((c) => ({
+    label: `vs ${c.name}`,
+    desc: c.weakness,
+    icon: ArrowUpRight,
+    route: `/alternatives/${c.slug}`,
+  })),
+  { label: 'Glossary', desc: '45+ Reddit marketing terms defined', icon: BookOpen, route: '/glossary' },
+];
 
 const navItems: NavItem[] = [
   {
@@ -51,77 +44,16 @@ const navItems: NavItem[] = [
     },
   },
   { label: 'How it works', scrollId: 'how-it-works' },
-  { label: 'Testimonials', scrollId: 'testimonials' },
   { label: 'Pricing', scrollId: 'pricing' },
   {
-    label: 'Alternatives',
+    label: 'Resources',
     route: '/alternatives',
     dropdown: {
-      items: altItems,
+      items: resourceItems,
       footer: { label: 'View all alternatives', route: '/alternatives' },
     },
   },
-  { label: 'Glossary', route: '/glossary' },
 ];
-
-function DropdownPanel({
-  dropdown,
-  scrolled,
-  onNavigate,
-}: {
-  dropdown: NonNullable<NavItem['dropdown']>;
-  scrolled: boolean;
-  onNavigate: (route?: string, scrollId?: string) => void;
-}) {
-  const isLarge = dropdown.items.length > 4;
-
-  return (
-    <div
-      className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50`}
-      style={{ minWidth: isLarge ? '580px' : '320px' }}
-    >
-      <div className="bg-background/95 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-[0_24px_60px_-12px_hsl(var(--foreground)/0.12)] overflow-hidden">
-        {/* Items grid */}
-        <div className={`p-3 ${isLarge ? 'grid grid-cols-2 gap-0.5' : 'space-y-0.5'}`}>
-          {dropdown.items.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => onNavigate(item.route, item.scrollId)}
-              className="group flex items-start gap-3 w-full text-left px-3.5 py-3 rounded-xl hover:bg-muted/60 transition-all duration-200"
-            >
-              <div className="mt-0.5 w-8 h-8 rounded-lg bg-primary/[0.06] border border-primary/[0.08] flex items-center justify-center flex-shrink-0 group-hover:bg-primary/[0.1] group-hover:border-primary/[0.15] transition-colors">
-                <item.icon className="w-4 h-4 text-primary/70 group-hover:text-primary transition-colors" />
-              </div>
-              <div className="min-w-0">
-                <span className="block text-[13px] font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
-                  {item.label}
-                </span>
-                <span className="block text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-1">
-                  {item.desc}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Footer */}
-        {dropdown.footer && (
-          <div className="border-t border-border/30 px-3 py-2.5">
-            <button
-              onClick={() => onNavigate(dropdown.footer!.route)}
-              className="group flex items-center justify-between w-full px-3.5 py-2 rounded-xl hover:bg-muted/40 transition-colors"
-            >
-              <span className="text-[12px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                {dropdown.footer!.label}
-              </span>
-              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -138,7 +70,6 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close dropdown on route change
   useEffect(() => {
     setActiveDropdown(null);
     setMobileOpen(false);
@@ -150,7 +81,6 @@ export function Navbar() {
     setMobileExpanded(null);
 
     if (route) {
-      // Handle hash routes like '/#features'
       if (route.startsWith('/#')) {
         if (location.pathname === '/') {
           document.getElementById(route.slice(2))?.scrollIntoView({ behavior: 'smooth' });
@@ -194,10 +124,14 @@ export function Navbar() {
     >
       <div className="max-w-[1200px] mx-auto px-6">
         <div className="flex items-center justify-between h-[64px]">
+          {/* Logo */}
           <button
             onClick={() => navigate('/')}
-            className={`text-[15px] font-bold tracking-tight transition-colors duration-300 ${scrolled ? 'text-foreground' : 'text-white'}`}
+            className={`flex items-center gap-2 text-[15px] font-bold tracking-tight transition-colors duration-300 ${scrolled ? 'text-foreground' : 'text-white'}`}
           >
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-300 ${scrolled ? 'bg-primary' : 'bg-white/15'}`}>
+              <Radar className="w-3.5 h-3.5 text-white" />
+            </div>
             Reddix
           </button>
 
@@ -234,11 +168,9 @@ export function Navbar() {
                   )}
                 </button>
 
-                {/* Dropdown */}
                 {item.dropdown && activeDropdown === item.label && (
                   <DropdownPanel
                     dropdown={item.dropdown}
-                    scrolled={scrolled}
                     onNavigate={handleNavigate}
                   />
                 )}
@@ -283,7 +215,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="lg:hidden bg-background/95 backdrop-blur-2xl border-b border-border px-6 py-4 space-y-1 max-h-[80vh] overflow-y-auto">
+        <div className="lg:hidden bg-background/95 backdrop-blur-2xl border-b border-border px-6 py-4 space-y-1 max-h-[80vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
           {navItems.map((item) => (
             <div key={item.label}>
               <button
@@ -302,7 +234,6 @@ export function Navbar() {
                 )}
               </button>
 
-              {/* Mobile sub-items */}
               {item.dropdown && mobileExpanded === item.label && (
                 <div className="pl-3 pb-2 space-y-0.5">
                   {item.dropdown.items.map((sub) => (
