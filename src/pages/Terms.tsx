@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import { useCanonical } from '@/hooks/useCanonical';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { Shield, Mail } from 'lucide-react';
 
 export default function Terms() {
+  useCanonical('/terms');
   useEffect(() => {
     document.title = 'Terms of Service | Reddix';
     const meta = document.querySelector('meta[name="description"]');

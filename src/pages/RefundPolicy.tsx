@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import { useCanonical } from '@/hooks/useCanonical';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { Shield, AlertTriangle, Mail } from 'lucide-react';
 
 export default function RefundPolicy() {
+  useCanonical('/refund-policy');
   useEffect(() => {
     document.title = 'Refund Policy — No Refunds | Reddix';
     const meta = document.querySelector('meta[name="description"]');

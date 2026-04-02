@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useCanonical } from '@/hooks/useCanonical';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -9,6 +10,7 @@ import { Search } from 'lucide-react';
 export default function Glossary() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('All');
+  useCanonical('/glossary');
 
   useEffect(() => {
     document.title = 'Reddit Marketing Glossary — 45+ Terms Defined | Reddix';

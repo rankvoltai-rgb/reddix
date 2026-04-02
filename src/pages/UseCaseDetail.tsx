@@ -1,5 +1,6 @@
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useCanonical } from '@/hooks/useCanonical';
 import { getUseCaseBySlug, useCases } from '@/lib/useCases';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
@@ -16,6 +17,7 @@ export default function UseCaseDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const useCase = slug ? getUseCaseBySlug(slug) : undefined;
+  useCanonical(`/use-cases/${slug || ''}`);
 
   useEffect(() => {
     if (useCase) {

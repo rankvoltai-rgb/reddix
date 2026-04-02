@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useCanonical } from '@/hooks/useCanonical';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -13,6 +14,7 @@ export default function AlternativeDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const competitor = slug ? getCompetitorBySlug(slug) : undefined;
+  useCanonical(`/alternatives/${slug || ''}`);
 
   useEffect(() => {
     if (competitor) {

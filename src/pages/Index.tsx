@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useCanonical } from '@/hooks/useCanonical';
 import { Loader2 } from 'lucide-react';
 
 import { Navbar } from '@/components/landing/Navbar';
@@ -22,6 +23,7 @@ import { Footer } from '@/components/landing/Footer';
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  useCanonical('/');
   const navigate = useNavigate();
 
   useEffect(() => {
