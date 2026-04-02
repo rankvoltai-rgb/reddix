@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
+import Alternatives from "./pages/Alternatives";
+import AlternativeDetail from "./pages/AlternativeDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
