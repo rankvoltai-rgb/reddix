@@ -305,10 +305,6 @@ export default function OnboardingWizard() {
                   <Button type="button" onClick={handleAnalyzeAndContinue} disabled={!canProceed() || isAnalyzing} className="gap-2">
                     {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <>Analyze & Continue <ArrowRight className="w-4 h-4" /></>}
                   </Button>
-                ) : step === 2 && data.selected_plan === 'free' ? (
-                  <Button type="button" onClick={handleComplete} disabled={isUpdating} className="gap-2">
-                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Complete Setup</>}
-                  </Button>
                 ) : step === 2 ? (
                   <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Back
