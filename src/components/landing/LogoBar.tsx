@@ -5,7 +5,7 @@ export function LogoBar() {
   ];
 
   return (
-    <section className="py-12 border-y border-border/30">
+    <section className="py-14 border-b border-border/30">
       <div className="max-w-[1100px] mx-auto px-6">
         <p className="text-center text-[11px] uppercase tracking-[0.15em] text-muted-foreground/50 font-medium mb-8">
           Trusted by teams at
