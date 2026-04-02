@@ -39,4 +39,4 @@ Disallow: /onboarding
 Disallow: /setup
 Disallow: /subscribe
 
-Sitemap: https://reddix.info/sitemap.xml
+Sitemap: https://www.reddix.info/sitemap.xml
