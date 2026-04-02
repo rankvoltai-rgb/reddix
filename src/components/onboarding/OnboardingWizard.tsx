@@ -33,12 +33,29 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Handle checkout=success redirect from Stripe
+  // Handle checkout=success redirect from Stripe — auto-complete onboarding
   useEffect(() => {
     const checkout = searchParams.get('checkout');
     if (checkout === 'success') {
-      refreshSubscription();
-      setStep(2);
+      refreshSubscription().then(() => {
+        // Auto-complete onboarding after successful payment
+        const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
+        updateProfile(
+          {
+            initial_setup_completed: true,
+            onboarding_completed: true,
+            auto_pilot_enabled: true,
+            next_scheduled_scan_at: nextScan.toISOString(),
+          } as any,
+          {
+            onSuccess: () => {
+              toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
+              triggerAutoSetup();
+              navigate('/dashboard');
+            },
+          }
+        );
+      });
     }
   }, []);
 
