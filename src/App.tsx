@@ -14,6 +14,8 @@ import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Alternatives from "./pages/Alternatives";
 import AlternativeDetail from "./pages/AlternativeDetail";
+import Glossary from "./pages/Glossary";
+import GlossaryTerm from "./pages/GlossaryTerm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
