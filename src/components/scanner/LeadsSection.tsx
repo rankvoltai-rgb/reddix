@@ -69,7 +69,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     },
     enabled: !!userId,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 
   // Realtime subscription for new leads
