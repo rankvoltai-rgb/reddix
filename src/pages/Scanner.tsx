@@ -51,7 +51,7 @@ const Scanner = () => {
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isFreePlan = !subscribed && (profile as any)?.selected_plan === 'free';
+  const isFreePlan = false;
 
   // Query today's high-intent lead count for free users
   const { data: todayLeadCount = 0, refetch: refetchLeadCount } = useQuery({
