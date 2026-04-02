@@ -35,7 +35,12 @@ export function HowItWorks() {
           <h2 className="text-3xl sm:text-[42px] font-semibold tracking-[-0.025em] leading-tight">
             From zero to warm leads
             <br />
-            <span className="font-display italic font-normal">in under two minutes</span>
+            <span
+              className="font-normal text-primary"
+              style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+            >
+              in under two minutes
+            </span>
           </h2>
           <p className="mt-5 text-[15px] text-muted-foreground max-w-md mx-auto">
             No complex setup, no learning curve. Just paste your URL and let AI do the rest.
@@ -45,7 +50,6 @@ export function HowItWorks() {
         <div className="space-y-6">
           {steps.map((step, i) => (
             <div key={i} className={`bento-card flex flex-col sm:flex-row gap-6 sm:gap-8 reveal reveal-delay-${i + 1}`}>
-              {/* Number + icon */}
               <div className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-3 shrink-0">
                 <div className="w-14 h-14 rounded-2xl bg-primary/[0.06] flex items-center justify-center">
                   <step.icon className="w-6 h-6 text-primary" />
@@ -55,7 +59,6 @@ export function HowItWorks() {
                 </span>
               </div>
 
-              {/* Content */}
               <div className="flex-1">
                 <h3 className="text-[18px] font-semibold text-foreground mb-2">{step.title}</h3>
                 <p className="text-[14px] text-muted-foreground leading-[1.65] mb-3">{step.body}</p>
