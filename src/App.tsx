@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
+import Alternatives from "./pages/Alternatives";
+import AlternativeDetail from "./pages/AlternativeDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/alternatives" element={<Alternatives />} />
+              <Route path="/alternatives/:slug" element={<AlternativeDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
