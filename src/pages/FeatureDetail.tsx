@@ -37,8 +37,41 @@ export default function FeatureDetail() {
     .map((s) => features.find((f) => f.slug === s))
     .filter(Boolean);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": feature.metaTitle,
+    "description": feature.metaDescription,
+    "url": `https://reddix.info/features/${feature.slug}`,
+    "isPartOf": {
+      "@type": "SoftwareApplication",
+      "name": "Reddix",
+      "url": "https://reddix.info"
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://reddix.info" },
+        { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://reddix.info/#features" },
+        { "@type": "ListItem", "position": 3, "name": feature.title, "item": `https://reddix.info/features/${feature.slug}` }
+      ]
+    }
+  };
+
+  const faqJsonLd = feature.faq?.length ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": feature.faq.map((item) => ({
+      "@type": "Question",
+      "name": item.q,
+      "acceptedAnswer": { "@type": "Answer", "text": item.a }
+    }))
+  } : null;
+
   return (
     <div className="min-h-screen bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <Navbar />
       <FeatureHero feature={feature} />
       <FeatureDemoSection feature={feature} />
