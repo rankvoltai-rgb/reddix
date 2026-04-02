@@ -24,6 +24,7 @@ export function Navbar() {
     { label: 'How it works', id: 'how-it-works' },
     { label: 'Testimonials', id: 'testimonials' },
     { label: 'Pricing', id: 'pricing' },
+    { label: 'Alternatives', id: 'alternatives', isRoute: true },
   ];
 
   return (
