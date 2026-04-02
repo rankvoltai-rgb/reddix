@@ -288,7 +288,7 @@ export default function OnboardingWizard() {
                       );
                     })}
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime</p>
+                  <p className="text-xs text-center text-muted-foreground">7-day free trial on Premium · Cancel anytime · Lifetime is a one-time payment</p>
                 </div>
               )}
             </div>
