@@ -1,23 +1,27 @@
 export const SUBSCRIPTION_TIERS = {
-  free: {
-    name: 'Free',
-    price_id: null,
-    product_id: null,
-    price: 0,
+  lifetime: {
+    name: 'Lifetime',
+    price_id: 'price_1THedrATaqTexwUQGCPUWSnI',
+    product_id: 'prod_UGAzApTebO1Lxj',
+    price: 150,
+    mode: 'payment' as const,
     features: [
-      '10 leads/day',
-      '4 subreddits',
-      'AI co-pilot',
-      'Hubspot integration',
+      'Unlimited leads',
+      'Unlimited subreddits',
+      'Priority scanning',
+      'Advanced analytics',
+      'Team collaboration',
+      'Priority support',
     ],
     popular: false,
-    cta: 'Get Started',
+    cta: 'Get Lifetime Access',
   },
   premium: {
     name: 'Premium',
     price_id: 'price_1ShkDkATaqTexwUQgyS1Ljyh',
     product_id: 'prod_Tf4MWwcVys39nO',
     price: 45,
+    mode: 'subscription' as const,
     features: [
       'Unlimited leads',
       'Unlimited subreddits',
@@ -34,6 +38,7 @@ export const SUBSCRIPTION_TIERS = {
     price_id: null,
     product_id: null,
     price: null,
+    mode: null,
     features: [
       'Custom signals',
       'Unlimited subreddits',
