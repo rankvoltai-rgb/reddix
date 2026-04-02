@@ -1,72 +1,73 @@
 
 
-# Reddix Landing Page Redesign — ChatGPT-Style, SaaS Founder ICP
+## Reddix — Alternatives Pages (SEO-Optimized, UI-Rich)
 
-## Vision
+### Research: Confirmed Competitors
 
-Transform the current minimal landing page into a rich, immersive experience inspired by ChatGPT/OpenAI's landing page style: bold hero with animated elements, product demo mockup, social proof, tiered pricing, and a sophisticated visual hierarchy. Targeted at SaaS founders who understand the value of warm leads.
+Based on web research, these are the main Reddit lead generation tools competing with Reddix:
 
-## Sections (Top to Bottom)
+| Competitor | Status | Key Weakness (for Reddix positioning) |
+|---|---|---|
+| **GummySearch** | Shut down Nov 2025 | Dead — no longer available |
+| **RedReach** | Active | No autonomous scanning, manual workflow |
+| **Redditor AI** | Active | Focused on auto-posting, risk of bans |
+| **SubredditSignals** | Active | Monitoring only, no AI replies |
+| **CommunityTracker** | Active | Analytics-heavy, limited lead scoring |
+| **ReplyAgent** | Active | Managed accounts model, expensive |
+| **ReddLeads** | Active | Basic keyword matching, no intent AI |
 
-### 1. Sticky Navigation Bar
-- Logo "Reddix" left, nav links center (Features, How it Works, Pricing), CTA buttons right (Sign in ghost, "Get Started" primary pill)
-- Transparent on scroll-top, glass-blur on scroll
+### What We'll Build
 
-### 2. Hero Section (ChatGPT-style)
-- Large bold headline with gradient text animation: "Your AI co-pilot for Reddit lead generation"
-- Subtitle targeting SaaS founders: "Stop cold outreach. Reddix finds people already asking for what you built."
-- Two CTAs: "Start free" (primary, large) + "Watch demo" (outline with play icon)
-- Below CTAs: trust strip — "Trusted by 500+ SaaS founders" with small avatar stack + star rating
-- Background: subtle radial glow + dot grid pattern (already in CSS utilities)
+**1. Alternatives Hub Page** (`/alternatives`)
+- SEO title: "Best Reddit Lead Generation Tools — Reddix Alternatives Compared"
+- Grid of competitor cards with scores, key differences, and CTAs
+- Hero with the same rich dark-gradient style as landing
+- Comparison table summarizing all tools
+- Final CTA section
 
-### 3. Product Demo / Mockup Section
-- A styled browser-frame mockup showing a fake scanner UI with sample leads, intent badges, and AI reply preview
-- Built with actual UI components (cards, badges) inside a decorative browser chrome wrapper
-- Animated fade-in on scroll
+**2. Individual Alternative Pages** (`/alternatives/:slug`)
+- One page per competitor (7 pages total)
+- Each page: Hero → Head-to-head comparison table → Feature breakdown → Why Reddix wins → CTA
+- SEO-optimized `<title>`, `<meta description>`, structured copy
+- Same visual language as landing (glassmorphism, gradient borders, reveal animations)
 
-### 4. "How It Works" — 3-Step Horizontal Flow
-- Step 1: "Describe your product" — icon + short copy
-- Step 2: "AI scans Reddit 24/7" — icon + short copy  
-- Step 3: "Get warm leads with AI replies" — icon + short copy
-- Connected by a subtle dashed line/arrow between steps
+### File Plan
 
-### 5. Features Grid (Enhanced)
-- 2x3 grid of feature cards with icon, title, description
-- Each card has a subtle colored tint background matching the feature theme
-- Cards: Intent Detection, Lead Scoring, AI Replies, Subreddit Discovery, Built-in CRM, Scheduled Scans
-- Hover: lift + shine effect (already in CSS)
+| File | Purpose |
+|---|---|
+| `src/lib/alternatives.ts` | Data file with all competitor info, features, slugs |
+| `src/pages/Alternatives.tsx` | Hub page listing all competitors |
+| `src/pages/AlternativeDetail.tsx` | Individual comparison page (dynamic by slug) |
+| `src/components/alternatives/AlternativeHero.tsx` | Shared hero component for alternatives |
+| `src/components/alternatives/ComparisonTable.tsx` | Head-to-head feature comparison table |
+| `src/components/alternatives/CompetitorCard.tsx` | Card component for the hub grid |
+| `src/App.tsx` | Add `/alternatives` and `/alternatives/:slug` routes |
+| `src/components/landing/Navbar.tsx` | Add "Alternatives" nav link |
+| `src/components/landing/Footer.tsx` | Add alternatives links in footer |
+| `index.html` | Update meta tags |
 
-### 6. Social Proof / Stats Bar
-- Horizontal strip with animated counters: "2,400+ leads found", "180+ subreddits monitored", "12x faster than manual outreach"
-- Uses the existing `animated-counter` component
+### SEO Strategy
 
-### 7. Pricing Section
-- 3-column pricing cards using data from `subscriptionTiers.ts`
-- Popular tier (Premium) highlighted with gradient border + "Most Popular" badge
-- Feature checkmarks, price display, CTA buttons
+- Each page gets a unique `document.title` and `meta description` set via `useEffect`
+- URL structure: `/alternatives/gummysearch`, `/alternatives/redreach`, etc.
+- H1 tags with target keywords like "Reddix vs GummySearch" 
+- Structured comparison content that answers search intent
+- Internal linking between hub and detail pages
+- robots.txt already allows all crawlers
 
-### 8. Final CTA Section
-- Dark/contrast background block
-- "Ready to find your next 100 customers on Reddit?" headline
-- Single large CTA button
-- Radial glow background effect
+### Design Approach
 
-### 9. Footer
-- Clean footer with logo, copyright, and links
+- Reuse landing page utility classes: `reveal`, `glass-card`, `gradient-border`, `orb`, `bento-card`
+- Dark gradient hero matching the landing page style
+- Comparison tables with the same styling as `ComparisonSection.tsx` (check/x icons, color-coded cells)
+- Competitor cards with hover effects, intent badges showing Reddix advantages
+- ICP-aligned copy: speaks to SaaS founders tired of manual Reddit prospecting
 
-## Technical Plan
+### Technical Details
 
-| File | Action |
-|------|--------|
-| `src/pages/Index.tsx` | Complete rewrite with all sections above |
-| `src/components/landing/HeroSection.tsx` | New — hero with gradient text, trust strip, radial glow bg |
-| `src/components/landing/ProductDemo.tsx` | New — browser-frame mockup with fake scanner UI |
-| `src/components/landing/HowItWorks.tsx` | New — 3-step horizontal flow |
-| `src/components/landing/FeaturesGrid.tsx` | New — 2x3 enhanced feature cards |
-| `src/components/landing/StatsBar.tsx` | New — animated counter stats strip |
-| `src/components/landing/PricingSection.tsx` | New — 3-col pricing from subscriptionTiers.ts |
-| `src/components/landing/FinalCTA.tsx` | New — dark CTA block |
-| `src/components/landing/Navbar.tsx` | New — sticky glass nav |
-
-All components use existing design tokens (primary red, muted grays) and CSS utilities (glass-card, radial-glow, shine-effect, gradient-text, bg-dot-pattern, animated-counter). No new dependencies needed.
+- All competitor data centralized in `src/lib/alternatives.ts` for easy maintenance
+- Dynamic routing with `useParams()` to render the correct competitor
+- 404 fallback if slug doesn't match any competitor
+- `useEffect` to set `document.title` and meta description per page
+- Smooth scroll nav items on detail pages link back to hub
 
