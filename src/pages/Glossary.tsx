@@ -10,6 +10,7 @@ import { Search } from 'lucide-react';
 export default function Glossary() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('All');
+  useCanonical('/glossary');
 
   useEffect(() => {
     document.title = 'Reddit Marketing Glossary — 45+ Terms Defined | Reddix';

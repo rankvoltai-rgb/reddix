@@ -34,6 +34,7 @@ const whyReddix = [
 
 export default function Alternatives() {
   const navigate = useNavigate();
+  useCanonical('/alternatives');
 
   useEffect(() => {
     document.title = 'Best Reddit Lead Generation Tools — Reddix Alternatives Compared';

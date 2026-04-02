@@ -19,6 +19,7 @@ export default function GlossaryTerm() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const term = slug ? getTermBySlug(slug) : undefined;
+  useCanonical(`/glossary/${slug || ''}`);
 
   useEffect(() => {
     if (term) {
