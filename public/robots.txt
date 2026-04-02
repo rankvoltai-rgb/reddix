@@ -10,5 +10,33 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
 User-agent: *
 Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /scanner
+Disallow: /leads
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /setup
+Disallow: /subscribe
+
+Sitemap: https://reddix.info/sitemap.xml

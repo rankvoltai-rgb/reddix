@@ -1,0 +1,74 @@
+# Reddix
+
+> AI-powered Reddit lead generation platform for SaaS founders, agencies, and growth teams.
+
+Reddix scans Reddit 24/7 to find high-intent leads mentioning your product category. It scores buying intent with AI (0–100), drafts context-aware replies, and tracks leads from discovery to conversion — all on autopilot.
+
+## Core Features
+
+- **AI Intent Detection**: Scores every Reddit thread for buying intent (0–100) using NLP
+- **Lead Scoring**: Ranks and prioritizes leads so you focus on real buyers
+- **AI Reply Drafts**: Generates natural, context-aware reply suggestions
+- **Subreddit Discovery**: AI finds relevant communities you didn't know existed
+- **Scheduled Scans**: Autonomous 24/7 scanning on autopilot
+- **Deduplication**: Filters duplicate posts so you never waste time
+- **Website Analysis**: Extracts product context from your URL for smarter scoring
+- **Natural Tone**: Replies match your brand voice (professional, casual, witty, etc.)
+- **Analytics Dashboard**: Track leads found, conversion rates, and scan history
+
+## Who It's For
+
+- SaaS Founders — find users actively searching for your category
+- Marketing Agencies — scale Reddit lead gen across multiple clients
+- Solopreneurs — one-person teams finding warm leads on autopilot
+- Developer Tools — reach devs where they actually hang out
+- E-commerce Brands — discover product recommendation threads
+- B2B Sales Teams — surface enterprise buying signals on Reddit
+- Content Marketers — find content gaps and distribution opportunities
+- Startup Growth — early traction through authentic Reddit engagement
+
+## Page Index
+
+### Homepage
+- [Reddix — AI Reddit Lead Generation](https://reddix.info/)
+
+### Features
+- [AI Intent Detection](https://reddix.info/features/intent-detection)
+- [Lead Scoring](https://reddix.info/features/lead-scoring)
+- [AI Reply Drafts](https://reddix.info/features/ai-replies)
+- [Subreddit Discovery](https://reddix.info/features/subreddit-discovery)
+- [Analytics Dashboard](https://reddix.info/features/analytics-dashboard)
+- [Scheduled Scans](https://reddix.info/features/scheduled-scans)
+- [Deduplication](https://reddix.info/features/deduplication)
+- [Website Analysis](https://reddix.info/features/website-analysis)
+- [Natural Tone](https://reddix.info/features/natural-tone)
+
+### Use Cases
+- [SaaS Founders](https://reddix.info/use-cases/saas-founders)
+- [Marketing Agencies](https://reddix.info/use-cases/marketing-agencies)
+- [Solopreneurs](https://reddix.info/use-cases/solopreneurs)
+- [Developer Tools](https://reddix.info/use-cases/developer-tools)
+- [E-commerce](https://reddix.info/use-cases/ecommerce)
+- [B2B Sales](https://reddix.info/use-cases/b2b-sales)
+- [Content Marketers](https://reddix.info/use-cases/content-marketers)
+- [Startup Growth](https://reddix.info/use-cases/startup-growth)
+
+### Alternatives (Comparisons)
+- [Reddix vs GummySearch](https://reddix.info/alternatives/gummysearch)
+- [Reddix vs RedReach](https://reddix.info/alternatives/redreach)
+- [Reddix vs Redditor AI](https://reddix.info/alternatives/redditor-ai)
+- [Reddix vs SubredditSignals](https://reddix.info/alternatives/subredditsignals)
+- [Reddix vs CommunityTracker](https://reddix.info/alternatives/communitytracker)
+- [Reddix vs ReplyAgent](https://reddix.info/alternatives/replyagent)
+- [Reddix vs ReddLeads](https://reddix.info/alternatives/reddleads)
+
+### Glossary
+- [Reddit & Lead Gen Glossary](https://reddix.info/glossary)
+
+### Legal
+- [Terms of Service](https://reddix.info/terms)
+- [Refund Policy](https://reddix.info/refund-policy)
+
+## Contact
+
+Website: https://reddix.info
