@@ -57,6 +57,14 @@ const navItems: NavItem[] = [
   { label: 'How it works', scrollId: 'how-it-works' },
   { label: 'Pricing', scrollId: 'pricing' },
   {
+    label: 'Use Cases',
+    route: '/use-cases/saas-founders',
+    dropdown: {
+      items: useCaseItems,
+      footer: { label: 'View all use cases', route: '/#features' },
+    },
+  },
+  {
     label: 'Resources',
     route: '/alternatives',
     dropdown: {

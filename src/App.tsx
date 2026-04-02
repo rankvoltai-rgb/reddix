@@ -49,6 +49,7 @@ const App = () => (
               <Route path="/features/:slug" element={<FeatureDetail />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/use-cases/:slug" element={<UseCaseDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
