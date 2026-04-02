@@ -47,7 +47,12 @@ export function FeatureShowcase() {
           <h2 className="text-3xl sm:text-[42px] font-semibold tracking-[-0.025em] leading-tight">
             More than a scanner —
             <br />
-            <span className="font-display italic font-normal">your Reddit growth engine</span>
+            <span
+              className="font-normal text-primary"
+              style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+            >
+              your Reddit growth engine
+            </span>
           </h2>
         </div>
 

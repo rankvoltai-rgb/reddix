@@ -17,7 +17,12 @@ export function FinalCTA() {
         </p>
         <h2 className="text-[32px] sm:text-[48px] font-semibold text-background tracking-[-0.03em] leading-[1.1]">
           Your next 100 customers are{' '}
-          <span className="font-display italic font-normal text-background/70">already on Reddit</span>
+          <span
+            className="font-normal text-background/70"
+            style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+          >
+            already on Reddit
+          </span>
         </h2>
         <p className="mt-6 text-[16px] text-background/40 leading-relaxed max-w-md mx-auto">
           They're asking for tools like yours right now. Reddix helps you show up in the conversation.

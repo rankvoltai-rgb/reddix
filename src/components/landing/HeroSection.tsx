@@ -23,7 +23,12 @@ export function HeroSection() {
         <h1 className="text-[clamp(2.6rem,6.5vw,5rem)] leading-[1.06] tracking-[-0.035em] font-semibold reveal reveal-delay-1">
           Stop chasing leads.
           <br />
-          <span className="font-display italic font-normal text-primary">Let them find you</span>{' '}
+          <span
+            className="font-normal text-primary"
+            style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+          >
+            Let them find you
+          </span>{' '}
           on Reddit.
         </h1>
 
