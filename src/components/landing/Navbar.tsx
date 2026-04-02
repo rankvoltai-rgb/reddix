@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar } from 'lucide-react';
+import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar, Rocket, Users, User, Code, ShoppingCart, Briefcase, PenTool, TrendingUp } from 'lucide-react';
 import { competitors } from '@/lib/alternatives';
 import { DropdownPanel, type DropdownConfig, type DropdownItem } from './DropdownPanel';
 
