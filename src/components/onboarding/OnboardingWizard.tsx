@@ -265,8 +265,9 @@ export default function OnboardingWizard() {
                           )}
                           <span className="text-base font-bold text-foreground">{tier.name}</span>
                           <span className="text-2xl font-bold text-foreground mt-1">
-                            {tier.price !== null ? `$${tier.price.toFixed(2)}` : 'Custom'}
-                            {tier.price !== null && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                            {tier.price !== null ? `$${tier.price}` : 'Custom'}
+                            {tier.price !== null && tier.mode === 'subscription' && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                            {tier.price !== null && tier.mode === 'payment' && <span className="text-sm font-normal text-muted-foreground"> one-time</span>}
                           </span>
                           <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                             {tier.features.map((f, i) => (
