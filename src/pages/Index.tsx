@@ -45,7 +45,7 @@ export default function Index() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Reddix",
-    "url": "https://www.reddix.info",
+    "url": "https://reddix.info",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "description": "AI-powered Reddit lead generation platform. Scans Reddit 24/7, scores buying intent with AI (0–100), drafts context-aware replies, and tracks leads from discovery to conversion.",
@@ -77,8 +77,8 @@ export default function Index() {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Reddix",
-    "url": "https://www.reddix.info",
-    "logo": "https://www.reddix.info/placeholder.svg",
+    "url": "https://reddix.info",
+    "logo": "https://reddix.info/placeholder.svg",
     "sameAs": []
   };
 
