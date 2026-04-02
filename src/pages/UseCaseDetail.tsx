@@ -17,6 +17,7 @@ export default function UseCaseDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const useCase = slug ? getUseCaseBySlug(slug) : undefined;
+  useCanonical(`/use-cases/${slug || ''}`);
 
   useEffect(() => {
     if (useCase) {

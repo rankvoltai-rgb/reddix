@@ -14,6 +14,7 @@ export default function AlternativeDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const competitor = slug ? getCompetitorBySlug(slug) : undefined;
+  useCanonical(`/alternatives/${slug || ''}`);
 
   useEffect(() => {
     if (competitor) {

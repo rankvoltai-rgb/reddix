@@ -16,6 +16,7 @@ export default function FeatureDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const feature = slug ? getFeatureBySlug(slug) : undefined;
+  useCanonical(`/features/${slug || ''}`);
 
   useEffect(() => {
     if (feature) {

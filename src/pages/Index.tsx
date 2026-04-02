@@ -23,6 +23,7 @@ import { Footer } from '@/components/landing/Footer';
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  useCanonical('/');
   const navigate = useNavigate();
 
   useEffect(() => {
