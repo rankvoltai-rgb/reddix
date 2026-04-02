@@ -194,11 +194,13 @@ export default function Auth() {
             <h1 className="text-[28px] md:text-[32px] font-bold text-foreground mb-2 tracking-[-0.03em] leading-[1.15]">
               {isLogin ? 'Your leads are' : 'Your next customer is'}
               <br />
-              <span
-                className="font-normal text-primary"
-                style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
-              >
-                {isLogin ? 'waiting for you' : 'already on Reddit'}
+              <span className="inline-block mt-1.5">
+                <span
+                  className="inline-flex items-center font-normal text-primary px-4 py-1 rounded-2xl border border-primary/[0.15] bg-primary/[0.04] backdrop-blur-sm"
+                  style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+                >
+                  {isLogin ? 'waiting for you' : 'already on Reddit'}
+                </span>
               </span>
             </h1>
             <p className="text-[14px] text-muted-foreground mb-8 leading-relaxed">
