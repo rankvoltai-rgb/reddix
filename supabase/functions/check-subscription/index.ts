@@ -104,6 +104,34 @@ serve(async (req) => {
       logStep("No active or trialing subscription found");
     }
 
+    // If no active subscription, check for one-time lifetime payments
+    if (!hasActiveSub) {
+      const sessions = await stripe.checkout.sessions.list({
+        customer: customerId,
+        limit: 100,
+      });
+
+      const lifetimeSession = sessions.data.find(
+        (s: any) => s.payment_status === "paid" && s.mode === "payment"
+      );
+
+      if (lifetimeSession) {
+        // Verify it's actually a lifetime product by checking line items
+        const lineItems = await stripe.checkout.sessions.listLineItems(lifetimeSession.id);
+        const lifetimeItem = lineItems.data.find((item: any) => {
+          const productId = item.price?.product as string;
+          return PRODUCT_TO_PLAN[productId] === "lifetime";
+        });
+
+        if (lifetimeItem) {
+          hasActiveSub = true;
+          plan = "lifetime";
+          subscriptionEnd = null; // Lifetime = no end date
+          logStep("Lifetime payment found", { sessionId: lifetimeSession.id });
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       plan,
