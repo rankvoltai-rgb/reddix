@@ -24,6 +24,17 @@ const featureItems: DropdownItem[] = [
   { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, route: '/features/natural-tone' },
 ];
 
+const useCaseItems: DropdownItem[] = [
+  { label: 'SaaS Founders', desc: 'Find users searching for your category', icon: Rocket, route: '/use-cases/saas-founders' },
+  { label: 'Marketing Agencies', desc: 'Scale across multiple clients', icon: Users, route: '/use-cases/marketing-agencies' },
+  { label: 'Solopreneurs', desc: 'Warm leads on autopilot', icon: User, route: '/use-cases/solopreneurs' },
+  { label: 'Developer Tools', desc: 'Reach devs where they hang out', icon: Code, route: '/use-cases/developer-tools' },
+  { label: 'E-commerce', desc: 'Product recommendation threads', icon: ShoppingCart, route: '/use-cases/ecommerce' },
+  { label: 'B2B Sales', desc: 'Enterprise buying signals', icon: Briefcase, route: '/use-cases/b2b-sales' },
+  { label: 'Content Marketers', desc: 'Content gaps & distribution', icon: PenTool, route: '/use-cases/content-marketers' },
+  { label: 'Startup Growth', desc: 'Early traction on Reddit', icon: TrendingUp, route: '/use-cases/startup-growth' },
+];
+
 const resourceItems: DropdownItem[] = [
   ...competitors.map((c) => ({
     label: `vs ${c.name}`,
