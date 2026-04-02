@@ -47,8 +47,7 @@ export default function Dashboard() {
     }
 
     // Check subscription (allow free plan users through)
-    const hasAccess = subscribed || (profile as any)?.selected_plan === 'free';
-    if (!subLoading && !isVerifyingSubscription && !hasAccess && profile) {
+    if (!subLoading && !isVerifyingSubscription && !subscribed && profile) {
       navigate('/onboarding');
       return;
     }
