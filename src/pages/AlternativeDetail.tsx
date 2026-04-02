@@ -121,7 +121,7 @@ export default function AlternativeDetail() {
           <h2 className="text-2xl sm:text-[36px] font-semibold tracking-[-0.03em] leading-[1.15] mb-4">
             Switch from {competitor.name}{' '}
             <span
-              className="font-normal text-primary"
+              className="inline-flex items-center font-normal text-primary px-4 py-0.5 rounded-2xl border border-primary/[0.15] bg-primary/[0.04]"
               style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
             >
               in 2 minutes
