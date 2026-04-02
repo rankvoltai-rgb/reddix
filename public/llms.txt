@@ -30,45 +30,45 @@ Reddix scans Reddit 24/7 to find high-intent leads mentioning your product categ
 ## Page Index
 
 ### Homepage
-- [Reddix — AI Reddit Lead Generation](https://reddix.info/)
+- [Reddix — AI Reddit Lead Generation](https://www.reddix.info/)
 
 ### Features
-- [AI Intent Detection](https://reddix.info/features/intent-detection)
-- [Lead Scoring](https://reddix.info/features/lead-scoring)
-- [AI Reply Drafts](https://reddix.info/features/ai-replies)
-- [Subreddit Discovery](https://reddix.info/features/subreddit-discovery)
-- [Analytics Dashboard](https://reddix.info/features/analytics-dashboard)
-- [Scheduled Scans](https://reddix.info/features/scheduled-scans)
-- [Deduplication](https://reddix.info/features/deduplication)
-- [Website Analysis](https://reddix.info/features/website-analysis)
-- [Natural Tone](https://reddix.info/features/natural-tone)
+- [AI Intent Detection](https://www.reddix.info/features/intent-detection)
+- [Lead Scoring](https://www.reddix.info/features/lead-scoring)
+- [AI Reply Drafts](https://www.reddix.info/features/ai-replies)
+- [Subreddit Discovery](https://www.reddix.info/features/subreddit-discovery)
+- [Analytics Dashboard](https://www.reddix.info/features/analytics-dashboard)
+- [Scheduled Scans](https://www.reddix.info/features/scheduled-scans)
+- [Deduplication](https://www.reddix.info/features/deduplication)
+- [Website Analysis](https://www.reddix.info/features/website-analysis)
+- [Natural Tone](https://www.reddix.info/features/natural-tone)
 
 ### Use Cases
-- [SaaS Founders](https://reddix.info/use-cases/saas-founders)
-- [Marketing Agencies](https://reddix.info/use-cases/marketing-agencies)
-- [Solopreneurs](https://reddix.info/use-cases/solopreneurs)
-- [Developer Tools](https://reddix.info/use-cases/developer-tools)
-- [E-commerce](https://reddix.info/use-cases/ecommerce)
-- [B2B Sales](https://reddix.info/use-cases/b2b-sales)
-- [Content Marketers](https://reddix.info/use-cases/content-marketers)
-- [Startup Growth](https://reddix.info/use-cases/startup-growth)
+- [SaaS Founders](https://www.reddix.info/use-cases/saas-founders)
+- [Marketing Agencies](https://www.reddix.info/use-cases/marketing-agencies)
+- [Solopreneurs](https://www.reddix.info/use-cases/solopreneurs)
+- [Developer Tools](https://www.reddix.info/use-cases/developer-tools)
+- [E-commerce](https://www.reddix.info/use-cases/ecommerce)
+- [B2B Sales](https://www.reddix.info/use-cases/b2b-sales)
+- [Content Marketers](https://www.reddix.info/use-cases/content-marketers)
+- [Startup Growth](https://www.reddix.info/use-cases/startup-growth)
 
 ### Alternatives (Comparisons)
-- [Reddix vs GummySearch](https://reddix.info/alternatives/gummysearch)
-- [Reddix vs RedReach](https://reddix.info/alternatives/redreach)
-- [Reddix vs Redditor AI](https://reddix.info/alternatives/redditor-ai)
-- [Reddix vs SubredditSignals](https://reddix.info/alternatives/subredditsignals)
-- [Reddix vs CommunityTracker](https://reddix.info/alternatives/communitytracker)
-- [Reddix vs ReplyAgent](https://reddix.info/alternatives/replyagent)
-- [Reddix vs ReddLeads](https://reddix.info/alternatives/reddleads)
+- [Reddix vs GummySearch](https://www.reddix.info/alternatives/gummysearch)
+- [Reddix vs RedReach](https://www.reddix.info/alternatives/redreach)
+- [Reddix vs Redditor AI](https://www.reddix.info/alternatives/redditor-ai)
+- [Reddix vs SubredditSignals](https://www.reddix.info/alternatives/subredditsignals)
+- [Reddix vs CommunityTracker](https://www.reddix.info/alternatives/communitytracker)
+- [Reddix vs ReplyAgent](https://www.reddix.info/alternatives/replyagent)
+- [Reddix vs ReddLeads](https://www.reddix.info/alternatives/reddleads)
 
 ### Glossary
-- [Reddit & Lead Gen Glossary](https://reddix.info/glossary)
+- [Reddit & Lead Gen Glossary](https://www.reddix.info/glossary)
 
 ### Legal
-- [Terms of Service](https://reddix.info/terms)
-- [Refund Policy](https://reddix.info/refund-policy)
+- [Terms of Service](https://www.reddix.info/terms)
+- [Refund Policy](https://www.reddix.info/refund-policy)
 
 ## Contact
 
-Website: https://reddix.info
+Website: https://www.reddix.info
