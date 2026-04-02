@@ -40,9 +40,10 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { priceId } = await req.json();
+    const { priceId, mode } = await req.json();
     if (!priceId) throw new Error("Price ID is required");
-    logStep("Price ID received", { priceId });
+    const checkoutMode = mode || "subscription";
+    logStep("Price ID received", { priceId, mode: checkoutMode });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     
@@ -61,22 +62,21 @@ serve(async (req) => {
     const cancelUrl = `${origin}/onboarding`;
     logStep("Redirect URLs configured", { successUrl, cancelUrl });
     
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      subscription_data: {
-        trial_period_days: 7,
-      },
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: checkoutMode,
       success_url: successUrl,
       cancel_url: cancelUrl,
-    });
+    };
+
+    // Only add trial for subscriptions
+    if (checkoutMode === "subscription") {
+      sessionParams.subscription_data = { trial_period_days: 7 };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
