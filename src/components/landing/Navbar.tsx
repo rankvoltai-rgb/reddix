@@ -36,7 +36,7 @@ const useCaseItems: DropdownItem[] = [
 ];
 
 const resourceItems: DropdownItem[] = [
-  ...competitors.map((c) => ({
+  ...competitors.slice(0, 5).map((c) => ({
     label: `vs ${c.name}`,
     desc: c.weakness,
     icon: ArrowUpRight,
