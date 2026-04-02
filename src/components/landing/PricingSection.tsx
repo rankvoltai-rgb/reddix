@@ -22,7 +22,7 @@ export function PricingSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/[0.06] border border-primary/10 text-[12px] font-medium text-primary mb-5">
             <Sparkles className="w-3.5 h-3.5" />
-            Start free. Scale when ready.
+            Pay once. Or subscribe monthly.
           </div>
           <h2 className="text-3xl sm:text-[44px] font-semibold tracking-[-0.03em] leading-[1.1]">
             Pricing that{' '}
