@@ -61,6 +61,7 @@ const navItems: NavItem[] = [
       footer: { label: 'View all alternatives', route: '/alternatives' },
     },
   },
+  { label: 'Glossary', route: '/glossary' },
 ];
 
 function DropdownPanel({

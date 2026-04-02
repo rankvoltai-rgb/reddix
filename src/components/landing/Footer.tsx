@@ -43,6 +43,7 @@ export function Footer() {
                 { label: 'Pricing', action: () => scrollTo('pricing') },
                 { label: 'How it works', action: () => scrollTo('how-it-works') },
                 { label: 'Alternatives', action: () => navigate('/alternatives') },
+                { label: 'Glossary', action: () => navigate('/glossary') },
                 { label: 'FAQ', action: () => scrollTo('faq') },
               ].map((item) => (
                 <li key={item.label}>

@@ -14,6 +14,8 @@ import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Alternatives from "./pages/Alternatives";
 import AlternativeDetail from "./pages/AlternativeDetail";
+import Glossary from "./pages/Glossary";
+import GlossaryTerm from "./pages/GlossaryTerm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/alternatives" element={<Alternatives />} />
               <Route path="/alternatives/:slug" element={<AlternativeDetail />} />
+              <Route path="/glossary" element={<Glossary />} />
+              <Route path="/glossary/:slug" element={<GlossaryTerm />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
