@@ -1,5 +1,6 @@
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useCanonical } from '@/hooks/useCanonical';
 import { getFeatureBySlug, features } from '@/lib/features';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
