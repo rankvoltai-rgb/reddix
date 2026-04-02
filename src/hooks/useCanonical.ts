@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 export function useCanonical(path: string) {
   useEffect(() => {
-    const url = `https://www.reddix.info${path}`;
+    const url = `https://reddix.info${path}`;
     let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!link) {
       link = document.createElement('link');
