@@ -123,29 +123,31 @@ export default function OnboardingWizard() {
   };
 
   const handlePlanSelect = async (planKey: SubscriptionPlan) => {
-    if (planKey === 'free') {
-      updateField('selected_plan', 'free');
-    } else if (planKey === 'premium') {
-      if (!session?.access_token) {
-        toast({ variant: 'destructive', title: 'Please sign in to continue' });
-        return;
-      }
-      setLoadingPlan('premium');
-      try {
-        const tier = SUBSCRIPTION_TIERS.premium;
-        const { data: checkoutData, error } = await supabase.functions.invoke('create-checkout', {
-          body: { priceId: tier.price_id },
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (error) throw error;
-        if (checkoutData?.url) window.location.href = checkoutData.url;
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
-      } finally {
-        setLoadingPlan(null);
-      }
-    } else if (planKey === 'enterprise') {
+    if (planKey === 'enterprise') {
       window.location.href = 'mailto:support@reddix.app?subject=Enterprise%20Plan%20Inquiry';
+      return;
+    }
+
+    const tier = SUBSCRIPTION_TIERS[planKey];
+    if (!tier.price_id) return;
+
+    if (!session?.access_token) {
+      toast({ variant: 'destructive', title: 'Please sign in to continue' });
+      return;
+    }
+
+    setLoadingPlan(planKey);
+    try {
+      const { data: checkoutData, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId: tier.price_id, mode: tier.mode },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error) throw error;
+      if (checkoutData?.url) window.location.href = checkoutData.url;
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
+    } finally {
+      setLoadingPlan(null);
     }
   };
 
