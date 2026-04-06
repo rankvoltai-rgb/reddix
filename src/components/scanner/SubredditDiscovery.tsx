@@ -42,7 +42,7 @@ export function SubredditDiscovery({ userId, existingSubreddits, onAddSubreddit 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({ title: "Please sign in", variant: "destructive" });
+        // Not signed in
         return;
       }
 
@@ -61,7 +61,7 @@ export function SubredditDiscovery({ userId, existingSubreddits, onAddSubreddit 
       toast({ title: "Discovery complete!", description: `Found ${response.data.suggestions.length} subreddit suggestions` });
     } catch (error: any) {
       console.error('Discovery error:', error);
-      toast({ title: "Discovery failed", description: error.message || "Something went wrong", variant: "destructive" });
+      // Discovery failed silently
     } finally {
       setIsDiscovering(false);
     }
@@ -78,7 +78,7 @@ export function SubredditDiscovery({ userId, existingSubreddits, onAddSubreddit 
       queryClient.invalidateQueries({ queryKey: ['subreddits'] });
       toast({ title: `Added r/${name}` });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      // Add subreddit failed silently
     }
   };
 

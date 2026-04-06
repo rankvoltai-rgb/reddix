@@ -90,7 +90,7 @@ export function ReplyDialog({
       toast({ title: "Copied to clipboard!" });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
+      // Copy failed silently
     }
   };
 
@@ -103,7 +103,7 @@ export function ReplyDialog({
       }
       onOpenChange(false);
     } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
+      // Copy failed silently
     }
   };
 

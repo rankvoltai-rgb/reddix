@@ -104,9 +104,7 @@ const Scanner = () => {
       setNewSubreddit("");
       toast({ title: "Subreddit added" });
     },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
+    onError: () => {},
   });
 
   const removeSubreddit = useMutation({
@@ -141,11 +139,6 @@ const Scanner = () => {
 
   const handleScan = async () => {
     if (subreddits.length === 0) {
-      toast({
-        title: "Configuration required",
-        description: "Add at least one subreddit to scan.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -170,10 +163,10 @@ const Scanner = () => {
         queryClient.invalidateQueries({ queryKey: ['leads', user?.id] });
         refetchLeadCount();
       } else {
-        toast({ title: "Scan failed", description: result.error || "Something went wrong", variant: "destructive" });
+        // Scan failed silently
       }
     } catch (error: any) {
-      toast({ title: "Scan error", description: error.message, variant: "destructive" });
+      // Scan error silently
     } finally {
       setIsScanning(false);
       // Start 10s cooldown

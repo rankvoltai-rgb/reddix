@@ -132,7 +132,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({ title: "Not authenticated", variant: "destructive" });
+        // Not authenticated
         return;
       }
 
@@ -157,7 +157,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
       toast({ title: isRegenerate ? "Reply regenerated!" : "Reply generated!" });
     } catch (err: any) {
       console.error('Reply generation error:', err);
-      toast({ title: "Generation failed", description: err.message, variant: "destructive" });
+      // Generation failed silently
     } finally {
       setGeneratingLeadId(null);
       setIsRegenerating(false);
@@ -185,7 +185,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
       toast({ title: "Lead saved to CRM!" });
     } catch (err) {
       console.error('Error saving lead:', err);
-      toast({ title: "Failed to save lead", variant: "destructive" });
+      // Save lead failed silently
     } finally {
       setSavingLeadId(null);
     }
@@ -202,7 +202,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
       toast({ title: "Lead dismissed" });
     } catch (err) {
       console.error('Error dismissing lead:', err);
-      toast({ title: "Failed to dismiss", variant: "destructive" });
+      // Dismiss failed silently
     }
   };
 
