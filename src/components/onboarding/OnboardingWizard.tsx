@@ -113,11 +113,11 @@ export default function OnboardingWizard() {
 
         toast({ title: '✨ Website analyzed!', description: 'Your product details have been auto-filled.' });
       } else {
-        toast({ variant: 'destructive', title: 'Analysis incomplete', description: result.error || 'Could not fully analyze website. You can update details later in Settings.' });
+        // Analysis incomplete — continue silently
       }
     } catch (error) {
       console.error('Analyze error:', error);
-      toast({ variant: 'destructive', title: 'Analysis failed', description: 'Proceeding with basic info. You can update details later.' });
+      // Analysis failed — continue silently
     }
 
     // Save profile regardless of analysis outcome

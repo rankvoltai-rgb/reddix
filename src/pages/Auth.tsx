@@ -218,7 +218,7 @@ export default function Auth() {
                     redirect_uri: window.location.origin,
                   });
                   if (error) {
-                    toast({ variant: 'destructive', title: 'Google sign-in failed', description: error.message });
+                    // Google sign-in failed silently
                   }
                 }}
                 className="flex-1 inline-flex items-center justify-center gap-2.5 h-12 rounded-xl border border-border/60 bg-background hover:bg-muted/50 transition-all duration-300 text-[13px] font-semibold text-foreground hover:shadow-md hover:-translate-y-0.5"
@@ -238,7 +238,7 @@ export default function Auth() {
                     redirect_uri: window.location.origin,
                   });
                   if (error) {
-                    toast({ variant: 'destructive', title: 'Apple sign-in failed', description: error.message });
+                    // Apple sign-in failed silently
                   }
                 }}
                 className="flex-1 inline-flex items-center justify-center gap-2.5 h-12 rounded-xl border border-border/60 bg-background hover:bg-muted/50 transition-all duration-300 text-[13px] font-semibold text-foreground hover:shadow-md hover:-translate-y-0.5"

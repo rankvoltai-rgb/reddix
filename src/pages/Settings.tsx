@@ -92,7 +92,7 @@ export default function Settings() {
   const onSubmit = (values: ProfileFormValues) => {
     updateProfile(values, {
       onSuccess: () => toast.success('Profile updated successfully'),
-      onError: (error) => toast.error(`Failed to update profile: ${error.message}`),
+      onError: () => {},
     });
   };
 
@@ -108,7 +108,7 @@ export default function Settings() {
       if (error) throw error;
       toast.success('Password reset email sent! Check your inbox.');
     } catch (error: any) {
-      toast.error(`Failed to send reset email: ${error.message}`);
+      // Reset email failed silently
     } finally {
       setIsResettingPassword(false);
     }
@@ -132,7 +132,7 @@ export default function Settings() {
       if (error) throw error;
       toast.success('All leads cleared successfully');
     } catch (error: any) {
-      toast.error(`Failed to clear leads: ${error.message}`);
+      // Clear leads failed silently
     } finally {
       setIsClearingLeads(false);
     }
@@ -152,7 +152,7 @@ export default function Settings() {
       toast.success('Onboarding reset! Redirecting...');
       navigate('/onboarding');
     } catch (error: any) {
-      toast.error(`Failed to reset onboarding: ${error.message}`);
+      // Reset onboarding failed silently
     } finally {
       setIsResettingOnboarding(false);
     }
@@ -183,7 +183,7 @@ export default function Settings() {
       if (error) throw error;
       if (data?.url) window.open(data.url, '_blank');
     } catch (error: any) {
-      toast.error(`Failed to open portal: ${error.message}`);
+      // Portal open failed silently
     } finally {
       setIsOpeningPortal(false);
     }

@@ -109,7 +109,7 @@ export default function Leads() {
       toast({ title: `Status updated to ${newStatus}` });
     } catch (err) {
       console.error('Error updating status:', err);
-      toast({ title: "Failed to update status", variant: "destructive" });
+      // Status update failed silently
     }
   };
 
@@ -126,7 +126,7 @@ export default function Leads() {
       toast({ title: "Lead deleted" });
     } catch (err) {
       console.error('Error deleting lead:', err);
-      toast({ title: "Failed to delete lead", variant: "destructive" });
+      // Delete lead failed silently
     }
   };
 
