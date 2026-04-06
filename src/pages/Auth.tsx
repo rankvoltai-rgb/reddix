@@ -142,12 +142,6 @@ export default function Auth() {
             description: "Welcome to Reddix. Let's get you set up.",
           });
         }
-        } else {
-          toast({
-            title: 'Account created!',
-            description: "Welcome to Reddix. Let's get you set up.",
-          });
-        }
       }
     } finally {
       setIsLoading(false);
