@@ -128,7 +128,7 @@ export default function OnboardingWizard() {
       },
       onError: () => {
         setIsAnalyzing(false);
-        toast({ variant: 'destructive', title: 'Could not save profile', description: 'Please try again.' });
+        // Save profile failed silently
       },
     });
   };
@@ -149,7 +149,7 @@ export default function OnboardingWizard() {
     if (!tier.price_id) return;
 
     if (!session?.access_token) {
-      toast({ variant: 'destructive', title: 'Please sign in to continue' });
+      // Not signed in
       return;
     }
 
@@ -162,7 +162,7 @@ export default function OnboardingWizard() {
       if (error) throw error;
       if (checkoutData?.url) window.location.href = checkoutData.url;
     } catch (error: any) {
-      toast({ variant: 'destructive', title: `Checkout failed: ${error.message}` });
+      // Checkout failed silently
     } finally {
       setLoadingPlan(null);
     }
@@ -186,7 +186,7 @@ export default function OnboardingWizard() {
           navigate('/dashboard');
         },
         onError: () => {
-          toast({ variant: 'destructive', title: 'Something went wrong', description: 'Please try again.' });
+          // Setup failed silently
         },
       }
     );

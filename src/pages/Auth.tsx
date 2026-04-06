@@ -126,9 +126,6 @@ export default function Auth() {
         const { error } = await signIn(email, password);
         if (error) {
           // Sign in failed silently
-              ? 'Invalid email or password. Please try again.'
-              : error.message,
-          });
         } else {
           toast({
             title: 'Welcome back!',
@@ -138,19 +135,13 @@ export default function Auth() {
       } else {
         const { error } = await signUp(email, password);
         if (error) {
-          if (error.message.includes('already registered')) {
-            toast({
-              variant: 'destructive',
-              title: 'Account exists',
-              description: 'This email is already registered. Please sign in instead.',
-            });
-          } else {
-            toast({
-              variant: 'destructive',
-              title: 'Sign up failed',
-              description: error.message,
-            });
-          }
+          // Sign up failed silently
+        } else {
+          toast({
+            title: 'Account created!',
+            description: "Welcome to Reddix. Let's get you set up.",
+          });
+        }
         } else {
           toast({
             title: 'Account created!',
