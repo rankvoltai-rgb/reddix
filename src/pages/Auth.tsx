@@ -125,10 +125,7 @@ export default function Auth() {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
-          toast({
-            variant: 'destructive',
-            title: 'Sign in failed',
-            description: error.message === 'Invalid login credentials'
+          // Sign in failed silently
               ? 'Invalid email or password. Please try again.'
               : error.message,
           });
