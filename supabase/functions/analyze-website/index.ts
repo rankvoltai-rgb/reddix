@@ -12,7 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    // Auth check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
@@ -41,7 +40,6 @@ serve(async (req) => {
       });
     }
 
-    // Format URL
     let formattedUrl = url.trim();
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = `https://${formattedUrl}`;
@@ -84,26 +82,25 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: Extract structured data with Lovable AI
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableKey) {
-      return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
+    // Step 2: Extract structured data with OpenRouter (Qwen)
+    const openrouterKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!openrouterKey) {
+      return new Response(JSON.stringify({ success: false, error: 'OpenRouter API key not configured' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Truncate markdown to avoid token limits
     const truncatedMarkdown = markdown.slice(0, 8000);
 
-    console.log('Analyzing content with AI, length:', truncatedMarkdown.length);
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Analyzing content with Qwen via OpenRouter, length:', truncatedMarkdown.length);
+    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableKey}`,
+        'Authorization': `Bearer ${openrouterKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'qwen/qwen3-235b-a22b',
         messages: [
           {
             role: 'system',
@@ -133,8 +130,9 @@ serve(async (req) => {
                   common_objections: { type: 'array', items: { type: 'string' }, description: 'Potential customer objections the website addresses' },
                   success_stories: { type: 'string', description: 'Any case studies, testimonials, or success metrics mentioned' },
                   tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty'], description: 'The best reply tone inferred from the website voice and brand personality' },
+                  suggested_keywords: { type: 'array', items: { type: 'string' }, description: 'Top 5-10 Reddit search keywords that would find people looking for this type of product (short phrases, 2-4 words each)' },
                 },
-                required: ['company_description', 'target_audience', 'value_proposition', 'key_features'],
+                required: ['company_description', 'target_audience', 'value_proposition', 'key_features', 'suggested_keywords'],
                 additionalProperties: false,
               },
             },
@@ -196,6 +194,7 @@ serve(async (req) => {
         common_objections: (extracted.common_objections || []).slice(0, 5),
         success_stories: extracted.success_stories || '',
         tone: extracted.tone || '',
+        suggested_keywords: (extracted.suggested_keywords || []).slice(0, 10),
       },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
