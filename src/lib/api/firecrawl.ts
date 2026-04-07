@@ -55,6 +55,7 @@ type AnalyzeWebsiteResponse = {
     common_objections: string[];
     success_stories: string;
     tone: string;
+    suggested_keywords: string[];
   };
 };
 
