@@ -1,5 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+
+function extractJsonFromResponse(response: string) {
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  const jsonStart = cleaned.search(/[\{\[]/);
+  if (jsonStart === -1) {
+    throw new Error('No JSON object found in response');
+  }
+
+  const closingChar = cleaned[jsonStart] === '[' ? ']' : '}';
+  const jsonEnd = cleaned.lastIndexOf(closingChar);
+  if (jsonEnd === -1) {
+    throw new Error('JSON appears truncated');
+  }
+
+  cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/[\x00-\x1F\x7F]/g, '');
+
+    return JSON.parse(cleaned);
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
