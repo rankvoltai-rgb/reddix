@@ -100,7 +100,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3-235b-a22b',
+        model: 'qwen/qwen3.6-plus:free',
         messages: [
           {
             role: 'system',
