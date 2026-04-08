@@ -130,7 +130,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-plus:free',
+        model: 'qwen/qwen3.6-plus',
         messages: [
           {
             role: 'system',
@@ -211,7 +211,7 @@ serve(async (req) => {
 
     let extracted;
     try {
-      extracted = JSON.parse(rawContent);
+      extracted = extractJsonFromResponse(rawContent) as Record<string, unknown>;
     } catch {
       console.error('Failed to parse AI JSON content', rawContent);
       return new Response(JSON.stringify({ success: false, error: 'AI response was malformed. Please fill in the fields manually.' }), {
