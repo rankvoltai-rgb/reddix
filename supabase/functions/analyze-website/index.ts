@@ -1,5 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+function extractJsonFromResponse(response: string) {
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  const jsonStart = cleaned.search(/[\{\[]/);
+  if (jsonStart === -1) {
+    throw new Error('No JSON object found in response');
+  }
+
+  const closingChar = cleaned[jsonStart] === '[' ? ']' : '}';
+  const jsonEnd = cleaned.lastIndexOf(closingChar);
+  if (jsonEnd === -1) {
+    throw new Error('JSON appears truncated');
+  }
+
+  cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/[\x00-\x1F\x7F]/g, '');
+
+    return JSON.parse(cleaned);
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,49 +130,59 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-plus:free',
+        model: 'qwen/qwen3.6-plus',
         messages: [
           {
             role: 'system',
-            content: 'You are a product analyst. Extract structured product information from website content. Be concise and accurate. If information is not available, leave the field empty or as an empty array.',
+            content: 'You are a product analyst. Return only valid JSON matching the requested schema. Be concise and accurate. If information is unavailable, use an empty string or empty array.',
           },
           {
             role: 'user',
-            content: `Analyze this website content and extract product details:\n\n${truncatedMarkdown}`,
+            content: `Analyze this website content and return structured product data as JSON with these exact keys: company_description, target_audience, value_proposition, key_features, competitor_names, pricing_model, unique_differentiators, common_objections, success_stories, tone, suggested_keywords.\n\nRules:\n- key_features, competitor_names, common_objections, suggested_keywords must be arrays\n- suggested_keywords should contain 5-10 short Reddit search phrases\n- tone must be one of: professional, casual, friendly, technical, witty, or empty string\n- pricing_model must be one of: free, freemium, free-trial, paid, enterprise, or empty string\n- return JSON only with no markdown fences or extra text\n\nWebsite content:\n${truncatedMarkdown}`,
           },
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'extract_product_data',
-              description: 'Extract structured product data from website content',
-              parameters: {
-                type: 'object',
-                properties: {
-                  company_description: { type: 'string', description: 'A 1-3 sentence description of the product/company and what problems it solves' },
-                  target_audience: { type: 'string', description: 'Who the ideal customers are (1-2 sentences)' },
-                  value_proposition: { type: 'string', description: 'The main value proposition - why someone should choose this product' },
-                  key_features: { type: 'array', items: { type: 'string' }, description: 'Top 3-5 key features of the product (short phrases)' },
-                  competitor_names: { type: 'array', items: { type: 'string' }, description: 'Names of competitors if mentioned or implied' },
-                  pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', ''], description: 'The pricing model' },
-                  unique_differentiators: { type: 'string', description: 'What makes this product unique compared to alternatives' },
-                  common_objections: { type: 'array', items: { type: 'string' }, description: 'Potential customer objections the website addresses' },
-                  success_stories: { type: 'string', description: 'Any case studies, testimonials, or success metrics mentioned' },
-                  tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty'], description: 'The best reply tone inferred from the website voice and brand personality' },
-                  suggested_keywords: { type: 'array', items: { type: 'string' }, description: 'Top 5-10 Reddit search keywords that would find people looking for this type of product (short phrases, 2-4 words each)' },
-                },
-                required: ['company_description', 'target_audience', 'value_proposition', 'key_features', 'suggested_keywords'],
-                additionalProperties: false,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'product_analysis',
+            strict: true,
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                company_description: { type: 'string' },
+                target_audience: { type: 'string' },
+                value_proposition: { type: 'string' },
+                key_features: { type: 'array', items: { type: 'string' } },
+                competitor_names: { type: 'array', items: { type: 'string' } },
+                pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', ''] },
+                unique_differentiators: { type: 'string' },
+                common_objections: { type: 'array', items: { type: 'string' } },
+                success_stories: { type: 'string' },
+                tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty', ''] },
+                suggested_keywords: { type: 'array', items: { type: 'string' } },
               },
+              required: [
+                'company_description',
+                'target_audience',
+                'value_proposition',
+                'key_features',
+                'competitor_names',
+                'pricing_model',
+                'unique_differentiators',
+                'common_objections',
+                'success_stories',
+                'tone',
+                'suggested_keywords'
+              ],
             },
           },
-        ],
-        tool_choice: { type: 'function', function: { name: 'extract_product_data' } },
+        },
       }),
     });
 
     if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ success: false, error: 'AI rate limit reached. Please try again in a moment.' }), {
           status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,17 +193,17 @@ serve(async (req) => {
           status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      console.error('AI error:', aiResponse.status);
+      console.error('AI error:', aiResponse.status, errorText);
       return new Response(JSON.stringify({ success: false, error: 'AI analysis failed. Please fill in the fields manually.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    const rawContent = aiData.choices?.[0]?.message?.content;
 
-    if (!toolCall?.function?.arguments) {
-      console.error('No tool call in AI response');
+    if (!rawContent || typeof rawContent !== 'string') {
+      console.error('No JSON content in AI response', JSON.stringify(aiData));
       return new Response(JSON.stringify({ success: false, error: 'AI could not extract product data. Please fill in the fields manually.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -171,9 +211,9 @@ serve(async (req) => {
 
     let extracted;
     try {
-      extracted = JSON.parse(toolCall.function.arguments);
+      extracted = extractJsonFromResponse(rawContent) as Record<string, unknown>;
     } catch {
-      console.error('Failed to parse AI tool call arguments');
+      console.error('Failed to parse AI JSON content', rawContent);
       return new Response(JSON.stringify({ success: false, error: 'AI response was malformed. Please fill in the fields manually.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
