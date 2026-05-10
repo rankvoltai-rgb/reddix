@@ -130,8 +130,7 @@ export default function OnboardingWizard() {
 
   const canProceed = () => {
     if (step === 1) return !!data.full_name.trim() && !!data.product_name.trim() && !!data.product_url.trim();
-    if (step === 2) return true;
-    if (step === 3) return data.selected_plan !== null;
+    if (step === 2) return data.selected_plan !== null;
     return false;
   };
 
