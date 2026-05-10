@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS, SubscriptionPlan } from '@/lib/subscriptionTiers';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles, Globe, Users, Lightbulb, Tag, Swords, Search } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 interface OnboardingData {
@@ -20,19 +20,7 @@ interface OnboardingData {
   selected_plan: SubscriptionPlan | null;
 }
 
-interface AnalysisResults {
-  company_description: string;
-  target_audience: string;
-  value_proposition: string;
-  key_features: string[];
-  competitor_names: string[];
-  suggested_keywords: string[];
-  pricing_model: string;
-  unique_differentiators: string;
-  tone: string;
-}
-
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2;
 
 export default function OnboardingWizard() {
   const [searchParams] = useSearchParams();
@@ -41,7 +29,7 @@ export default function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
+  
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -122,17 +110,6 @@ export default function OnboardingWizard() {
         if (d.unique_differentiators) profileUpdate.unique_differentiators = d.unique_differentiators;
         if ((d as any).tone) profileUpdate.tone = (d as any).tone;
 
-        setAnalysisResults({
-          company_description: d.company_description || '',
-          target_audience: d.target_audience || '',
-          value_proposition: d.value_proposition || '',
-          key_features: d.key_features || [],
-          competitor_names: d.competitor_names || [],
-          suggested_keywords: (d as any).suggested_keywords || [],
-          pricing_model: d.pricing_model || '',
-          unique_differentiators: d.unique_differentiators || '',
-          tone: (d as any).tone || '',
-        });
 
         toast({ title: '✨ Website analyzed!', description: 'Your product details have been auto-filled.' });
       }
@@ -153,8 +130,7 @@ export default function OnboardingWizard() {
 
   const canProceed = () => {
     if (step === 1) return !!data.full_name.trim() && !!data.product_name.trim() && !!data.product_url.trim();
-    if (step === 2) return true;
-    if (step === 3) return data.selected_plan !== null;
+    if (step === 2) return data.selected_plan !== null;
     return false;
   };
 
@@ -236,8 +212,7 @@ export default function OnboardingWizard() {
 
   const stepTitles: Record<number, string> = {
     1: 'Tell us about your business',
-    2: 'Your AI analysis results',
-    3: 'Choose your lead generation plan',
+    2: 'Choose your lead generation plan',
   };
 
   return (
@@ -272,100 +247,8 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {/* Step 2: Analysis Results */}
+              {/* Step 2: Plan Selection */}
               {step === 2 && (
-                <div className="space-y-5 animate-fade-in">
-                  {analysisResults ? (
-                    <>
-                      {/* Company Description */}
-                      {analysisResults.company_description && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Globe className="w-4 h-4 text-primary" />
-                            About Your Product
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{analysisResults.company_description}</p>
-                        </div>
-                      )}
-
-                      {/* Target Audience */}
-                      {analysisResults.target_audience && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Users className="w-4 h-4 text-primary" />
-                            Target Audience
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{analysisResults.target_audience}</p>
-                        </div>
-                      )}
-
-                      {/* Value Proposition */}
-                      {analysisResults.value_proposition && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Lightbulb className="w-4 h-4 text-primary" />
-                            Value Proposition
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{analysisResults.value_proposition}</p>
-                        </div>
-                      )}
-
-                      {/* Key Features */}
-                      {analysisResults.key_features.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Tag className="w-4 h-4 text-primary" />
-                            Key Features
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {analysisResults.key_features.map((f, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">{f}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Competitors */}
-                      {analysisResults.competitor_names.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Swords className="w-4 h-4 text-primary" />
-                            Competitors Detected
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {analysisResults.competitor_names.map((c, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">{c}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Suggested Keywords */}
-                      {analysisResults.suggested_keywords.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Search className="w-4 h-4 text-primary" />
-                            AI-Suggested Keywords
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {analysisResults.suggested_keywords.map((k, i) => (
-                              <Badge key={i} variant="default" className="text-xs">{k}</Badge>
-                            ))}
-                          </div>
-                          <p className="text-xs text-muted-foreground">These keywords will be used to find relevant Reddit leads</p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <p className="text-sm text-muted-foreground">No analysis data available. You can continue to choose your plan.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 3: Plan Selection */}
-              {step === 3 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier]) => {
@@ -429,16 +312,7 @@ export default function OnboardingWizard() {
                     {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <>Analyze & Continue <ArrowRight className="w-4 h-4" /></>}
                   </Button>
                 ) : step === 2 ? (
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
-                      <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                    </Button>
-                    <Button type="button" onClick={() => setStep(3)} className="gap-2">
-                      Continue <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : step === 3 ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(2)}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Back
                   </Button>
                 ) : null}
