@@ -312,16 +312,7 @@ export default function OnboardingWizard() {
                     {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <>Analyze & Continue <ArrowRight className="w-4 h-4" /></>}
                   </Button>
                 ) : step === 2 ? (
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
-                      <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                    </Button>
-                    <Button type="button" onClick={() => setStep(3)} className="gap-2">
-                      Continue <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : step === 3 ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(2)}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setStep(1)}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Back
                   </Button>
                 ) : null}
