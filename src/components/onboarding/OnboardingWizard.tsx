@@ -213,8 +213,7 @@ export default function OnboardingWizard() {
 
   const stepTitles: Record<number, string> = {
     1: 'Tell us about your business',
-    2: 'Your AI analysis results',
-    3: 'Choose your lead generation plan',
+    2: 'Choose your lead generation plan',
   };
 
   return (
