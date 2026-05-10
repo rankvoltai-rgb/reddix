@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, TrendingUp, Flame, Target, CheckCircle2, Radar } from 'lucide-react';
+import { ArrowRight, Sparkles, TrendingUp, Flame, Target, CheckCircle2, Radar, Globe } from 'lucide-react';
 
 export function HeroSection() {
   const navigate = useNavigate();
