@@ -110,17 +110,6 @@ export default function OnboardingWizard() {
         if (d.unique_differentiators) profileUpdate.unique_differentiators = d.unique_differentiators;
         if ((d as any).tone) profileUpdate.tone = (d as any).tone;
 
-        setAnalysisResults({
-          company_description: d.company_description || '',
-          target_audience: d.target_audience || '',
-          value_proposition: d.value_proposition || '',
-          key_features: d.key_features || [],
-          competitor_names: d.competitor_names || [],
-          suggested_keywords: (d as any).suggested_keywords || [],
-          pricing_model: d.pricing_model || '',
-          unique_differentiators: d.unique_differentiators || '',
-          tone: (d as any).tone || '',
-        });
 
         toast({ title: '✨ Website analyzed!', description: 'Your product details have been auto-filled.' });
       }
