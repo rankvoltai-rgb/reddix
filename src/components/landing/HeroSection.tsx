@@ -120,25 +120,37 @@ export function HeroSection() {
           AI agents that scan Reddit 24/7, detect buying intent, and draft natural replies — driving warm leads to your SaaS on autopilot.
         </p>
 
-        {/* CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-3 reveal reveal-delay-3">
-          <Button
-            size="lg"
-            onClick={() => navigate('/auth')}
-            className="h-[54px] px-8 rounded-2xl text-[15px] font-semibold bg-white text-foreground hover:bg-white/90 shadow-2xl shadow-black/20 border-0 transition-all duration-300 hover:scale-[1.02]"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Start Finding Leads — It's Free
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-            className="h-[54px] px-8 rounded-2xl text-[15px] font-medium bg-white/[0.08] text-white border-white/[0.2] hover:bg-white/[0.15] hover:text-white backdrop-blur-sm transition-all duration-300"
-          >
-            See How It Works
-          </Button>
-        </div>
+        {/* Website input CTA */}
+        <form
+          onSubmit={handleSubmit}
+          className="mt-10 w-full max-w-[560px] reveal reveal-delay-3"
+        >
+          <div className="flex items-center gap-2 p-2 rounded-2xl bg-white/[0.12] backdrop-blur-xl border border-white/[0.2] shadow-2xl shadow-black/20 focus-within:border-white/[0.4] focus-within:bg-white/[0.16] transition-all duration-300">
+            <div className="pl-3 pr-1 hidden sm:flex items-center text-white/70">
+              <Globe className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="yourwebsite.com"
+              className="flex-1 h-[48px] bg-transparent outline-none text-[15px] text-white placeholder:text-white/40 px-2"
+            />
+            <Button
+              type="submit"
+              className="h-[48px] px-5 sm:px-6 rounded-xl text-[14px] font-semibold bg-white text-foreground hover:bg-white/90 border-0 transition-all duration-200 hover:scale-[1.02] shrink-0"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              Find leads
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <p className="mt-3 text-center text-[12px] text-white/50">
+            Enter your website — get warm Reddit leads in minutes.
+          </p>
+        </form>
 
         {/* Proof points */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-[13px] text-white/50 reveal reveal-delay-4">
