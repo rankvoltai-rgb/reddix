@@ -29,7 +29,7 @@ export default function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
+  
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
