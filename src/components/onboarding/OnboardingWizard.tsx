@@ -20,19 +20,7 @@ interface OnboardingData {
   selected_plan: SubscriptionPlan | null;
 }
 
-interface AnalysisResults {
-  company_description: string;
-  target_audience: string;
-  value_proposition: string;
-  key_features: string[];
-  competitor_names: string[];
-  suggested_keywords: string[];
-  pricing_model: string;
-  unique_differentiators: string;
-  tone: string;
-}
-
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2;
 
 export default function OnboardingWizard() {
   const [searchParams] = useSearchParams();
