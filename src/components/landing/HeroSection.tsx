@@ -123,33 +123,49 @@ export function HeroSection() {
         {/* Website input CTA */}
         <form
           onSubmit={handleSubmit}
-          className="mt-10 w-full max-w-[560px] reveal reveal-delay-3"
+          className="mt-10 w-full max-w-[580px] reveal reveal-delay-3"
         >
-          <div className="flex items-center gap-2 p-2 rounded-2xl bg-white/[0.12] backdrop-blur-xl border border-white/[0.2] shadow-2xl shadow-black/20 focus-within:border-white/[0.4] focus-within:bg-white/[0.16] transition-all duration-300">
-            <div className="pl-3 pr-1 hidden sm:flex items-center text-white/70">
-              <Globe className="w-4 h-4" />
+          <div className="group relative">
+            {/* Soft glow ring */}
+            <div className="absolute -inset-[2px] rounded-[20px] bg-gradient-to-r from-white/30 via-white/10 to-white/30 opacity-60 blur-md group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+            <div className="relative flex items-center gap-1.5 p-1.5 rounded-[18px] bg-white/[0.08] backdrop-blur-2xl border border-white/[0.18] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] focus-within:border-white/[0.35] focus-within:bg-white/[0.12] transition-all duration-300">
+              <div className="pl-3.5 pr-0.5 flex items-center text-white/60 group-focus-within:text-white/90 transition-colors">
+                <Globe className="w-[18px] h-[18px]" strokeWidth={2.2} />
+              </div>
+              <input
+                type="text"
+                inputMode="url"
+                autoComplete="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="yourwebsite.com"
+                className="flex-1 min-w-0 h-[52px] bg-transparent outline-none text-[15px] font-medium text-white placeholder:text-white/35 placeholder:font-normal px-2 tracking-[-0.01em]"
+              />
+              <Button
+                type="submit"
+                className="h-[44px] px-4 sm:px-5 rounded-[12px] text-[14px] font-semibold bg-white text-foreground hover:bg-white shadow-[0_4px_16px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_20px_-4px_rgba(0,0,0,0.35)] border-0 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shrink-0 gap-1.5"
+              >
+                <span className="hidden sm:inline">Find leads</span>
+                <span className="sm:hidden">Find</span>
+                <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+              </Button>
             </div>
-            <input
-              type="text"
-              inputMode="url"
-              autoComplete="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="yourwebsite.com"
-              className="flex-1 h-[48px] bg-transparent outline-none text-[15px] text-white placeholder:text-white/40 px-2"
-            />
-            <Button
-              type="submit"
-              className="h-[48px] px-5 sm:px-6 rounded-xl text-[14px] font-semibold bg-white text-foreground hover:bg-white/90 border-0 transition-all duration-200 hover:scale-[1.02] shrink-0"
-            >
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              Find leads
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
           </div>
-          <p className="mt-3 text-center text-[12px] text-white/50">
-            Enter your website — get warm Reddit leads in minutes.
-          </p>
+
+          <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-white/55">
+            <span className="flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300" />
+              </span>
+              Free to start
+            </span>
+            <span className="w-px h-3 bg-white/15" />
+            <span>No credit card</span>
+            <span className="w-px h-3 bg-white/15" />
+            <span>2-min setup</span>
+          </div>
         </form>
 
         {/* Proof points */}
