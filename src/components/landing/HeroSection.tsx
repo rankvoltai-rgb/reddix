@@ -5,6 +5,16 @@ import { ArrowRight, Sparkles, TrendingUp, Flame, Target, CheckCircle2, Radar, G
 
 export function HeroSection() {
   const navigate = useNavigate();
+  const [website, setWebsite] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = website.trim();
+    if (value) {
+      try { sessionStorage.setItem('pendingWebsite', value); } catch {}
+    }
+    navigate('/auth');
+  };
 
   return (
     <section className="relative min-h-[100vh] flex flex-col overflow-hidden">
