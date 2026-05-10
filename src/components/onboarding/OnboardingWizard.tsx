@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS, SubscriptionPlan } from '@/lib/subscriptionTiers';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles, Globe, Users, Lightbulb, Tag, Swords, Search } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 interface OnboardingData {
