@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { Loader2, Eye, EyeOff, Flame, Bookmark, ExternalLink, Sparkles, Radar, TrendingUp, Target, ArrowRight, CheckCircle2, ArrowUpRight } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { lovable } from '@/integrations/lovable/index';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
