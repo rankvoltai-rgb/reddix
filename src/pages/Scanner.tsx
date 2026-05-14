@@ -35,6 +35,12 @@ async function getTodayHighIntentCount(userId: string): Promise<number> {
 }
 
 const Scanner = () => {
+  usePageMeta({
+    title: 'Reddit Scanner | Reddix',
+    description: 'Scan Reddit in real time for high-intent buyers and draft AI replies that convert.',
+    path: '/scanner',
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading, updateProfile } = useProfile();
