@@ -61,6 +61,12 @@ const toneOptions = [
 ];
 
 export default function Settings() {
+  usePageMeta({
+    title: 'Account Settings | Reddix',
+    description: 'Manage your Reddix account, business profile, subscription, and preferences.',
+    path: '/settings',
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
   const { profile, isLoading, updateProfile, isUpdating } = useProfile();
