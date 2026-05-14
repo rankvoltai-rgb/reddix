@@ -37,7 +37,7 @@ export default function Alternatives() {
   useCanonical('/alternatives');
 
   useEffect(() => {
-    document.title = 'Best Reddit Lead Generation Tools — Reddix Alternatives Compared';
+    document.title = 'Reddit Lead Gen Tools Compared | Reddix';
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', 'Compare the best Reddit lead generation tools. See how Reddix stacks up against GummySearch, RedReach, Redditor AI, and more. AI-powered scoring, 24/7 scanning, and smart replies.');
   }, []);
