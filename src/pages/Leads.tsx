@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,12 @@ const intentConfig = {
 };
 
 export default function Leads() {
+  usePageMeta({
+    title: 'Leads CRM | Reddix',
+    description: 'Manage saved Reddit leads, statuses, and outreach in your Reddix CRM.',
+    path: '/leads',
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();

@@ -18,6 +18,7 @@ import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, Crown, Flame } from "lu
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
 import { formatDistanceToNow, differenceInSeconds, intervalToDuration, startOfDay } from "date-fns";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const FREE_DAILY_LIMIT = 10;
 
@@ -35,6 +36,12 @@ async function getTodayHighIntentCount(userId: string): Promise<number> {
 }
 
 const Scanner = () => {
+  usePageMeta({
+    title: 'Reddit Scanner | Reddix',
+    description: 'Scan Reddit in real time for high-intent buyers and draft AI replies that convert.',
+    path: '/scanner',
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading, updateProfile } = useProfile();

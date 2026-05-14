@@ -12,8 +12,15 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { BadgesSection } from '@/components/badges/BadgesSection';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export default function Dashboard() {
+  usePageMeta({
+    title: 'Dashboard | Reddix',
+    description: 'Your Reddix command center: track leads, scanning activity, and conversion stats at a glance.',
+    path: '/dashboard',
+    noindex: true,
+  });
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const { subscribed, isLoading: subLoading, refreshSubscription } = useSubscription();

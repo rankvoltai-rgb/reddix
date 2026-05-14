@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { Loader2, Eye, EyeOff, Flame, Bookmark, ExternalLink, Sparkles, Radar, TrendingUp, Target, ArrowRight, CheckCircle2, ArrowUpRight } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { lovable } from '@/integrations/lovable/index';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -75,6 +76,12 @@ function LeadPreviewCard({ className = '', style, title, body, subreddit, score,
 }
 
 export default function Auth() {
+  usePageMeta({
+    title: 'Sign In or Create Account | Reddix',
+    description: 'Log in or sign up for Reddix to start finding warm Reddit leads with AI-powered intent scoring.',
+    path: '/auth',
+    noindex: true,
+  });
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

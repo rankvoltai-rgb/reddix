@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscriptionTiers';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +61,12 @@ const toneOptions = [
 ];
 
 export default function Settings() {
+  usePageMeta({
+    title: 'Account Settings | Reddix',
+    description: 'Manage your Reddix account, business profile, subscription, and preferences.',
+    path: '/settings',
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
   const { profile, isLoading, updateProfile, isUpdating } = useProfile();

@@ -4,8 +4,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { Loader2 } from 'lucide-react';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export default function Onboarding() {
+  usePageMeta({
+    title: 'Get Started | Reddix',
+    description: 'Set up your Reddix account in minutes — tell us about your business and pick a plan.',
+    path: '/onboarding',
+    noindex: true,
+  });
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const navigate = useNavigate();
