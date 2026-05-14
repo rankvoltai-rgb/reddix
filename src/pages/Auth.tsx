@@ -76,6 +76,12 @@ function LeadPreviewCard({ className = '', style, title, body, subreddit, score,
 }
 
 export default function Auth() {
+  usePageMeta({
+    title: 'Sign In or Create Account | Reddix',
+    description: 'Log in or sign up for Reddix to start finding warm Reddit leads with AI-powered intent scoring.',
+    path: '/auth',
+    noindex: true,
+  });
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
