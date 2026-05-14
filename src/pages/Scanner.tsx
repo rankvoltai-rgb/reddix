@@ -18,6 +18,7 @@ import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, Crown, Flame } from "lu
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
 import { formatDistanceToNow, differenceInSeconds, intervalToDuration, startOfDay } from "date-fns";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const FREE_DAILY_LIMIT = 10;
 
