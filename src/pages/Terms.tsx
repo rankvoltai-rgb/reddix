@@ -38,7 +38,7 @@ export default function Terms() {
           <h1 className="text-[34px] sm:text-[48px] font-bold text-white tracking-[-0.04em] leading-[1.1]">
             Terms of Service
           </h1>
-          <p className="mt-5 text-[16px] text-white/40 leading-relaxed max-w-lg mx-auto">
+          <p className="mt-5 text-[16px] text-white/70 leading-relaxed max-w-lg mx-auto">
             Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>

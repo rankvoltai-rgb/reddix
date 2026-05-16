@@ -36,7 +36,7 @@ export function FinalCTA() {
           </span>
         </h2>
         
-        <p className="mt-7 text-[17px] text-white/40 leading-relaxed max-w-lg mx-auto reveal reveal-delay-2">
+        <p className="mt-7 text-[17px] text-white/70 leading-relaxed max-w-lg mx-auto reveal reveal-delay-2">
           They're asking for recommendations. Comparing tools. Describing the exact problem you solve. Show up before your competitor does.
         </p>
 
@@ -52,7 +52,7 @@ export function FinalCTA() {
         </div>
 
         {/* Proof points */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-[13px] text-white/30 reveal reveal-delay-4">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-[13px] text-white/60 reveal reveal-delay-4">
           {[
             'No credit card required',
             '2 minute setup',

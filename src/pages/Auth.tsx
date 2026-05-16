@@ -284,7 +284,7 @@ export default function Auth() {
                 </div>
                 {errors.password && <p className="text-destructive text-[12px] flex items-center gap-1"><span>⚠</span>{errors.password}</p>}
                 {!isLogin && !errors.password && (
-                  <p className="text-muted-foreground/50 text-[11px]">8+ characters · uppercase · lowercase · number</p>
+                  <p className="text-muted-foreground text-[11px]">8+ characters · uppercase · lowercase · number</p>
                 )}
               </div>
 
@@ -337,9 +337,9 @@ export default function Auth() {
 
           {/* Footer */}
           <div className="relative flex items-center gap-4 mt-8 pt-4 border-t border-border/20">
-            <span className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground cursor-pointer transition-colors">Privacy</span>
-            <span className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground cursor-pointer transition-colors">Terms</span>
-            <span className="ml-auto text-[11px] text-muted-foreground/30">© 2026 Reddix</span>
+            <span className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Privacy</span>
+            <span className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Terms</span>
+            <span className="ml-auto text-[11px] text-muted-foreground">© 2026 Reddix</span>
           </div>
         </div>
 
@@ -391,7 +391,7 @@ export default function Auth() {
               <h2 className="text-[22px] font-bold text-white leading-tight tracking-[-0.02em]">
                 Real leads, found by AI
               </h2>
-              <p className="text-[13px] text-white/40 mt-1">Here's what your dashboard looks like from day one.</p>
+              <p className="text-[13px] text-white/70 mt-1">Here's what your dashboard looks like from day one.</p>
             </div>
 
             <LeadPreviewCard
