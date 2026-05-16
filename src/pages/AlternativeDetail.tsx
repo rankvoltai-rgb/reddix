@@ -24,6 +24,49 @@ export default function AlternativeDetail() {
     }
   }, [competitor]);
 
+  useEffect(() => {
+    if (!competitor) return;
+    const featureList = competitor.features.map((f) => f.name);
+    const scripts: HTMLScriptElement[] = [];
+
+    const competitorLd = {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: competitor.name,
+      description: competitor.description,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      featureList,
+    };
+    const reddixLd = {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Reddix',
+      description: `Reddix vs ${competitor.name}: ${competitor.heroSubtitle}`,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: `https://reddix.info/alternatives/${competitor.slug}`,
+      featureList,
+      offers: {
+        '@type': 'Offer',
+        price: '45',
+        priceCurrency: 'USD',
+      },
+    };
+
+    [competitorLd, reddixLd].forEach((ld, i) => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.dataset.seo = `alternative-${i}`;
+      script.text = JSON.stringify(ld);
+      document.head.appendChild(script);
+      scripts.push(script);
+    });
+    return () => {
+      scripts.forEach((s) => s.remove());
+    };
+  }, [competitor]);
+
   if (!competitor) return <NotFound />;
 
   // Get 3 other competitors for "also compare" section

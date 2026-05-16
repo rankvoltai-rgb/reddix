@@ -29,6 +29,31 @@ export default function GlossaryTerm() {
     }
   }, [term]);
 
+  useEffect(() => {
+    if (!term) return;
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'DefinedTerm',
+      name: term.title,
+      description: term.longDef,
+      inDefinedTermSet: {
+        '@type': 'DefinedTermSet',
+        name: 'Reddix Glossary',
+        url: 'https://reddix.info/glossary',
+      },
+      termCode: term.slug,
+      url: `https://reddix.info/glossary/${term.slug}`,
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.dataset.seo = 'glossary-term';
+    script.text = JSON.stringify(ld);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [term]);
+
   if (!term) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
