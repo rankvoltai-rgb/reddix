@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -19,14 +19,35 @@ export default function GlossaryTerm() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const term = slug ? getTermBySlug(slug) : undefined;
-  useCanonical(`/glossary/${slug || ''}`);
+  usePageMeta({
+    title: term?.metaTitle ?? 'Glossary | Reddix',
+    description: term?.metaDescription ?? 'Reddit lead generation glossary.',
+    path: `/glossary/${slug || ''}`,
+  });
 
   useEffect(() => {
-    if (term) {
-      document.title = term.metaTitle;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute('content', term.metaDescription);
-    }
+    if (!term) return;
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'DefinedTerm',
+      name: term.title,
+      description: term.longDef,
+      inDefinedTermSet: {
+        '@type': 'DefinedTermSet',
+        name: 'Reddix Glossary',
+        url: 'https://reddix.info/glossary',
+      },
+      termCode: term.slug,
+      url: `https://reddix.info/glossary/${term.slug}`,
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.dataset.seo = 'glossary-term';
+    script.text = JSON.stringify(ld);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
   }, [term]);
 
   useEffect(() => {
