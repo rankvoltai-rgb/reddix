@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -14,15 +14,11 @@ export default function AlternativeDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const competitor = slug ? getCompetitorBySlug(slug) : undefined;
-  useCanonical(`/alternatives/${slug || ''}`);
-
-  useEffect(() => {
-    if (competitor) {
-      document.title = competitor.metaTitle;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute('content', competitor.metaDescription);
-    }
-  }, [competitor]);
+  usePageMeta({
+    title: competitor?.metaTitle ?? 'Reddix Alternatives',
+    description: competitor?.metaDescription ?? 'Compare Reddix with other Reddit lead generation tools.',
+    path: `/alternatives/${slug || ''}`,
+  });
 
   useEffect(() => {
     if (!competitor) return;
