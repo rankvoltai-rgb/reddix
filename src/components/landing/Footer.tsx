@@ -100,7 +100,7 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="mt-14 pt-6 border-t border-border/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[12px] text-muted-foreground/50">
+          <p className="text-[12px] text-muted-foreground">
             © {new Date().getFullYear()} Reddix. All rights reserved.
           </p>
           <p className="text-[12px] text-muted-foreground/35">

@@ -51,7 +51,7 @@ const intentConfig = {
   hot: { label: "🔥 Hot", className: "text-red-500" },
   warm: { label: "🌡️ Warm", className: "text-amber-500" },
   research: { label: "🔍 Research", className: "text-blue-500" },
-  low: { label: "💤 Low", className: "text-gray-400" },
+  low: { label: "💤 Low", className: "text-muted-foreground" },
 };
 
 export default function Leads() {
