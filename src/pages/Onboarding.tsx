@@ -41,5 +41,15 @@ export default function Onboarding() {
     );
   }
 
+  // Hard guard: once onboarding is completed it must NEVER re-appear, even if
+  // upstream routing logic regresses or the subscription check is flaky.
+  if (profile?.onboarding_completed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return <OnboardingWizard />;
 }

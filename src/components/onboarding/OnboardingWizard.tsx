@@ -35,6 +35,15 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Defensive guard: if onboarding is already completed, never render the
+  // wizard. Send the user back to the dashboard immediately.
+  useEffect(() => {
+    if (profile?.onboarding_completed) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [profile?.onboarding_completed, navigate]);
+  if (profile?.onboarding_completed) return null;
+
   // Handle checkout=success redirect from Stripe — one-shot, guarded.
   const checkoutHandledRef = useRef(false);
   useEffect(() => {
