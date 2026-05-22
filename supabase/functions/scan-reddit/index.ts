@@ -553,20 +553,19 @@ serve(async (req) => {
     let timedOut = false;
 
     const doScan = async () => {
-      // Get search terms + seen posts (7-day window only) in parallel
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      // Get search terms + seen posts in parallel
+      const seenSince = new Date(Date.now() - SEEN_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
       const [topics, seenPostsResult] = await Promise.all([
         getCachedOrGenerateTerms(supabase, userId, profile, lovableKey),
-        supabase.from('seen_posts').select('post_url').eq('user_id', userId).gte('last_seen_at', sevenDaysAgo),
+        supabase.from('seen_posts').select('post_url').eq('user_id', userId).gte('last_seen_at', seenSince),
       ]);
 
       const seenUrls = new Set((seenPostsResult.data || []).map((p: any) => p.post_url));
-      console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts (7-day window)`);
+      console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts (${SEEN_WINDOW_DAYS}-day window)`);
 
       // ── Search Phase: ALL strategies in PARALLEL ──
       const searchPromises: Promise<RedditPost[]>[] = [];
 
-      // Strategy 0: Latest Posts via search (NOT scrape) — last 24 hours, capped at 2 subreddits
       for (const sub of subreddits.slice(0, 2)) {
         searchPromises.push(
           runSearch(
@@ -576,14 +575,12 @@ serve(async (req) => {
         );
       }
 
-      // Strategy A: Fresh content — AI terms + subreddit scoping, NO quotes
       const topicTerms = topics.slice(0, 3).join(' OR ');
       const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
       searchPromises.push(
         runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey, callCounter)
       );
 
-      // Strategy B: Competitor alternatives (max 2 competitors)
       if (profile.competitor_names?.length > 0) {
         const competitorQuery = profile.competitor_names
           .slice(0, 2)
@@ -594,7 +591,6 @@ serve(async (req) => {
         );
       }
 
-      // Strategy C: Subreddit-specific — capped at 3 subreddits
       const topTermsUnquoted = topics.slice(0, 2).join(' OR ');
       for (const sub of subreddits.slice(0, 3)) {
         searchPromises.push(
@@ -605,7 +601,6 @@ serve(async (req) => {
         );
       }
 
-      // Run ALL strategies in parallel
       const searchResults = await Promise.all(searchPromises);
       const allPosts: RedditPost[] = [];
       for (const posts of searchResults) {
@@ -614,7 +609,6 @@ serve(async (req) => {
 
       console.log(`Found ${allPosts.length} total posts from all strategies`);
 
-      // Strategy D: Broad fallback (only if very few results AND we have API call budget)
       if (allPosts.length < 8 && callCounter.count < MAX_FIRECRAWL_CALLS) {
         console.log('Few results, running fallback search...');
         const fallbackPosts = await runSearch(
@@ -626,7 +620,7 @@ serve(async (req) => {
 
       console.log(`Total posts after all strategies: ${allPosts.length}`);
 
-      // Deduplicate
+      // Deduplicate (against scan results + seen cache)
       const uniquePosts = allPosts.filter((post, index, self) => {
         return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
       });
@@ -635,26 +629,13 @@ serve(async (req) => {
 
       if (uniquePosts.length === 0) return;
 
-      // Mark as seen (update last_seen_at for existing, insert new)
-      const now = new Date().toISOString();
-      const postsToMark = uniquePosts.map(p => ({
-        user_id: userId,
-        post_url: p.url,
-        last_seen_at: now,
-      }));
-      for (let i = 0; i < postsToMark.length; i += 50) {
-        await supabase.from('seen_posts').upsert(postsToMark.slice(i, i + 50), {
-          onConflict: 'user_id,post_url', ignoreDuplicates: false,
-        });
-      }
-
-      // Check time budget before AI passes
-      if (Date.now() - startTime > TIMEOUT_MS - 10_000) {
+      // Time budget check before AI passes
+      if (Date.now() - startTime > TIMEOUT_MS - 15_000) {
         console.log('TIMEOUT WARNING: Skipping AI analysis — not enough time');
         return;
       }
 
-      // ── PASS 1: Batch Fast Filter ──
+      // ── PASS 1: Batch Fast Filter with per-batch timeout ──
       console.log('=== PASS 1: Batch Fast Filter ===');
       const postsToAnalyze = uniquePosts
         .filter(p => (p.markdown || p.description || '').length >= MIN_CONTENT_LENGTH)
@@ -673,22 +654,56 @@ serve(async (req) => {
           title: p.title,
           content: p.markdown || p.description || '',
         }));
-        pass1Promises.push(batchScorePass1(batch, productContext, lovableKey));
+        // Per-batch timeout: if Gemini hangs, default to neutral 25 so post still has a chance.
+        const guarded = Promise.race([
+          batchScorePass1(batch, productContext, lovableKey),
+          new Promise<{ post: number; score: number }[]>((resolve) =>
+            setTimeout(() => {
+              console.warn(`Pass 1 batch starting at ${i} timed out after ${PASS1_BATCH_TIMEOUT_MS}ms — using neutral scores`);
+              resolve(batch.map(b => ({ post: b.index, score: 25 })));
+            }, PASS1_BATCH_TIMEOUT_MS)
+          ),
+        ]);
+        pass1Promises.push(guarded);
       }
 
-      const pass1BatchResults = await Promise.all(pass1Promises);
-      for (const scores of pass1BatchResults) {
-        for (const s of scores) {
-          pass1Results.set(s.post, s.score);
+      const pass1Settled = await Promise.allSettled(pass1Promises);
+      for (const result of pass1Settled) {
+        if (result.status === 'fulfilled') {
+          for (const s of result.value) {
+            pass1Results.set(s.post, s.score);
+          }
+        } else {
+          console.error('Pass 1 batch rejected:', result.reason);
         }
       }
 
-      const pass1Qualified = postsToAnalyze
-        .map((post, idx) => ({ post, score: pass1Results.get(idx) || 0 }))
+      // Score distribution for diagnostics
+      const dist = { '0-19': 0, '20-39': 0, '40-59': 0, '60-79': 0, '80-100': 0 };
+      for (const [, score] of pass1Results) {
+        if (score < 20) dist['0-19']++;
+        else if (score < 40) dist['20-39']++;
+        else if (score < 60) dist['40-59']++;
+        else if (score < 80) dist['60-79']++;
+        else dist['80-100']++;
+      }
+      console.log('Pass 1 score distribution:', JSON.stringify(dist));
+
+      let pass1Qualified = postsToAnalyze
+        .map((post, idx) => ({ post, score: pass1Results.get(idx) ?? 0 }))
         .filter(x => x.score >= PASS1_THRESHOLD)
         .sort((a, b) => b.score - a.score)
         .slice(0, PASS1_MAX_LEADS);
       console.log(`Pass 1: ${pass1Qualified.length} posts kept (>= ${PASS1_THRESHOLD}) of ${postsToAnalyze.length}`);
+
+      // ── Fallback floor: never return empty when we have viable content ──
+      if (pass1Qualified.length === 0 && postsToAnalyze.length >= 5) {
+        console.log(`Fallback floor: surfacing top ${PASS1_FLOOR_LEADS} by content length as provisional leads`);
+        pass1Qualified = postsToAnalyze
+          .map(post => ({ post, score: 20 }))
+          .sort((a, b) => (b.post.markdown || b.post.description || '').length - (a.post.markdown || a.post.description || '').length)
+          .slice(0, PASS1_FLOOR_LEADS);
+      }
 
       // ── Insert as provisional leads (deep analysis on-demand) ──
       for (const { post, score } of pass1Qualified) {
@@ -705,6 +720,20 @@ serve(async (req) => {
           intent_level: 'research', // provisional — user clicks Analyze for real classification
           relevance_notes: '',
           user_id: userId,
+        });
+      }
+
+      // ── Only mark posts as seen AFTER they were considered (qualified or not) ──
+      // This prevents burning the candidate pool on scans that timed out before AI ran.
+      const now = new Date().toISOString();
+      const postsToMark = postsToAnalyze.map(p => ({
+        user_id: userId,
+        post_url: p.url,
+        last_seen_at: now,
+      }));
+      for (let i = 0; i < postsToMark.length; i += 50) {
+        await supabase.from('seen_posts').upsert(postsToMark.slice(i, i + 50), {
+          onConflict: 'user_id,post_url', ignoreDuplicates: false,
         });
       }
     };
