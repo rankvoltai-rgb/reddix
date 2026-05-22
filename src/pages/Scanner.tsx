@@ -10,14 +10,13 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, X, Search, Sparkles, Zap, Clock, Crown, Flame } from "lucide-react";
 import { LeadsSection } from "@/components/scanner/LeadsSection";
 import { SubredditDiscovery } from "@/components/scanner/SubredditDiscovery";
-import { formatDistanceToNow, differenceInSeconds, intervalToDuration, startOfDay } from "date-fns";
+import { formatDistanceToNow, startOfDay } from "date-fns";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const FREE_DAILY_LIMIT = 10;
@@ -136,13 +135,8 @@ const Scanner = () => {
     );
   }
 
-  const toggleAutoPilot = async (enabled: boolean) => {
-    updateProfile({ auto_pilot_enabled: enabled });
-    toast({
-      title: enabled ? "Auto-pilot enabled" : "Auto-pilot disabled",
-      description: enabled ? "Leads will be discovered automatically" : "Use manual scanning",
-    });
-  };
+
+
 
   const handleScan = async () => {
     if (subreddits.length === 0) {
@@ -197,20 +191,7 @@ const Scanner = () => {
 
   const isConfigured = subreddits.length > 0;
   const lastScan = profile?.last_scan_at ? new Date(profile.last_scan_at) : null;
-  const autoPilotEnabled = profile?.auto_pilot_enabled ?? true;
-  const nextScheduledScan = profile?.next_scheduled_scan_at ? new Date(profile.next_scheduled_scan_at) : null;
 
-  const getNextScanText = () => {
-    if (!nextScheduledScan || !autoPilotEnabled) return null;
-    const now = new Date();
-    const secondsRemaining = differenceInSeconds(nextScheduledScan, now);
-    if (secondsRemaining <= 0) return "Scanning soon…";
-    const duration = intervalToDuration({ start: now, end: nextScheduledScan });
-    const parts: string[] = [];
-    if (duration.hours && duration.hours > 0) parts.push(`${duration.hours}h`);
-    if (duration.minutes !== undefined) parts.push(`${duration.minutes}m`);
-    return parts.join(' ') || "Soon";
-  };
 
   const leadLimitPercent = Math.min((todayLeadCount / FREE_DAILY_LIMIT) * 100, 100);
 
@@ -242,14 +223,6 @@ const Scanner = () => {
             )}
           </Button>
 
-          <div className="h-6 w-px bg-border" />
-
-          <div className="flex items-center gap-2">
-            <Zap className={`h-4 w-4 ${autoPilotEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className="text-sm font-medium">Auto-Pilot</span>
-            <Switch checked={autoPilotEnabled} onCheckedChange={toggleAutoPilot} />
-          </div>
-
           <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
             {/* Free plan daily count indicator */}
             {isFreePlan && (
@@ -266,9 +239,6 @@ const Scanner = () => {
                 <Clock className="h-3 w-3" />
                 {formatDistanceToNow(lastScan, { addSuffix: true })}
               </span>
-            )}
-            {autoPilotEnabled && getNextScanText() && (
-              <span className="text-primary font-medium">Next: {getNextScanText()}</span>
             )}
             {isConfigured && (
               <span>{subreddits.length} subreddit{subreddits.length !== 1 ? 's' : ''}</span>
@@ -404,7 +374,7 @@ const Scanner = () => {
               <p className="text-sm font-medium">Premium includes:</p>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> Unlimited high-intent leads</li>
-                <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> Auto-pilot scanning 24/7</li>
+                <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> Unlimited manual scans</li>
                 <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-primary" /> AI-powered reply generation</li>
               </ul>
             </div>

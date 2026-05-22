@@ -47,13 +47,10 @@ export default function OnboardingWizard() {
 
     (async () => {
       await refreshSubscription();
-      const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
       updateProfile(
         {
           initial_setup_completed: true,
           onboarding_completed: true,
-          auto_pilot_enabled: true,
-          next_scheduled_scan_at: nextScan.toISOString(),
         } as any,
         {
           onSuccess: () => {
@@ -170,15 +167,11 @@ export default function OnboardingWizard() {
   };
 
   const handleComplete = async () => {
-    const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
-
     updateProfile(
       {
         selected_plan: data.selected_plan,
         initial_setup_completed: true,
         onboarding_completed: true,
-        auto_pilot_enabled: true,
-        next_scheduled_scan_at: nextScan.toISOString(),
       } as any,
       {
         onSuccess: async () => {
