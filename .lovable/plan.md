@@ -1,78 +1,75 @@
-## Deep-Dive: Why Leads Aren't Showing
+## Root cause analysis
 
-I traced the full backend pipeline (`scan-reddit` → DB → frontend) and cross-referenced live data, edge logs, and `scan_history`. The dashboard isn't the problem — **the scan pipeline has been inserting zero leads since the last refactor.**
+I traced the full `scan-reddit` pipeline against live data, edge logs, and `scan_history`. The previous fixes (per-batch timeout, fallback floor, 2-day seen window) are deployed and working — but lead generation is still **0 every scan**. The real blocker has shifted.
 
-### Hard evidence from the database
+### The smoking gun
 
-| Signal | Value |
-|---|---|
-| Most recent lead inserted (any user) | `2026-05-04` (18 days ago) |
-| Recent `scan_history` rows | 9 of last 10 = `completed`, `leads_found = 0` |
-| Latest scan for current user | `30 posts_scanned`, `0 leads_found` |
-| Scan before that | `0 posts_scanned`, `0 leads_found` (seen-posts dedupe) |
-| `seen_posts` cache for current user | 45 URLs in last 7 days |
-
-So scans **do complete**, **do find posts**, and **do not crash** — they just never insert anything. That isolates the failure to the Pass-1 / insertion segment.
-
----
-
-### Root causes (ranked by impact)
-
-#### 1. Pass 1 hangs and hits the 50s timeout — primary culprit
-Edge logs for the 08:46 scan:
-
-```text
-T+0s    "30 posts pass content threshold"
-T+0s    "=== PASS 1: Batch Fast Filter ==="
-T+47s   "⏰ Scan hit 50s timeout — returning partial results"
+Edge logs (08:53 + 09:00 scans):
+```
+Found 46 total posts from all strategies
+0 new unique posts (46 dupes/seen removed)
 ```
 
-The expected log line `"Pass 1: N posts kept (>= 25)"` is **missing** — meaning `await Promise.all(pass1Promises)` never resolved before the timeout race fired. Five parallel `gemini-2.5-flash-lite` tool-calls (one per batch of 6 posts) are stalling on the AI gateway.
+Database confirms it:
+- `seen_posts` for the user: **45 rows, ALL marked at the 08:00 hour**
+- `scan_history`: last 4 scans completed with `posts_scanned = 0`, `leads_found = 0`
 
-Because the timeout rejects the whole `doScan()` promise, the `pass1Qualified` array is never built, `leadsCollected` stays empty, and `completeScan()` writes 0 rows.
+The flow halts at line 635 (`if (uniquePosts.length === 0) return;`) — Pass 1, fallback floor, and inserts **never run**.
 
-#### 2. `seen_posts` cache poisoning — secondary cause
-On every subsequent scan within 7 days, the same ~46 Firecrawl URLs come back and are filtered out at the dedupe step:
+### Why every scan returns the same 46 URLs
 
-```text
-"0 new unique posts (46 dupes/seen removed)"
-```
+1. `cached_search_terms` is reused for 24h → the same 8 queries fire every time.
+2. Firecrawl + Google's `tbs:qdr:w/d` returns the same ranked Reddit URLs on repeat calls.
+3. The 08:46 scan was the one that successfully ran Pass 1 (30 posts) but produced 0 leads — and in doing so, **marked all 30 + 15 others as seen**. Every subsequent scan now finds those same URLs and filters 100% of them out.
+4. The 2-day seen window does nothing here because the cache is fresh (<2h old) and Firecrawl keeps returning the same URLs.
 
-So even if Pass 1 worked, repeat scans (the user is clicking Scan Now rapidly) find nothing new. The seen-window is 7 days and the candidate pool per scan is tiny (~30–50 URLs from 7 capped Firecrawl calls).
+### Secondary issues found
 
-#### 3. `hot_leads` / `warm_leads` metric is structurally wrong
-All new inserts use `intent_level: 'research'` (provisional). `completeScan` then counts `hot`/`warm` from that same array, so those counters will always be 0 by construction — even when leads do exist. Misleading for analytics and for the dashboard "Hot leads" stat.
+- **`postsScannedCount` is set inside `doScan()` at line 649**, but the 08:46 scan that processed 30 posts still wrote `leads_found = 0`. That means Pass 1 returned 0 qualifiers AND the fallback floor didn't insert — likely the deployment timing: that scan ran before the floor logic was live. New scans never get that far now because of issue #1.
+- **`pass1Qualified` fallback** is good but unreachable when `uniquePosts === 0`.
+- **Mark-seen at line 734 marks EVERY content-passing post**, including ones that scored 0 in Pass 1. This poisons the pool for unqualified posts that might score higher in a different context (different product profile, retry).
+- **Search query diversity is low**: only `topics.slice(0, 3)` and `subreddits.slice(0, 2-3)` are ever used. The user has 21 subreddits configured, but only 5 are ever searched.
 
-#### 4. No fallback when Pass 1 hangs
-If the AI batch promise hangs, the loop has no per-batch timeout and no fallback insert. Combined with the 50s outer race, a single slow Gemini call = entire scan loses all candidates.
+## Proposed fix (frontend untouched, edge function only)
 
-#### 5. Provisional-only inserts inflate the bar
-With the deep-analysis removed and threshold at 25, raw Pass-1 scores from `gemini-2.5-flash-lite` cluster low for generic subreddit posts. Historical data confirms: the last batch ever inserted had scores 25–60, with most at 25–35. A flaky Pass 1 plus a strict threshold leaves nothing.
+### A. Only mark QUALIFIED leads as seen
+Move the `seen_posts` upsert to mark **only `pass1Qualified` posts** (the ones inserted as leads). Unqualified posts stay eligible for re-evaluation on the next scan — Firecrawl will keep returning them, but they may get a different score or be qualified once content evolves.
 
----
+### B. Rotate searched subreddits + topics each scan
+- Shuffle `subreddits` before slicing so different subreddits are queried each run.
+- Rotate which `topics` slice is used (e.g., `topics.slice(scanIndex % topics.length, ...)`).
+- Use scan count (or a random offset) to pick which 2-3 of 21 subs to hit.
 
-### Frontend is fine
-`useDashboardStats` and `LeadsSection` query without intent filtering. Old users with pre-refactor leads (e.g. 590, 576, 440 rows) still see them. Provisional `research` leads render via `LeadCard`'s "Unanalyzed" path added last turn. So the UI surfaces whatever the DB contains — the DB just contains nothing new.
+### C. Add a "different freshness" rotation
+Alternate `tbs` between `qdr:d`, `qdr:w`, `qdr:m` across scans so Google returns different SERPs.
 
----
+### D. Reduce seen window for unqualified posts to 12h, keep 7d for qualified
+Optional. If we keep marking all posts as seen (instead of A), use shorter window for unqualified.
 
-### Proposed fix (next loop, build mode)
+### E. Diagnostic log: post-dedupe count + which URLs were filtered
+Add `console.log` of first 5 filtered URLs so future debugging shows whether dedupe or AI is the blocker.
 
-**A. Make Pass 1 robust (the real fix)**
-1. Wrap each `batchScorePass1` call in a per-batch `Promise.race` with a 12s timeout that resolves to default scores instead of rejecting.
-2. Lower batch concurrency cap or chunk sequentially with `Promise.allSettled` so one stuck batch can't drag the rest down.
-3. Add a `console.log` of pass1 score distribution to make this debuggable going forward.
-4. Add a hard floor: if Pass 1 returns zero qualifiers but there are ≥10 content-passing posts, insert the top 10 by content length as provisional `research` leads with score = 20. Better to show "go analyze these" than nothing.
+### F. One-time cleanup
+Provide a SQL note to clear stale `seen_posts` for this user so the next scan has a clean slate to validate the fix.
 
-**B. Soften seen_posts dedupe**
-- Drop the seen window from 7 days → 48 hours, OR only mark a post "seen" after it's actually qualified (not after every search hit). Current behavior burns the candidate pool.
+## Technical changes — single file
 
-**C. Fix `completeScan` metrics**
-- Drop `hot_leads`/`warm_leads` from the immediate insert tally (they'll always be 0). Compute them from `leads` table at scan completion via a single `count` query grouped by `intent_level` for that user.
+`supabase/functions/scan-reddit/index.ts`:
+- **Line 734-743**: change `postsToMark` to iterate `pass1Qualified` only (not all `postsToAnalyze`).
+- **Line 574-607**: shuffle `subreddits` and rotate `topics` slice using a per-scan seed.
+- **Line 578, 586, 595, 604**: rotate `freshness` parameter.
+- **Line 633**: log first 5 dedupe-filtered URLs for diagnostics.
+- No schema changes. No frontend changes. No new env vars.
 
-**D. Add scan diagnostics**
-- Persist Pass-1 score histogram and timing per scan into `scan_history.error_message` (rename to `notes` later) for transparency.
+## Out of scope
+- No UI changes.
+- No model swap.
+- No new tables.
+- No changes to Pass 2 / deep analysis.
 
-**Out of scope:** No frontend changes, no schema migrations, no AI model swap.
-
-**Files touched (next loop):** `supabase/functions/scan-reddit/index.ts` only.
+## Validation steps after deploy
+1. Run a manual scan.
+2. Confirm log shows `N new unique posts` with N > 0.
+3. Confirm `scan_history.leads_found > 0`.
+4. Confirm `leads` table receives rows with `intent_level = 'research'`.
+5. Run a second scan within 5 minutes → should still find new unique posts (different subs/topics rotated).
