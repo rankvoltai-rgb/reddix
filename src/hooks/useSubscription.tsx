@@ -49,9 +49,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           token = refreshed.session?.access_token ?? undefined;
         }
         if (!token) {
-          setSubscribed(false);
-          setPlan(null);
-          setSubscriptionEnd(null);
+          // No token at all — treat as unknown, don't clobber last-known-good.
+          // Routing will keep waiting (isLoading stays true via finally only on first load).
           return;
         }
 
@@ -61,18 +60,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         });
 
         if (error) {
-          setSubscribed(false);
-          setPlan(null);
-          setSubscriptionEnd(null);
-        } else {
-          setSubscribed(data?.subscribed ?? false);
-          setPlan(data?.plan ?? null);
-          setSubscriptionEnd(data?.subscriptionEnd ?? null);
+          // Transient error (network, cold start, 5xx). Preserve last-known-good
+          // values — flipping `subscribed` to false here would wrongly send a
+          // paid user back into the paywall/onboarding flow on every blip.
+          return;
+        }
+
+        // Only trust an explicit server response.
+        if (data && typeof data.subscribed === 'boolean') {
+          setSubscribed(data.subscribed);
+          setPlan(data.plan ?? null);
+          setSubscriptionEnd(data.subscriptionEnd ?? null);
         }
       } catch {
-        setSubscribed(false);
-        setPlan(null);
-        setSubscriptionEnd(null);
+        // Same as above: keep last-known-good on unexpected failure.
+        return;
       } finally {
         setIsLoading(false);
       }
