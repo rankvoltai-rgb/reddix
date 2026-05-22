@@ -394,13 +394,18 @@ async function completeScan(
   supabase: any, scanId: string | undefined,
   postsScanned: number, leadsToInsert: Lead[], userId: string
 ) {
-  const hotLeads = leadsToInsert.filter(l => l.intent_level === 'hot').length;
-  const warmLeads = leadsToInsert.filter(l => l.intent_level === 'warm').length;
-
   if (leadsToInsert.length > 0) {
     const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
     if (insertError) console.error('Insert error:', insertError);
   }
+
+  // Compute hot/warm from the DB so analyzed leads are reflected, not just this scan's provisional inserts.
+  const [{ count: hotCount }, { count: warmCount }] = await Promise.all([
+    supabase.from('leads').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('intent_level', 'hot'),
+    supabase.from('leads').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('intent_level', 'warm'),
+  ]);
+  const hotLeads = hotCount ?? 0;
+  const warmLeads = warmCount ?? 0;
 
   if (scanId) {
     await supabase.from('scan_history').update({
