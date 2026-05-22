@@ -105,10 +105,23 @@ serve(async (req) => {
           results.push({ userId: user.id, success: false, error: scanResult.error });
         }
 
-        // Calculate next scan time
-        const scanFrequency = user.scan_frequency_hours || 4;
+        // Calculate next scan time — back off if recent scans found nothing
+        let scanFrequency = user.scan_frequency_hours || 4;
+        const { data: recentScans } = await supabase
+          .from('scan_history')
+          .select('leads_found, status')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .order('completed_at', { ascending: false })
+          .limit(2);
+        const allZero = (recentScans?.length || 0) >= 2
+          && recentScans!.every((s: any) => (s.leads_found || 0) === 0);
+        if (allZero) {
+          scanFrequency = Math.min(scanFrequency * 2, 24);
+          console.log(`User ${user.id}: last 2 scans returned 0 leads — backing off to ${scanFrequency}h`);
+        }
         const nextScan = new Date(now.getTime() + scanFrequency * 60 * 60 * 1000);
-        
+
         // Update next_scheduled_scan_at
         await supabase
           .from('profiles')
