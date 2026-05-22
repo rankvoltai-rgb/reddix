@@ -48,7 +48,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-white/10 bg-primary">
       <SidebarHeader className="p-3 border-b border-white/10">
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3 px-2")}>
-          <img src={logo} alt="Ai Co-pilot" className="h-8 w-8 flex-shrink-0" />
+          <img src={logo} alt="Ai Co-pilot" className="h-8 w-8 flex-shrink-0 rounded-[10px]" />
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-white tracking-tight text-sm">Lead Generation</span>

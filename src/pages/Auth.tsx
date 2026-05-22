@@ -168,7 +168,7 @@ export default function Auth() {
           
           {/* Logo */}
           <div className="relative flex items-center gap-2.5 mb-16">
-            <img src={logo} alt="Reddix" className="h-7 w-auto" />
+            <img src={logo} alt="Reddix" className="h-7 w-auto rounded-[10px]" />
             <span className="text-[17px] font-bold text-foreground tracking-tight">Reddix</span>
           </div>
 

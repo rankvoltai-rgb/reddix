@@ -262,7 +262,7 @@ export default function OnboardingWizard() {
         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           {/* Header with logo */}
           <div className="px-8 pt-8 pb-6">
-            <img src={logo} alt="Reddix" className="h-8 w-auto mb-6" />
+            <img src={logo} alt="Reddix" className="h-8 w-auto mb-6 rounded-[10px]" />
             <h2 className="text-2xl font-bold text-foreground">{stepTitles[step]}</h2>
           </div>
 
