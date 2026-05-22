@@ -1,0 +1,1 @@
+DELETE FROM public.seen_posts WHERE user_id = '1efc74a1-bc7c-45fc-b3e9-697983be5184';

@@ -568,22 +568,41 @@ serve(async (req) => {
       const seenUrls = new Set((seenPostsResult.data || []).map((p: any) => p.post_url));
       console.log(`Scanning ${subreddits.length} subreddits with ${topics.length} topics, ${seenUrls.size} seen posts (${SEEN_WINDOW_DAYS}-day window)`);
 
+      // ── Rotation seed: changes every 5 min so we hit different subs/topics/freshness ──
+      const rot = Math.floor(Date.now() / (1000 * 60 * 5));
+      const shuffled = <T,>(arr: T[]): T[] => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(((rot * 9301 + 49297 + i * 233) % 233280) / 233280 * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      const rotatedSubs = shuffled(subreddits);
+      const rotatedTopics = topics.length > 0
+        ? [...topics.slice(rot % topics.length), ...topics.slice(0, rot % topics.length)]
+        : topics;
+      const freshnessCycle = ['qdr:d', 'qdr:w', 'qdr:m'];
+      const freshA = freshnessCycle[rot % 3];
+      const freshB = freshnessCycle[(rot + 1) % 3];
+      const freshC = freshnessCycle[(rot + 2) % 3];
+
       // ── Search Phase: ALL strategies in PARALLEL ──
       const searchPromises: Promise<RedditPost[]>[] = [];
 
-      for (const sub of subreddits.slice(0, 2)) {
+      for (const sub of rotatedSubs.slice(0, 2)) {
         searchPromises.push(
           runSearch(
             `site:reddit.com/r/${sub.subreddit_name}`,
-            `Latest:${sub.subreddit_name}`, 'qdr:d', firecrawlKey, callCounter
+            `Latest:${sub.subreddit_name}`, freshA, firecrawlKey, callCounter
           )
         );
       }
 
-      const topicTerms = topics.slice(0, 3).join(' OR ');
-      const subredditScope = subreddits.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
+      const topicTerms = rotatedTopics.slice(0, 3).join(' OR ');
+      const subredditScope = rotatedSubs.slice(0, 3).map((s: any) => `r/${s.subreddit_name}`).join(' OR ');
       searchPromises.push(
-        runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', 'qdr:w', firecrawlKey, callCounter)
+        runSearch(`site:reddit.com (${topicTerms}) (${subredditScope})`, 'Fresh', freshB, firecrawlKey, callCounter)
       );
 
       if (profile.competitor_names?.length > 0) {
@@ -592,16 +611,16 @@ serve(async (req) => {
           .map((c: string) => `"alternative to ${c}" OR "switching from ${c}" OR "${c} vs"`)
           .join(' OR ');
         searchPromises.push(
-          runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', 'qdr:w', firecrawlKey, callCounter)
+          runSearch(`site:reddit.com (${competitorQuery})`, 'Competitors', freshC, firecrawlKey, callCounter)
         );
       }
 
-      const topTermsUnquoted = topics.slice(0, 2).join(' OR ');
-      for (const sub of subreddits.slice(0, 3)) {
+      const topTermsUnquoted = rotatedTopics.slice(0, 2).join(' OR ');
+      for (const sub of rotatedSubs.slice(0, 3)) {
         searchPromises.push(
           runSearch(
             `site:reddit.com/r/${sub.subreddit_name} ${topTermsUnquoted}`,
-            `Sub:${sub.subreddit_name}`, 'qdr:w', firecrawlKey, callCounter
+            `Sub:${sub.subreddit_name}`, freshB, firecrawlKey, callCounter
           )
         );
       }
@@ -612,7 +631,7 @@ serve(async (req) => {
         allPosts.push(...posts);
       }
 
-      console.log(`Found ${allPosts.length} total posts from all strategies`);
+      console.log(`Found ${allPosts.length} total posts (rot=${rot}, fresh=${freshA}/${freshB}/${freshC})`);
 
       if (allPosts.length < 8 && callCounter.count < MAX_FIRECRAWL_CALLS) {
         console.log('Few results, running fallback search...');
@@ -626,11 +645,21 @@ serve(async (req) => {
       console.log(`Total posts after all strategies: ${allPosts.length}`);
 
       // Deduplicate (against scan results + seen cache)
+      const filteredOutByCache: string[] = [];
       const uniquePosts = allPosts.filter((post, index, self) => {
-        return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
+        const isDupe = index !== self.findIndex(p => p.url === post.url);
+        if (isDupe) return false;
+        if (seenUrls.has(post.url)) {
+          if (filteredOutByCache.length < 5) filteredOutByCache.push(post.url);
+          return false;
+        }
+        return true;
       });
 
       console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes/seen removed)`);
+      if (filteredOutByCache.length > 0) {
+        console.log(`First filtered-by-seen URLs:`, filteredOutByCache);
+      }
 
       if (uniquePosts.length === 0) return;
 
@@ -728,12 +757,12 @@ serve(async (req) => {
         });
       }
 
-      // ── Only mark posts as seen AFTER they were considered (qualified or not) ──
-      // This prevents burning the candidate pool on scans that timed out before AI ran.
+      // ── Only mark QUALIFIED leads as seen — unqualified posts stay eligible for retry ──
+      // This prevents poisoning the candidate pool with posts that scored low under stale context.
       const now = new Date().toISOString();
-      const postsToMark = postsToAnalyze.map(p => ({
+      const postsToMark = pass1Qualified.map(({ post }) => ({
         user_id: userId,
-        post_url: p.url,
+        post_url: post.url,
         last_seen_at: now,
       }));
       for (let i = 0; i < postsToMark.length; i += 50) {
