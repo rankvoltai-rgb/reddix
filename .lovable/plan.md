@@ -1,75 +1,67 @@
-## Root cause analysis
+## Root cause
 
-I traced the full `scan-reddit` pipeline against live data, edge logs, and `scan_history`. The previous fixes (per-batch timeout, fallback floor, 2-day seen window) are deployed and working — but lead generation is still **0 every scan**. The real blocker has shifted.
+The onboarding wizard pops up randomly because of two compounding bugs in the routing logic:
 
-### The smoking gun
+### Bug 1 — `resolveDestination` sends paid users back to `/onboarding` on every subscription glitch
 
-Edge logs (08:53 + 09:00 scans):
+`src/lib/routing.ts` line 43:
+```ts
+if (!subscribed) return '/onboarding';
 ```
-Found 46 total posts from all strategies
-0 new unique posts (46 dupes/seen removed)
-```
 
-Database confirms it:
-- `seen_posts` for the user: **45 rows, ALL marked at the 08:00 hour**
-- `scan_history`: last 4 scans completed with `posts_scanned = 0`, `leads_found = 0`
+This treats "no active subscription" as "needs onboarding". A user who has `onboarding_completed = true` will still get routed to `/onboarding` whenever `subscribed` is `false` — even momentarily.
 
-The flow halts at line 635 (`if (uniquePosts.length === 0) return;`) — Pass 1, fallback floor, and inserts **never run**.
+### Bug 2 — `useSubscription` collapses every error to `subscribed = false`
 
-### Why every scan returns the same 46 URLs
+`src/hooks/useSubscription.tsx` lines 63-72: any network error, edge-function cold-start hiccup, expired-token race, or `check-subscription` 5xx flips `subscribed` to `false`. Combined with Bug 1, the wizard pops up.
 
-1. `cached_search_terms` is reused for 24h → the same 8 queries fire every time.
-2. Firecrawl + Google's `tbs:qdr:w/d` returns the same ranked Reddit URLs on repeat calls.
-3. The 08:46 scan was the one that successfully ran Pass 1 (30 posts) but produced 0 leads — and in doing so, **marked all 30 + 15 others as seen**. Every subsequent scan now finds those same URLs and filters 100% of them out.
-4. The 2-day seen window does nothing here because the cache is fresh (<2h old) and Firecrawl keeps returning the same URLs.
+### Bug 3 — Wizard restarts at step 1 regardless of completion
 
-### Secondary issues found
+`OnboardingWizard.tsx` line 30: `useState(1)` always starts at the business-details step. So when the user is wrongly bounced, they see the full form again (including fields they already filled), making it feel like onboarding "randomly re-opened".
 
-- **`postsScannedCount` is set inside `doScan()` at line 649**, but the 08:46 scan that processed 30 posts still wrote `leads_found = 0`. That means Pass 1 returned 0 qualifiers AND the fallback floor didn't insert — likely the deployment timing: that scan ran before the floor logic was live. New scans never get that far now because of issue #1.
-- **`pass1Qualified` fallback** is good but unreachable when `uniquePosts === 0`.
-- **Mark-seen at line 734 marks EVERY content-passing post**, including ones that scored 0 in Pass 1. This poisons the pool for unqualified posts that might score higher in a different context (different product profile, retry).
-- **Search query diversity is low**: only `topics.slice(0, 3)` and `subreddits.slice(0, 2-3)` are ever used. The user has 21 subreddits configured, but only 5 are ever searched.
+### When this fires in practice
+- After a tab is backgrounded and session refresh races with check-subscription
+- Right after Stripe webhook lag (paid, but DB hasn't synced yet)
+- During edge-function cold starts (5-10s of `subscribed=false`)
+- On any temporary network blip
 
-## Proposed fix (frontend untouched, edge function only)
+## Fix — frontend only, no schema changes
 
-### A. Only mark QUALIFIED leads as seen
-Move the `seen_posts` upsert to mark **only `pass1Qualified` posts** (the ones inserted as leads). Unqualified posts stay eligible for re-evaluation on the next scan — Firecrawl will keep returning them, but they may get a different score or be qualified once content evolves.
+### A. Separate "needs onboarding" from "needs to subscribe"
+`src/lib/routing.ts`:
+- If `profile.onboarding_completed === true`, NEVER return `/onboarding`. Always send paid-required users to `/dashboard` (the dashboard already has a hard-paywall overlay per project memory), or to a dedicated `/checkout` route.
+- The check becomes:
+  ```ts
+  if (!profile.onboarding_completed) return '/onboarding';
+  return '/dashboard'; // dashboard handles paywall gating itself
+  ```
 
-### B. Rotate searched subreddits + topics each scan
-- Shuffle `subreddits` before slicing so different subreddits are queried each run.
-- Rotate which `topics` slice is used (e.g., `topics.slice(scanIndex % topics.length, ...)`).
-- Use scan count (or a random offset) to pick which 2-3 of 21 subs to hit.
+### B. Don't downgrade `subscribed` on transient errors
+`src/hooks/useSubscription.tsx`:
+- Track the last known-good value. On error / network failure, KEEP the previous `subscribed` value rather than forcing `false`.
+- Only set `subscribed = false` when the server explicitly returns `{ subscribed: false }`.
+- Add an `unknown` state (or simply leave loading=true on error so navigation logic doesn't make a decision).
 
-### C. Add a "different freshness" rotation
-Alternate `tbs` between `qdr:d`, `qdr:w`, `qdr:m` across scans so Google returns different SERPs.
+### C. Guard `Onboarding.tsx` from rendering the wizard for completed users
+`src/pages/Onboarding.tsx`:
+- If `profile.onboarding_completed === true`, immediately redirect to `/dashboard` and render the loader instead of the wizard. Belt-and-suspenders so even if routing logic ever mis-fires, the wizard never appears for completed users.
 
-### D. Reduce seen window for unqualified posts to 12h, keep 7d for qualified
-Optional. If we keep marking all posts as seen (instead of A), use shorter window for unqualified.
-
-### E. Diagnostic log: post-dedupe count + which URLs were filtered
-Add `console.log` of first 5 filtered URLs so future debugging shows whether dedupe or AI is the blocker.
-
-### F. One-time cleanup
-Provide a SQL note to clear stale `seen_posts` for this user so the next scan has a clean slate to validate the fix.
-
-## Technical changes — single file
-
-`supabase/functions/scan-reddit/index.ts`:
-- **Line 734-743**: change `postsToMark` to iterate `pass1Qualified` only (not all `postsToAnalyze`).
-- **Line 574-607**: shuffle `subreddits` and rotate `topics` slice using a per-scan seed.
-- **Line 578, 586, 595, 604**: rotate `freshness` parameter.
-- **Line 633**: log first 5 dedupe-filtered URLs for diagnostics.
-- No schema changes. No frontend changes. No new env vars.
+### D. (Defensive) `OnboardingWizard.tsx`
+- On mount, if `profile.onboarding_completed === true`, `return null` and trigger a redirect. Prevents any future regression from showing the form.
 
 ## Out of scope
-- No UI changes.
-- No model swap.
-- No new tables.
-- No changes to Pass 2 / deep analysis.
+- No backend changes
+- No schema migrations
+- No changes to the paywall itself (it already exists on `/dashboard`)
+- No changes to `useProfile`
 
-## Validation steps after deploy
-1. Run a manual scan.
-2. Confirm log shows `N new unique posts` with N > 0.
-3. Confirm `scan_history.leads_found > 0`.
-4. Confirm `leads` table receives rows with `intent_level = 'research'`.
-5. Run a second scan within 5 minutes → should still find new unique posts (different subs/topics rotated).
+## Files to touch
+1. `src/lib/routing.ts` — drop the `!subscribed → /onboarding` rule
+2. `src/hooks/useSubscription.tsx` — preserve last-known-good on error
+3. `src/pages/Onboarding.tsx` — hard guard against rendering wizard when completed
+4. `src/components/onboarding/OnboardingWizard.tsx` — early-return guard
+
+## Validation
+1. Set `onboarding_completed = true` and force `subscribed = false` (block the check-subscription edge function) — confirm user lands on `/dashboard` (with paywall) and never sees the wizard.
+2. Background the tab for 10 min, return — confirm no wizard flash.
+3. Hard-refresh `/dashboard` 10 times — confirm wizard never appears.

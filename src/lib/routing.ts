@@ -38,10 +38,10 @@ export function resolveDestination({
 
   if (!profile.onboarding_completed) return '/onboarding';
 
-  // Onboarding done but no active subscription — keep them on onboarding
-  // (the plan-selection step) instead of bouncing through dashboard.
-  if (!subscribed) return '/onboarding';
-
+  // Onboarding done — always send to /dashboard. The dashboard owns the
+  // hard-paywall overlay for unsubscribed users. We must NEVER bounce a
+  // user with onboarding_completed=true back into the wizard, because
+  // transient subscription-check failures would re-open onboarding.
   return '/dashboard';
 }
 
