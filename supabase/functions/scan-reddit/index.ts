@@ -757,12 +757,12 @@ serve(async (req) => {
         });
       }
 
-      // ── Only mark posts as seen AFTER they were considered (qualified or not) ──
-      // This prevents burning the candidate pool on scans that timed out before AI ran.
+      // ── Only mark QUALIFIED leads as seen — unqualified posts stay eligible for retry ──
+      // This prevents poisoning the candidate pool with posts that scored low under stale context.
       const now = new Date().toISOString();
-      const postsToMark = postsToAnalyze.map(p => ({
+      const postsToMark = pass1Qualified.map(({ post }) => ({
         user_id: userId,
-        post_url: p.url,
+        post_url: post.url,
         last_seen_at: now,
       }));
       for (let i = 0; i < postsToMark.length; i += 50) {
