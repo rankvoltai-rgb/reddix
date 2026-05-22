@@ -10,7 +10,8 @@ const corsHeaders = {
 
 const RATE_LIMIT_MINUTES = 5;
 const BATCH_SIZE = 6;
-const PASS1_THRESHOLD = 25;
+const PASS1_THRESHOLD = 35; // raised from 25 to send fewer posts to expensive Pass 2
+const PASS2_MAX_POSTS = 15; // hard cap on Pass-2 deep analyses per scan
 const MIN_CONTENT_LENGTH = 50;
 const TIMEOUT_MS = 50_000; // 50s guard — return partial results before edge function dies
 const MAX_FIRECRAWL_CALLS = 7;
@@ -313,7 +314,7 @@ NEGATIVE SIGNALS (subtract points):
 - Post appears older than 30 days → -15
 
 POST TITLE: ${post.title}
-POST CONTENT: ${(post.markdown || post.description || '').slice(0, 3000)}
+POST CONTENT: ${(post.markdown || post.description || '').slice(0, 1200)}
 POST URL: ${post.url}`;
 
   try {
@@ -324,7 +325,8 @@ POST URL: ${post.url}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
+        max_tokens: 400,
         messages: [
           { role: 'system', content: 'Expert lead qualifier. Analyze and score Reddit posts.' },
           { role: 'user', content: prompt },
@@ -678,8 +680,14 @@ serve(async (req) => {
         }
       }
 
-      const pass1Qualified = postsToAnalyze.filter((_, idx) => (pass1Results.get(idx) || 0) >= PASS1_THRESHOLD);
-      console.log(`Pass 1: ${pass1Qualified.length}/${postsToAnalyze.length} posts scored >= ${PASS1_THRESHOLD}`);
+      const pass1QualifiedAll = postsToAnalyze
+        .map((post, idx) => ({ post, score: pass1Results.get(idx) || 0 }))
+        .filter(x => x.score >= PASS1_THRESHOLD)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, PASS2_MAX_POSTS);
+      const pass1Qualified = pass1QualifiedAll.map(x => x.post);
+      console.log(`Pass 1: ${pass1Qualified.length} posts kept (>= ${PASS1_THRESHOLD}, capped at ${PASS2_MAX_POSTS}) of ${postsToAnalyze.length}`);
+
 
       // Check time budget before Pass 2
       if (Date.now() - startTime > TIMEOUT_MS - 5_000) {

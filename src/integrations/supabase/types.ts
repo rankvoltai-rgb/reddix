@@ -44,6 +44,7 @@ export type Database = {
       leads: {
         Row: {
           author: string | null
+          cached_replies: Json | null
           created_at: string | null
           discovered_at: string | null
           id: string
@@ -51,6 +52,7 @@ export type Database = {
           intent_score: number | null
           notes: string | null
           relevance_notes: string | null
+          replies_generated_at: string | null
           status: Database["public"]["Enums"]["lead_status"] | null
           subreddit: string
           thread_content: string | null
@@ -61,6 +63,7 @@ export type Database = {
         }
         Insert: {
           author?: string | null
+          cached_replies?: Json | null
           created_at?: string | null
           discovered_at?: string | null
           id?: string
@@ -68,6 +71,7 @@ export type Database = {
           intent_score?: number | null
           notes?: string | null
           relevance_notes?: string | null
+          replies_generated_at?: string | null
           status?: Database["public"]["Enums"]["lead_status"] | null
           subreddit: string
           thread_content?: string | null
@@ -78,6 +82,7 @@ export type Database = {
         }
         Update: {
           author?: string | null
+          cached_replies?: Json | null
           created_at?: string | null
           discovered_at?: string | null
           id?: string
@@ -85,6 +90,7 @@ export type Database = {
           intent_score?: number | null
           notes?: string | null
           relevance_notes?: string | null
+          replies_generated_at?: string | null
           status?: Database["public"]["Enums"]["lead_status"] | null
           subreddit?: string
           thread_content?: string | null
