@@ -125,11 +125,11 @@ serve(async (req) => {
                   value_proposition: { type: 'string', description: 'Core value proposition' },
                   key_features: { type: 'array', items: { type: 'string' }, description: '3-5 key features' },
                   competitor_names: { type: 'array', items: { type: 'string' }, description: 'Named competitors if mentioned' },
-                  pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', ''] },
+                  pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', 'unknown'] },
                   unique_differentiators: { type: 'string' },
                   common_objections: { type: 'array', items: { type: 'string' } },
                   success_stories: { type: 'string' },
-                  tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty', ''] },
+                  tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty'] },
                   suggested_keywords: { type: 'array', items: { type: 'string' }, description: '5-10 short Reddit search phrases potential customers would use' },
                 },
                 required: [
