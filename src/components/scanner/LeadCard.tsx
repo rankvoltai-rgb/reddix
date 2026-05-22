@@ -44,12 +44,13 @@ const intentConfig = {
   },
 };
 
-export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGenerating, isSaving = false, showSaveButton = true }: LeadCardProps) {
+export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismiss, isGenerating, isAnalyzing = false, isSaving = false, showSaveButton = true }: LeadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
+  const isAnalyzed = (lead as any).deep_analyzed === true;
   const intentLevel = lead.intent_level || "low";
   const config = intentConfig[intentLevel as keyof typeof intentConfig] || intentConfig.low;
-  
+
   const truncatedContent = lead.thread_content && lead.thread_content.length > 150
     ? lead.thread_content.slice(0, 150) + "..."
     : lead.thread_content;
@@ -57,7 +58,10 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
   const shouldShowExpand = lead.thread_content && lead.thread_content.length > 150;
 
   return (
-    <Card className={cn("border-l-4 hover:shadow-md transition-shadow group relative", config.borderColor)}>
+    <Card className={cn(
+      "border-l-4 hover:shadow-md transition-shadow group relative",
+      isAnalyzed ? config.borderColor : "border-l-muted-foreground/30"
+    )}>
       {/* Dismiss button */}
       {onDismiss && (
         <button
@@ -73,19 +77,27 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
           <div className="flex-1 min-w-0">
             {/* Intent & Score Row */}
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className={cn("text-xs font-medium", config.className)}>
-                {config.label}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Score: {lead.intent_score || 0}
-              </span>
+              {isAnalyzed ? (
+                <>
+                  <Badge variant="outline" className={cn("text-xs font-medium", config.className)}>
+                    {config.label}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Score: {lead.intent_score || 0}
+                  </span>
+                </>
+              ) : (
+                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-dashed">
+                  Unanalyzed
+                </Badge>
+              )}
               {lead.status && lead.status !== "new" && (
                 <Badge variant="secondary" className="text-xs capitalize">
                   {lead.status}
                 </Badge>
               )}
             </div>
-            
+
             {/* Title */}
             <h3 className="font-semibold text-base leading-tight line-clamp-2 mb-2">
               {lead.thread_title || "Untitled Post"}
