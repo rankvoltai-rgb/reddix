@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,41 +23,49 @@ interface OnboardingData {
 const TOTAL_STEPS = 2;
 
 export default function OnboardingWizard() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const { refreshSubscription } = useSubscription();
   const [step, setStep] = useState(1);
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
   const { profile, updateProfile, isUpdating } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Handle checkout=success redirect from Stripe
+  // Handle checkout=success redirect from Stripe — one-shot, guarded.
+  const checkoutHandledRef = useRef(false);
   useEffect(() => {
     const checkout = searchParams.get('checkout');
-    if (checkout === 'success') {
-      refreshSubscription().then(() => {
-        const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
-        updateProfile(
-          {
-            initial_setup_completed: true,
-            onboarding_completed: true,
-            auto_pilot_enabled: true,
-            next_scheduled_scan_at: nextScan.toISOString(),
-          } as any,
-          {
-            onSuccess: () => {
-              toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
-              triggerAutoSetup();
-              navigate('/dashboard');
-            },
-          }
-        );
-      });
-    }
-  }, []);
+    if (checkout !== 'success' || checkoutHandledRef.current) return;
+    checkoutHandledRef.current = true;
+
+    // Strip the query param immediately so a refresh can't re-trigger this.
+    setSearchParams({}, { replace: true });
+
+    (async () => {
+      await refreshSubscription();
+      const nextScan = new Date(Date.now() + 4 * 60 * 60 * 1000);
+      updateProfile(
+        {
+          initial_setup_completed: true,
+          onboarding_completed: true,
+          auto_pilot_enabled: true,
+          next_scheduled_scan_at: nextScan.toISOString(),
+        } as any,
+        {
+          onSuccess: () => {
+            toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
+            triggerAutoSetup();
+            navigate('/dashboard', { replace: true });
+          },
+        }
+      );
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
 
   const [data, setData] = useState<OnboardingData>({
     full_name: '',
