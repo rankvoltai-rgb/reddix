@@ -645,11 +645,21 @@ serve(async (req) => {
       console.log(`Total posts after all strategies: ${allPosts.length}`);
 
       // Deduplicate (against scan results + seen cache)
+      const filteredOutByCache: string[] = [];
       const uniquePosts = allPosts.filter((post, index, self) => {
-        return index === self.findIndex(p => p.url === post.url) && !seenUrls.has(post.url);
+        const isDupe = index !== self.findIndex(p => p.url === post.url);
+        if (isDupe) return false;
+        if (seenUrls.has(post.url)) {
+          if (filteredOutByCache.length < 5) filteredOutByCache.push(post.url);
+          return false;
+        }
+        return true;
       });
 
       console.log(`${uniquePosts.length} new unique posts (${allPosts.length - uniquePosts.length} dupes/seen removed)`);
+      if (filteredOutByCache.length > 0) {
+        console.log(`First filtered-by-seen URLs:`, filteredOutByCache);
+      }
 
       if (uniquePosts.length === 0) return;
 
