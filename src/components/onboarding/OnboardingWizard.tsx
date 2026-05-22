@@ -267,7 +267,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Website URL <span className="text-primary">*</span></label>
                     <Input placeholder="yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
-                    <p className="text-xs text-muted-foreground">We'll analyze your website to auto-fill your product details</p>
+                    <p className="text-xs text-muted-foreground">We'll analyze your site and preselect 5 subreddits to monitor.</p>
                   </div>
                 </div>
               )}
