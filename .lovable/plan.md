@@ -1,65 +1,41 @@
-## Problem
+## Dashboard UX Tightening Plan
 
-Two things to address:
+Keep the existing structure and brand (red, Instrument Serif headings, glassmorphism). Refine spacing, hierarchy, and make **Recent Leads** the visual anchor. No business logic changes — `src/pages/Dashboard.tsx` only.
 
-1. **Scans often return 0 (or partial) leads.** The most recent `scan-reddit` invocation hit the 50s edge-function timeout. Pass 1 (batch score) + Pass 2 (deep per-post Gemini analysis, up to 15 sequential-ish calls) burns the budget — when timeout fires, partial results are saved but the deep-analysis step usually never runs, so very few or zero leads land in the DB.
-2. **AI costs scale with every scan**, even on posts the user never opens. The user wants control: scan should be cheap and broad, and deep analysis should happen only when the user clicks a button on a lead card.
+### 1. Header band (tighter, more useful)
+- Replace the plain `text-3xl` welcome with a serif `Instrument Serif` headline ("Welcome back, {name}") + small muted sub.
+- Move "Last scan" pill inline to the right of the headline on desktop, with a small green pulse dot when recent (<1h).
+- Add a single primary `Scan Now` button (anchored top-right) and a ghost `View All Leads` next to it. Header height drops ~30%.
 
-## Plan
+### 2. Stats strip (demoted, refined)
+- Convert 4-card grid into a single horizontal `rounded-2xl` glass strip with 4 cells separated by hairline dividers (no per-card borders).
+- Smaller numerals (`text-2xl`), icon left of value, label below — tighter footprint so the leads feed dominates.
+- Keep AnimatedCounter, keep stagger fade-in.
 
-### 1. Make `scan-reddit` cheap and fast (remove Pass 2)
+### 3. Recent Leads (new visual anchor)
+- Promote to a larger `rounded-2xl` glass panel directly under the stats strip.
+- Header: serif "Recent Leads" + small count chip ("12 today") + `View all →` ghost link.
+- Each row becomes a richer card:
+  - Left: intent dot (red/amber/blue/gray) + thread title (serif-ish weight, 2-line clamp).
+  - Sub-row: `r/subreddit` chip · time ago · short relevance snippet (italic Playfair) when present.
+  - Right: intent badge + hover-reveal `Open ↗` and `Reply` ghost buttons.
+- Increase row padding, subtle hover lift (`translate-y-[-1px]`, ring-1 ring-primary/10).
+- Show up to 6 (was implicit smaller); empty rows collapse cleanly.
 
-In `supabase/functions/scan-reddit/index.ts`:
-- Keep Firecrawl search + dedupe + seen-posts logic as-is.
-- Keep Pass 1 batch scoring (cheap, `gemini-2.5-flash-lite`, ~5 batches of 6 posts) to filter obvious junk.
-- **Remove Pass 2 entirely** from the scan path.
-- Insert every Pass-1-qualified post (score ≥ `PASS1_THRESHOLD`, e.g. lower it back to 25 so we surface more candidates) as a lead with:
-  - `intent_score` = pass-1 score
-  - `intent_level` = `'research'` (provisional, neutral)
-  - `relevance_notes` = `null`
-  - new flag `deep_analyzed = false`
-- Drop `PASS2_MAX_POSTS` cap; raise candidate pool to ~40 posts.
-- Result: scan completes in ~15–20s instead of timing out, and consistently returns a populated lead list.
+### 4. Badges section
+- Wrap in a collapsible `<details>`-style section ("Achievements") below leads, default expanded, smaller header so it doesn't compete with leads.
 
-### 2. New `analyze-lead` edge function (per-card deep analysis)
+### 5. Empty / setup states
+- Keep the two empty-state cards but slim padding (`p-10` instead of `p-14`), serif headline, and add a secondary ghost link ("Learn how scanning works" → docs/glossary).
 
-Create `supabase/functions/analyze-lead/index.ts`:
-- POST `{ lead_id }`, auth required, validates the lead belongs to caller.
-- Loads the lead's stored `thread_title` + `thread_content` + caller's profile.
-- Calls existing `deepAnalyzePost` logic (Gemini 2.5 flash-lite, tool-calling) — exactly one AI call.
-- Updates the lead row: `intent_score`, `intent_level` (hot/warm/research/low), `relevance_notes`, `deep_analyzed = true`, `analyzed_at = now()`.
-- Returns 200 with `{ success: true, lead: {...} }` or `{ success: false, error }` per the silent-error contract.
+### 6. Layout polish
+- Page max-width to `max-w-6xl` (was wider via DashboardLayout default) centered.
+- Vertical rhythm: `space-y-6` between major blocks (was `mb-10`).
+- Add subtle top radial red glow behind header (matches Scanner hero) for visual continuity.
 
-### 3. Schema migration
+### Files touched
+- `src/pages/Dashboard.tsx` — full presentational refactor, same hooks/data/navigation.
 
-Add two columns to `public.leads`:
-- `deep_analyzed boolean DEFAULT false`
-- `analyzed_at timestamptz`
-
-(RLS unchanged — user-scoped policies already cover it.)
-
-### 4. LeadCard UI: "Analyze" button
-
-In `src/components/scanner/LeadCard.tsx`:
-- When `lead.deep_analyzed === false`: hide the score badge, show provisional `🔍 Unanalyzed` intent label, add an **Analyze** button (Sparkles icon) alongside Reply/Save.
-- When clicked: call `supabase.functions.invoke('analyze-lead', { body: { lead_id } })`, show spinner, then invalidate the leads query so the card re-renders with the real intent label, score, and `relevance_notes`.
-- When `deep_analyzed === true`: render the badge/score exactly as today, and surface `relevance_notes` as a small italic line under the content preview.
-
-### 5. Scanner copy tweak
-
-Tiny meta line above the leads list: "Scans surface candidates fast — click **Analyze** on any card to spend 1 AI credit and get a full intent score + notes." Reinforces the cost model.
-
-## Out of scope
-
-- No changes to `generate-reply`, billing, onboarding, Stripe, or subreddit preseed.
-- No changes to scan rate limit, search strategies, or Firecrawl quotas.
-- Existing leads in the DB simply behave as `deep_analyzed = false` (default) and get an Analyze button.
-
-## Files touched
-
-- `supabase/functions/scan-reddit/index.ts` (remove Pass 2, lower threshold, insert as provisional)
-- `supabase/functions/analyze-lead/index.ts` (new)
-- `src/components/scanner/LeadCard.tsx` (Analyze button, provisional state, notes display)
-- `src/components/scanner/LeadsSection.tsx` (wire `onAnalyze` mutation)
-- `src/pages/Scanner.tsx` (one-line helper copy above leads)
-- Migration: `leads.deep_analyzed`, `leads.analyzed_at`
+### Out of scope
+- No changes to `useDashboardStats`, routing, edge functions, or DB.
+- No new components beyond inline JSX (BadgesSection stays as-is, just re-wrapped).
