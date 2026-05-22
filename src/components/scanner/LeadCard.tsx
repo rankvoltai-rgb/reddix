@@ -120,12 +120,22 @@ export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismi
               </div>
             )}
             
+            {/* AI Analysis Notes (only if deep-analyzed) */}
+            {isAnalyzed && lead.relevance_notes && (
+              <div className="mb-3 rounded-md border-l-2 border-primary/40 bg-muted/40 px-3 py-2">
+                <p className="text-xs italic text-muted-foreground leading-relaxed">
+                  <Brain className="inline h-3 w-3 mr-1 text-primary" />
+                  {lead.relevance_notes}
+                </p>
+              </div>
+            )}
+
             {/* Meta Row */}
             <div className="flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal">
                 r/{lead.subreddit}
               </Badge>
-              {lead.author && (
+              {lead.author && lead.author !== 'unknown' && (
                 <span className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   u/{lead.author}
@@ -138,7 +148,7 @@ export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismi
               )}
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 shrink-0">
             <div className="flex gap-2">
@@ -166,9 +176,9 @@ export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismi
                 className="w-9 h-9 p-0"
                 asChild
               >
-                <a 
-                  href={lead.thread_url} 
-                  target="_blank" 
+                <a
+                  href={lead.thread_url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   title="Open in Reddit"
                 >
@@ -176,6 +186,27 @@ export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismi
                 </a>
               </Button>
             </div>
+
+            {!isAnalyzed && onAnalyze && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => onAnalyze(lead.id)}
+                disabled={isAnalyzing}
+                title="Run AI deep analysis (1 credit)"
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Analyze
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button
               size="sm"
               className="gap-1.5"
