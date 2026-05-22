@@ -11,6 +11,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Require shared-secret auth to prevent unauthorized invocation
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const incoming = req.headers.get('x-cron-secret');
+  const authHeader = req.headers.get('authorization') ?? '';
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const hasServiceRoleAuth =
+    serviceRoleKey.length > 0 && authHeader === `Bearer ${serviceRoleKey}`;
+  const hasCronSecret =
+    !!cronSecret && !!incoming && incoming === cronSecret;
+  if (!hasCronSecret && !hasServiceRoleAuth) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Forbidden' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
