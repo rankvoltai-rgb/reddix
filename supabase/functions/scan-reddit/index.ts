@@ -12,8 +12,11 @@ const RATE_LIMIT_MINUTES = 5;
 const BATCH_SIZE = 6;
 const PASS1_THRESHOLD = 25; // lowered — deep analysis happens on-demand from the UI
 const PASS1_MAX_LEADS = 30; // cap leads inserted per scan
+const PASS1_FLOOR_LEADS = 10; // fallback when AI returns nothing usable
 const MIN_CONTENT_LENGTH = 50;
 const TIMEOUT_MS = 50_000;
+const PASS1_BATCH_TIMEOUT_MS = 12_000; // per-batch AI hang guard
+const SEEN_WINDOW_DAYS = 2; // shorter window so the candidate pool refreshes
 const MAX_FIRECRAWL_CALLS = 7;
 
 interface RedditPost {
