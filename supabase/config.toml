@@ -23,6 +23,3 @@ verify_jwt = false
 
 [functions.auto-generate-keywords]
 verify_jwt = false
-
-[functions.scheduled-scan]
-verify_jwt = false

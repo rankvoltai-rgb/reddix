@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN auto_pilot_enabled SET DEFAULT false;
