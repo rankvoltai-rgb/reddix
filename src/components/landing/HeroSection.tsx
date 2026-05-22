@@ -90,10 +90,8 @@ export function HeroSection() {
         <div className="mb-10 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/15 backdrop-blur-md flex items-center gap-3 shadow-xl reveal">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/90 uppercase tracking-[0.18em]">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_hsl(38,95%,60%)]" />
-            2,400+ Leads
+            100K+ Leads Found
           </span>
-          <span className="w-px h-3 bg-white/20" />
-          <span className="text-[11px] font-medium text-white/70 uppercase tracking-[0.14em]">Found on Autopilot</span>
         </div>
 
         {/* Headline */}
