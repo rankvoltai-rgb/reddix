@@ -1,35 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-function extractJsonFromResponse(response: string) {
-  let cleaned = response
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/g, '')
-    .trim();
-
-  const jsonStart = cleaned.search(/[\{\[]/);
-  if (jsonStart === -1) {
-    throw new Error('No JSON object found in response');
-  }
-
-  const closingChar = cleaned[jsonStart] === '[' ? ']' : '}';
-  const jsonEnd = cleaned.lastIndexOf(closingChar);
-  if (jsonEnd === -1) {
-    throw new Error('JSON appears truncated');
-  }
-
-  cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    cleaned = cleaned
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/[\x00-\x1F\x7F]/g, '');
-
-    return JSON.parse(cleaned);
-  }
-}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +15,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -59,14 +29,14 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { url } = await req.json();
     if (!url || typeof url !== 'string') {
       return new Response(JSON.stringify({ success: false, error: 'URL is required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -75,7 +45,7 @@ serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    // Step 1: Scrape website with Firecrawl
+    // Step 1: Scrape with Firecrawl
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!firecrawlKey) {
       return new Response(JSON.stringify({ success: false, error: 'Firecrawl connector not configured' }), {
@@ -112,72 +82,68 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: Extract structured data with OpenRouter (Qwen)
-    const openrouterKey = Deno.env.get('OPENROUTER_API_KEY');
-    if (!openrouterKey) {
-      return new Response(JSON.stringify({ success: false, error: 'OpenRouter API key not configured' }), {
+    // Step 2: Extract structured data via Lovable AI (Gemini) + tool calling
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const truncatedMarkdown = markdown.slice(0, 8000);
+    console.log('Analyzing content with Gemini via Lovable AI, length:', truncatedMarkdown.length);
 
-    console.log('Analyzing content with Qwen via OpenRouter, length:', truncatedMarkdown.length);
-    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openrouterKey}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-plus',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           {
             role: 'system',
-            content: 'You are a product analyst. Return only valid JSON matching the requested schema. Be concise and accurate. If information is unavailable, use an empty string or empty array.',
+            content: 'You are a product analyst. Extract structured product data from website content. Be concise and accurate. If information is unavailable, use empty strings or empty arrays.',
           },
           {
             role: 'user',
-            content: `Analyze this website content and return structured product data as JSON with these exact keys: company_description, target_audience, value_proposition, key_features, competitor_names, pricing_model, unique_differentiators, common_objections, success_stories, tone, suggested_keywords.\n\nRules:\n- key_features, competitor_names, common_objections, suggested_keywords must be arrays\n- suggested_keywords should contain 5-10 short Reddit search phrases\n- tone must be one of: professional, casual, friendly, technical, witty, or empty string\n- pricing_model must be one of: free, freemium, free-trial, paid, enterprise, or empty string\n- return JSON only with no markdown fences or extra text\n\nWebsite content:\n${truncatedMarkdown}`,
+            content: `Analyze this website content and extract the product profile.\n\nWebsite content:\n${truncatedMarkdown}`,
           },
         ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'product_analysis',
-            strict: true,
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                company_description: { type: 'string' },
-                target_audience: { type: 'string' },
-                value_proposition: { type: 'string' },
-                key_features: { type: 'array', items: { type: 'string' } },
-                competitor_names: { type: 'array', items: { type: 'string' } },
-                pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', ''] },
-                unique_differentiators: { type: 'string' },
-                common_objections: { type: 'array', items: { type: 'string' } },
-                success_stories: { type: 'string' },
-                tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty', ''] },
-                suggested_keywords: { type: 'array', items: { type: 'string' } },
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'extract_product_profile',
+              description: 'Extract structured product information from a website.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  company_description: { type: 'string', description: 'Short 1-2 sentence description of the company/product' },
+                  target_audience: { type: 'string', description: 'Who the product is for' },
+                  value_proposition: { type: 'string', description: 'Core value proposition' },
+                  key_features: { type: 'array', items: { type: 'string' }, description: '3-5 key features' },
+                  competitor_names: { type: 'array', items: { type: 'string' }, description: 'Named competitors if mentioned' },
+                  pricing_model: { type: 'string', enum: ['free', 'freemium', 'free-trial', 'paid', 'enterprise', ''] },
+                  unique_differentiators: { type: 'string' },
+                  common_objections: { type: 'array', items: { type: 'string' } },
+                  success_stories: { type: 'string' },
+                  tone: { type: 'string', enum: ['professional', 'casual', 'friendly', 'technical', 'witty', ''] },
+                  suggested_keywords: { type: 'array', items: { type: 'string' }, description: '5-10 short Reddit search phrases potential customers would use' },
+                },
+                required: [
+                  'company_description', 'target_audience', 'value_proposition',
+                  'key_features', 'competitor_names', 'pricing_model',
+                  'unique_differentiators', 'common_objections', 'success_stories',
+                  'tone', 'suggested_keywords',
+                ],
+                additionalProperties: false,
               },
-              required: [
-                'company_description',
-                'target_audience',
-                'value_proposition',
-                'key_features',
-                'competitor_names',
-                'pricing_model',
-                'unique_differentiators',
-                'common_objections',
-                'success_stories',
-                'tone',
-                'suggested_keywords'
-              ],
             },
           },
-        },
+        ],
+        tool_choice: { type: 'function', function: { name: 'extract_product_profile' } },
       }),
     });
 
@@ -200,20 +166,21 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    const rawContent = aiData.choices?.[0]?.message?.content;
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    const rawArgs = toolCall?.function?.arguments;
 
-    if (!rawContent || typeof rawContent !== 'string') {
-      console.error('No JSON content in AI response', JSON.stringify(aiData));
+    if (!rawArgs) {
+      console.error('No tool call in AI response', JSON.stringify(aiData));
       return new Response(JSON.stringify({ success: false, error: 'AI could not extract product data. Please fill in the fields manually.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    let extracted;
+    let extracted: Record<string, unknown>;
     try {
-      extracted = extractJsonFromResponse(rawContent) as Record<string, unknown>;
+      extracted = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
     } catch {
-      console.error('Failed to parse AI JSON content', rawContent);
+      console.error('Failed to parse tool args', rawArgs);
       return new Response(JSON.stringify({ success: false, error: 'AI response was malformed. Please fill in the fields manually.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -227,14 +194,14 @@ serve(async (req) => {
         company_description: extracted.company_description || '',
         target_audience: extracted.target_audience || '',
         value_proposition: extracted.value_proposition || '',
-        key_features: (extracted.key_features || []).slice(0, 5),
-        competitor_names: (extracted.competitor_names || []).slice(0, 5),
+        key_features: ((extracted.key_features as string[]) || []).slice(0, 5),
+        competitor_names: ((extracted.competitor_names as string[]) || []).slice(0, 5),
         pricing_model: extracted.pricing_model || '',
         unique_differentiators: extracted.unique_differentiators || '',
-        common_objections: (extracted.common_objections || []).slice(0, 5),
+        common_objections: ((extracted.common_objections as string[]) || []).slice(0, 5),
         success_stories: extracted.success_stories || '',
         tone: extracted.tone || '',
-        suggested_keywords: (extracted.suggested_keywords || []).slice(0, 10),
+        suggested_keywords: ((extracted.suggested_keywords as string[]) || []).slice(0, 10),
       },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -242,7 +209,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('analyze-website error:', error);
     return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Analysis failed' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
