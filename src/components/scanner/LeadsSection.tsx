@@ -45,6 +45,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [generatingLeadId, setGeneratingLeadId] = useState<string | null>(null);
+  const [analyzingLeadId, setAnalyzingLeadId] = useState<string | null>(null);
   const [savingLeadId, setSavingLeadId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
