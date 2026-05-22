@@ -37,15 +37,24 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     const run = (async () => {
       try {
-        // supabase-js auto-refreshes tokens; just read the current session.
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
+        // supabase-js auto-refreshes on a timer, but if we land here right after
+        // the token expired (e.g. tab was backgrounded), the cached session can
+        // still be stale. Detect that and force a refresh before invoking.
+        let { data: sessionData } = await supabase.auth.getSession();
+        let token = sessionData.session?.access_token;
+        const expiresAt = sessionData.session?.expires_at ?? 0;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (!token || expiresAt - nowSec < 30) {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          token = refreshed.session?.access_token ?? undefined;
+        }
         if (!token) {
           setSubscribed(false);
           setPlan(null);
           setSubscriptionEnd(null);
           return;
         }
+
 
         const { data, error } = await supabase.functions.invoke('check-subscription', {
           headers: { Authorization: `Bearer ${token}` },
