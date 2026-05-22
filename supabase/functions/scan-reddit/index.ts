@@ -10,7 +10,8 @@ const corsHeaders = {
 
 const RATE_LIMIT_MINUTES = 5;
 const BATCH_SIZE = 6;
-const PASS1_THRESHOLD = 25;
+const PASS1_THRESHOLD = 35; // raised from 25 to send fewer posts to expensive Pass 2
+const PASS2_MAX_POSTS = 15; // hard cap on Pass-2 deep analyses per scan
 const MIN_CONTENT_LENGTH = 50;
 const TIMEOUT_MS = 50_000; // 50s guard — return partial results before edge function dies
 const MAX_FIRECRAWL_CALLS = 7;
