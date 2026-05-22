@@ -35,7 +35,7 @@ export default function Glossary() {
         title={
           <span className="text-[clamp(32px,5vw,56px)] font-bold leading-[1.1] text-white">
             Reddit Marketing{' '}
-            <span className="italic font-serif">Glossary</span>
+            <span className="italic">Glossary</span>
           </span>
         }
         subtitle="Every term you need to know about Reddit lead generation, AI-powered marketing, and social selling — explained simply."
