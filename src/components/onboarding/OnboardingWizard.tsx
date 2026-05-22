@@ -259,6 +259,7 @@ export default function OnboardingWizard() {
               {/* Step 2: Plan Selection */}
               {step === 2 && (
                 <div className="space-y-4 animate-fade-in">
+                  <LiveLeadsCard productName={data.product_name} />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {(Object.entries(SUBSCRIPTION_TIERS) as [SubscriptionPlan, typeof SUBSCRIPTION_TIERS[SubscriptionPlan]][]).map(([key, tier]) => {
                       const isSelected = data.selected_plan === key;
