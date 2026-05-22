@@ -396,7 +396,7 @@ function LiveLeadsCard({ productName }: { productName: string }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <Flame className="w-5 h-5 text-primary shrink-0 self-center" />
-            <span className="text-3xl sm:text-4xl font-semibold text-foreground leading-none tabular-nums">
+            <span className="font-serif text-3xl sm:text-4xl font-semibold text-foreground leading-none tabular-nums">
               <AnimatedCounter value={count} duration={900} />
             </span>
             <span className="text-sm sm:text-[15px] text-foreground/80">
