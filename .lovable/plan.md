@@ -1,45 +1,46 @@
 ## Goal
 
-Remove the autopilot / background scanning feature so the app is **manual-only**: users click "Scan Now" to find leads, nothing runs in the background.
+Make onboarding reliably set the app up for scanning:
+1. The website URL analysis on Step 1 should populate every profile field the scanner uses.
+2. By the time the user lands on the Scanner, 5 relevant subreddits are already monitored — no manual selection.
+
+## Current behavior
+
+- Step 1 (`OnboardingWizard.handleAnalyzeAndContinue`) already calls `firecrawlApi.analyzeWebsite` and writes the returned fields to `profiles`. If Firecrawl/Qwen fails, the failure is swallowed and the user advances to Step 2 with empty product fields, which makes later scans poor or empty.
+- Subreddit preselection only happens in `triggerAutoSetup`, which runs **after** the paywall completes (post-Stripe redirect). It also calls `scanForLeads('auto')`, which contradicts the manual-only constraint. If `discover-subreddits` fails silently, the user reaches Scanner with zero monitored subreddits and has to add them by hand.
 
 ## Changes
 
-### 1. Delete the scheduled-scan edge function
-- Delete `supabase/functions/scheduled-scan/index.ts`
-- Remove its `[functions.scheduled-scan]` block from `supabase/config.toml`
+### 1. `src/components/onboarding/OnboardingWizard.tsx` — Step 1 analyze flow
 
-### 2. Remove the cron job (if any)
-- Drop any `cron.job` that invokes `scheduled-scan` via a `pg_cron` insert. (If none exists, no-op.)
+- In `handleAnalyzeAndContinue`:
+  - If `analyzeWebsite` returns `success: false` or no usable fields, surface a toast ("We couldn't read your site — you can refine details later") and still let the user continue, but log which fields are empty.
+  - After the profile update succeeds, kick off `firecrawlApi.discoverSubreddits()` **in the background** (no await blocking the UI) and upsert the top 5 into `monitored_subreddits`. This uses the freshly-analyzed profile, so suggestions are good, and it runs in parallel with the user picking a plan + paying.
+  - Also kick off `autoGenerateKeywords()` at the same time so keywords are ready.
 
-### 3. Strip Auto-Pilot UI from the Scanner page (`src/pages/Scanner.tsx`)
-- Remove the Auto-Pilot toggle + label + divider (around lines 245–251)
-- Remove the `toggleAutoPilot` handler and the "Auto-pilot enabled/disabled" toast (line 140-142)
-- Remove the `autoPilotEnabled` and `nextScheduledScan` derived state (lines 200–201)
-- Remove the "Next: ..." next-scan countdown (lines 270–272) and the `getNextScanText` helper if unused
-- Remove the "Auto-pilot scanning 24/7" bullet from the upsell list (line 407)
-- Drop the `Zap` / `Switch` imports if no longer used
+### 2. `triggerAutoSetup` (called after paywall completes)
 
-### 4. Stop writing autopilot fields during onboarding (`src/components/onboarding/OnboardingWizard.tsx`)
-- Remove `auto_pilot_enabled` and `next_scheduled_scan_at` from the two profile updates (lines 55–56 and 180–181); drop the `nextScan` computation
-- Leaves the rest of onboarding untouched
+- Remove `await firecrawlApi.scanForLeads('auto')` — violates manual-scan-only constraint.
+- Keep the subreddit + keywords calls as a safety net (idempotent upsert), in case Step 1's background tasks didn't finish before Stripe checkout.
+- Make subreddit preselection robust: if `discoverSubreddits` returns `< 5` good suggestions, top up from a static fallback list (`SaaS`, `Entrepreneur`, `smallbusiness`, `startups`, `marketing`) so the user always lands on Scanner with 5 active subreddits.
 
-### 5. Default `auto_pilot_enabled` to `false` for existing users (migration)
-- `UPDATE profiles SET auto_pilot_enabled = false, next_scheduled_scan_at = NULL;`
-- `ALTER TABLE profiles ALTER COLUMN auto_pilot_enabled SET DEFAULT false;`
-- Columns are kept (not dropped) to avoid breaking the generated types file and any cached row reads. They simply become inert.
+### 3. `supabase/functions/discover-subreddits/index.ts`
 
-### 6. Update memory
-- Add a constraint memory: "Manual scanning only — no background/autopilot scans. `scheduled-scan` removed."
+- Return HTTP 200 with `{ success: false, error: '...' }` on logical errors (currently 401/404/500) so the client can handle gracefully and the fallback list can fill in.
+- No prompt changes.
+
+### 4. UX copy on Step 1
+
+- Update the helper text under Website URL: "We'll analyze your site and preselect 5 subreddits to monitor."
 
 ## Out of scope
-- No marketing-copy changes on the landing page (Testimonials/FeatureShowcase/Hero/Navbar still mention 24/7 — flag for a separate copy pass if you want)
-- Pricing & paywall untouched
-- `useCases.ts`, `glossary.ts`, `features.ts`, `alternatives.ts` content copy untouched (SEO pages)
+
+- No DB schema changes.
+- No changes to the paywall, Stripe flow, or `scan-reddit` itself.
+- No changes to the Scanner page UI.
 
 ## Confirm before I build
 
-Three quick decisions:
-
-1. **Landing page copy** still says things like "Auto-pilot scanning 24/7" and "monitors 24/7". Want me to rewrite that copy in this pass, or leave it for a follow-up?
-2. **Drop the DB columns** (`auto_pilot_enabled`, `scan_frequency_hours`, `next_scheduled_scan_at`) entirely, or keep them inert as proposed?
-3. **Free-plan daily limit + cooldown** stays as-is on manual scan, right?
+1. **Fallback subreddit list** — OK with `SaaS, Entrepreneur, smallbusiness, startups, marketing`, or do you want a different default set?
+2. **Block vs background on Step 1** — should subreddit discovery run in the background (user is not blocked, faster) or block "Analyze & Continue" until subreddits are saved (slower step 1, but guaranteed ready)? My recommendation: background.
+3. **Re-running on re-analyze** — if a returning user re-enters onboarding with an updated URL, should we clear their existing monitored subreddits and re-discover, or only top up to 5?
