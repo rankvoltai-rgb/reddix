@@ -204,7 +204,7 @@ export default function Dashboard() {
           <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <h2 className="font-display text-2xl text-foreground">Recent leads</h2>
+                <h2 className="text-2xl font-semibold text-foreground">Recent leads</h2>
                 <Badge variant="outline" className="text-xs font-normal">
                   {recentLeads.length} latest
                 </Badge>
