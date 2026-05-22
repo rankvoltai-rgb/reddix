@@ -222,9 +222,12 @@ export default function OnboardingWizard() {
       } as any,
       {
         onSuccess: async () => {
-          toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
-          triggerAutoSetup();
-          navigate('/dashboard');
+          toast({ title: 'Setup complete!', description: 'Configuring your scanner...' });
+          await Promise.race([
+            triggerAutoSetup(),
+            new Promise(resolve => setTimeout(resolve, 6000)),
+          ]);
+          navigate('/scanner');
         },
       }
     );
