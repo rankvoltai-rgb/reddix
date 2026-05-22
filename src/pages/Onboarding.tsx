@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { Loader2 } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { resolveDestination, safeNavigate } from '@/lib/routing';
 
 export default function Onboarding() {
   usePageMeta({
@@ -15,15 +17,21 @@ export default function Onboarding() {
   });
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  const { subscribed, isLoading: subLoading } = useSubscription();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/auth');
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    if (!profileLoading && profile?.onboarding_completed) navigate('/dashboard');
-  }, [profile, profileLoading, navigate]);
+    const dest = resolveDestination({
+      user,
+      profile,
+      subscribed,
+      authLoading,
+      profileLoading,
+      subLoading,
+    });
+    safeNavigate(location.pathname, dest, navigate);
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate, location.pathname]);
 
   if (authLoading || profileLoading) {
     return (
