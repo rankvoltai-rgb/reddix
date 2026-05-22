@@ -7,13 +7,31 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Search, MessageSquare, Users, TrendingUp, ExternalLink, Clock, Zap, ArrowRight } from 'lucide-react';
+import {
+  Loader2,
+  Search,
+  MessageSquare,
+  Users,
+  TrendingUp,
+  ExternalLink,
+  Clock,
+  Zap,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { BadgesSection } from '@/components/badges/BadgesSection';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { resolveDestination, safeNavigate } from '@/lib/routing';
+
+const intentDot: Record<string, string> = {
+  hot: 'bg-destructive',
+  warm: 'bg-amber-500',
+  research: 'bg-blue-500',
+  low: 'bg-muted-foreground/40',
+};
 
 export default function Dashboard() {
   usePageMeta({
@@ -32,7 +50,6 @@ export default function Dashboard() {
   const [isVerifyingSubscription, setIsVerifyingSubscription] = useState(false);
   const hasRefreshedRef = useRef(false);
 
-  // Handle checkout success - refresh subscription status (once).
   useEffect(() => {
     const checkoutSuccess = searchParams.get('checkout');
     if (checkoutSuccess === 'success' && !hasRefreshedRef.current) {
@@ -83,154 +100,198 @@ export default function Dashboard() {
   const hasSetup = stats && stats.activeSubreddits > 0;
   const hasLeads = stats && stats.totalLeads > 0;
 
+  const lastScan = profile?.last_scan_at ? new Date(profile.last_scan_at) : null;
+  const isRecentScan = lastScan ? Date.now() - lastScan.getTime() < 60 * 60 * 1000 : false;
+
+  const statItems = [
+    { label: 'Leads', value: stats?.totalLeads, icon: Users, color: 'text-primary' },
+    { label: 'Hot', value: stats?.hotLeads, icon: TrendingUp, color: 'text-destructive' },
+    { label: 'Replies ready', value: stats?.repliesReady, icon: MessageSquare, color: 'text-amber-500' },
+    { label: 'Subreddits', value: stats?.activeSubreddits, icon: Search, color: 'text-emerald-500' },
+  ];
+
   return (
     <DashboardLayout>
-      {/* Welcome */}
-      <div className="mb-10 animate-fade-in">
-        <h2 className="text-3xl font-semibold text-foreground tracking-tight">
-          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}
-        </h2>
-        <p className="text-muted-foreground mt-2 text-base">
-          Your Reddit lead generation dashboard is ready.
-        </p>
-        {profile?.last_scan_at && (
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            Last scan: {formatDistanceToNow(new Date(profile.last_scan_at), { addSuffix: true })}
-          </div>
-        )}
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-        {[
-          { label: 'Leads Found', value: stats?.totalLeads, icon: Users, color: 'text-primary', tint: 'stat-tint-primary' },
-          { label: 'Hot Leads', value: stats?.hotLeads, icon: TrendingUp, color: 'text-destructive', tint: 'stat-tint-destructive' },
-          { label: 'AI Replies Ready', value: stats?.repliesReady, icon: MessageSquare, color: 'text-warning', tint: 'stat-tint-warning' },
-          { label: 'Subreddits Tracked', value: stats?.activeSubreddits, icon: Search, color: 'text-success', tint: 'stat-tint-success' },
-        ].map((stat, index) => (
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="relative animate-fade-in">
           <div
-            key={stat.label}
-            className={`bg-card border border-border rounded-lg p-5 card-hover ${stat.tint} opacity-0 animate-stagger-fade-in`}
-            style={{ animationDelay: `${index * 75}ms` }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-background border border-border`}>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+            className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[640px] h-[280px] rounded-full blur-3xl opacity-40"
+            style={{ background: 'radial-gradient(closest-side, hsl(var(--primary) / 0.18), transparent 70%)' }}
+            aria-hidden
+          />
+          <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <h1 className="font-display text-4xl md:text-5xl text-foreground leading-[1.05] tracking-tight">
+                Welcome back{profile?.full_name ? <>, <em className="italic">{profile.full_name}</em></> : ''}
+              </h1>
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <p className="text-sm text-muted-foreground">Your Reddit lead command center.</p>
+                {lastScan && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted/60 backdrop-blur rounded-full text-xs text-muted-foreground border border-border/50">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isRecentScan ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40'}`} />
+                    <Clock className="w-3 h-3" />
+                    Last scan {formatDistanceToNow(lastScan, { addSuffix: true })}
+                  </span>
+                )}
               </div>
             </div>
-            {statsLoading ? (
-              <Skeleton className="h-9 w-14 mb-1" />
-            ) : (
-              <p className="text-3xl font-semibold text-foreground mb-1">
-                <AnimatedCounter value={stat.value ?? 0} />
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Achievement Badges */}
-      <BadgesSection />
-
-      {/* Dynamic Content Based on State */}
-      {statsLoading ? (
-        <div className="bg-card border border-border rounded-lg p-6">
-          <Skeleton className="h-6 w-48 mb-5" />
-          <div className="space-y-3">
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-          </div>
-        </div>
-      ) : !hasSetup ? (
-        /* No subreddits configured */
-        <div className="bg-card border border-border rounded-lg p-14 text-center">
-          <div className="max-w-sm mx-auto">
-            <div className="w-14 h-14 bg-muted rounded-full flex items-center justify-center mx-auto mb-5">
-              <Search className="w-7 h-7 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/leads')} className="gap-1.5 text-muted-foreground hover:text-foreground">
+                All leads
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+              <Button onClick={() => navigate('/scanner')} className="gap-2 shadow-lg shadow-primary/20">
+                <Sparkles className="w-4 h-4" />
+                Scan now
+              </Button>
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              No subreddits configured
-            </h3>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
-              Set up your first subreddit and keywords to start discovering leads automatically.
-            </p>
-            <Button onClick={() => navigate('/scanner')} className="gap-2">
-              Configure Scanner
-              <ArrowRight className="w-4 h-4" />
-            </Button>
           </div>
         </div>
-      ) : !hasLeads ? (
-        /* Has setup but no leads */
-        <div className="bg-card border border-border rounded-lg p-14 text-center">
-          <div className="max-w-sm mx-auto">
-            <div className="w-14 h-14 bg-muted rounded-full flex items-center justify-center mx-auto mb-5">
-              <Zap className="w-7 h-7 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              Ready to find leads
-            </h3>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
-              You have {stats?.activeSubreddits} subreddit{stats?.activeSubreddits !== 1 ? 's' : ''} configured. Run a scan to discover potential leads.
-            </p>
-            <Button onClick={() => navigate('/scanner')} className="gap-2">
-              Run First Scan
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Has leads - show recent leads */
-        <div className="bg-card border border-border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-semibold text-foreground">Recent Leads</h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/leads')} className="gap-1.5 text-muted-foreground hover:text-foreground">
-              View All
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          <div className="space-y-2">
-            {recentLeads.map((lead, index) => (
-              <a
-                key={lead.id}
-                href={lead.thread_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-4 rounded-lg lead-card opacity-0 animate-stagger-fade-in group"
-                style={{ animationDelay: `${index * 50 + 300}ms` }}
+
+        {/* Stats strip */}
+        <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border/60">
+            {statItems.map((stat, i) => (
+              <div
+                key={stat.label}
+                className="p-5 opacity-0 animate-stagger-fade-in"
+                style={{ animationDelay: `${i * 60}ms` }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground truncate">
-                        {lead.thread_title || 'Untitled Thread'}
-                      </p>
-                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    </div>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Badge variant="outline" className="text-xs font-normal">
-                        r/{lead.subreddit}
-                      </Badge>
-                      {lead.discovered_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(lead.discovered_at), { addSuffix: true })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant={getIntentBadgeVariant(lead.intent_level)} className="capitalize">
-                    {lead.intent_level || 'low'}
-                  </Badge>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  <stat.icon className={`w-3.5 h-3.5 ${stat.color}`} />
+                  {stat.label}
                 </div>
-              </a>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-14 mt-2" />
+                ) : (
+                  <p className="mt-1.5 text-3xl font-semibold text-foreground tabular-nums">
+                    <AnimatedCounter value={stat.value ?? 0} />
+                  </p>
+                )}
+              </div>
             ))}
           </div>
         </div>
-      )}
+
+        {/* Recent leads — visual anchor */}
+        {statsLoading ? (
+          <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-6">
+            <Skeleton className="h-6 w-48 mb-5" />
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          </div>
+        ) : !hasSetup ? (
+          <EmptyState
+            icon={Search}
+            title="No subreddits configured"
+            body="Set up your first subreddit and keywords to start discovering leads."
+            cta="Configure scanner"
+            onClick={() => navigate('/scanner')}
+          />
+        ) : !hasLeads ? (
+          <EmptyState
+            icon={Zap}
+            title="Ready to find leads"
+            body={`You have ${stats?.activeSubreddits} subreddit${stats?.activeSubreddits !== 1 ? 's' : ''} configured. Run a scan to discover potential buyers.`}
+            cta="Run first scan"
+            onClick={() => navigate('/scanner')}
+          />
+        ) : (
+          <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <h2 className="font-display text-2xl text-foreground">Recent leads</h2>
+                <Badge variant="outline" className="text-xs font-normal">
+                  {recentLeads.length} latest
+                </Badge>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/leads')} className="gap-1.5 text-muted-foreground hover:text-foreground">
+                View all
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+
+            <div className="space-y-1.5">
+              {recentLeads.map((lead, index) => (
+                <a
+                  key={lead.id}
+                  href={lead.thread_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block px-4 py-3.5 rounded-xl border border-transparent hover:border-border/60 hover:bg-background/60 hover:-translate-y-px transition-all opacity-0 animate-stagger-fade-in"
+                  style={{ animationDelay: `${index * 50 + 200}ms` }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span
+                        className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${intentDot[lead.intent_level || 'low']}`}
+                        aria-hidden
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground line-clamp-1">
+                            {lead.thread_title || 'Untitled thread'}
+                          </p>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground/70">r/{lead.subreddit}</span>
+                          {lead.discovered_at && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span>{formatDistanceToNow(new Date(lead.discovered_at), { addSuffix: true })}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant={getIntentBadgeVariant(lead.intent_level)} className="capitalize flex-shrink-0">
+                      {lead.intent_level || 'low'}
+                    </Badge>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Achievements */}
+        <BadgesSection />
+      </div>
     </DashboardLayout>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  body,
+  cta,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  cta: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-10 text-center">
+      <div className="max-w-sm mx-auto">
+        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <Icon className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <h3 className="font-display text-2xl text-foreground mb-2">{title}</h3>
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">{body}</p>
+        <Button onClick={onClick} className="gap-2">
+          {cta}
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
