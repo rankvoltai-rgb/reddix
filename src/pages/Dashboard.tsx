@@ -285,7 +285,7 @@ function EmptyState({
         <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon className="w-6 h-6 text-muted-foreground" />
         </div>
-        <h3 className="font-display text-2xl text-foreground mb-2">{title}</h3>
+        <h3 className="text-2xl font-semibold text-foreground mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground mb-6 leading-relaxed">{body}</p>
         <Button onClick={onClick} className="gap-2">
           {cta}
