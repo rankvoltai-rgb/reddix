@@ -227,30 +227,10 @@ export default function OnboardingWizard() {
   };
 
   const triggerAutoSetup = async () => {
-    try {
-      const { firecrawlApi } = await import('@/lib/api/firecrawl');
-      const keywordsResult = await firecrawlApi.autoGenerateKeywords();
-      if (keywordsResult.success) console.log(`Generated ${keywordsResult.inserted} keywords`);
-
-      const subredditsResult = await firecrawlApi.discoverSubreddits();
-      if (subredditsResult.success && subredditsResult.suggestions) {
-        const topSubreddits = subredditsResult.suggestions.slice(0, 5);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          for (const sub of topSubreddits) {
-            await supabase.from('monitored_subreddits').upsert({
-              user_id: user.id,
-              subreddit_name: sub.name.toLowerCase(),
-              is_active: true,
-            }, { onConflict: 'user_id,subreddit_name' }).select();
-          }
-        }
-      }
-
-      await firecrawlApi.scanForLeads('auto');
-    } catch (error) {
-      console.error('Auto-setup error:', error);
-    }
+    // Safety net after paywall — ensures keywords + 5 subreddits exist even if
+    // the background step-1 preseed didn't complete before checkout. No auto scan
+    // (manual-only constraint).
+    await preseedScannerSetup();
   };
 
   const progressPercentage = Math.round((step / TOTAL_STEPS) * 100);
