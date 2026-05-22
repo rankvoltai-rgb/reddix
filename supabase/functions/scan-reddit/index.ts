@@ -314,7 +314,7 @@ NEGATIVE SIGNALS (subtract points):
 - Post appears older than 30 days → -15
 
 POST TITLE: ${post.title}
-POST CONTENT: ${(post.markdown || post.description || '').slice(0, 3000)}
+POST CONTENT: ${(post.markdown || post.description || '').slice(0, 1200)}
 POST URL: ${post.url}`;
 
   try {
@@ -325,7 +325,8 @@ POST URL: ${post.url}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
+        max_tokens: 400,
         messages: [
           { role: 'system', content: 'Expert lead qualifier. Analyze and score Reddit posts.' },
           { role: 'user', content: prompt },
