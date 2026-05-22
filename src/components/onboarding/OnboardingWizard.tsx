@@ -53,10 +53,14 @@ export default function OnboardingWizard() {
           onboarding_completed: true,
         } as any,
         {
-          onSuccess: () => {
-            toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
-            triggerAutoSetup();
-            navigate('/dashboard', { replace: true });
+          onSuccess: async () => {
+            toast({ title: 'Setup complete!', description: 'Configuring your scanner...' });
+            // Await preseed (with timeout) so Scanner has subreddits ready.
+            await Promise.race([
+              triggerAutoSetup(),
+              new Promise(resolve => setTimeout(resolve, 6000)),
+            ]);
+            navigate('/scanner', { replace: true });
           },
         }
       );
@@ -218,9 +222,12 @@ export default function OnboardingWizard() {
       } as any,
       {
         onSuccess: async () => {
-          toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
-          triggerAutoSetup();
-          navigate('/dashboard');
+          toast({ title: 'Setup complete!', description: 'Configuring your scanner...' });
+          await Promise.race([
+            triggerAutoSetup(),
+            new Promise(resolve => setTimeout(resolve, 6000)),
+          ]);
+          navigate('/scanner');
         },
       }
     );
@@ -267,7 +274,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Website URL <span className="text-primary">*</span></label>
                     <Input placeholder="yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
-                    <p className="text-xs text-muted-foreground">We'll analyze your site and preselect 5 subreddits to monitor.</p>
+                    <p className="text-xs text-muted-foreground">We'll analyze your site, build your product profile, and preselect 5 subreddits — so you can scan immediately after subscribing.</p>
                   </div>
                 </div>
               )}

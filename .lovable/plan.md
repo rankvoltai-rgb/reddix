@@ -1,46 +1,51 @@
 ## Goal
 
-Make onboarding reliably set the app up for scanning:
-1. The website URL analysis on Step 1 should populate every profile field the scanner uses.
-2. By the time the user lands on the Scanner, 5 relevant subreddits are already monitored — no manual selection.
+Lock in the flow: Landing → Auth → Onboarding (analyze site with Gemini) → Subscribe → Scanner with 5 AI-picked subreddits already active. Clicking **Scan Now** uses the analyzed profile to find leads.
 
-## Current behavior
+## What's already in place
 
-- Step 1 (`OnboardingWizard.handleAnalyzeAndContinue`) already calls `firecrawlApi.analyzeWebsite` and writes the returned fields to `profiles`. If Firecrawl/Qwen fails, the failure is swallowed and the user advances to Step 2 with empty product fields, which makes later scans poor or empty.
-- Subreddit preselection only happens in `triggerAutoSetup`, which runs **after** the paywall completes (post-Stripe redirect). It also calls `scanForLeads('auto')`, which contradicts the manual-only constraint. If `discover-subreddits` fails silently, the user reaches Scanner with zero monitored subreddits and has to add them by hand.
+- Step 1 of `OnboardingWizard.tsx` calls `firecrawlApi.analyzeWebsite(url)` and writes the analyzed product fields to `profiles`.
+- `preseedScannerSetup()` runs in the background after Step 1 — calls `discoverSubreddits()` (already on Gemini via Lovable AI) + `autoGenerateKeywords()`, merges AI picks with a fallback list, and upserts 5 into `monitored_subreddits`.
+- `triggerAutoSetup()` re-runs `preseedScannerSetup()` after Stripe checkout as a safety net.
+- `scan-reddit` reads the profile + subreddits + keywords on manual Scan Now.
 
 ## Changes
 
-### 1. `src/components/onboarding/OnboardingWizard.tsx` — Step 1 analyze flow
+### 1. Swap `analyze-website` from OpenRouter/Qwen → Lovable AI (Gemini)
+`supabase/functions/analyze-website/index.ts` currently uses `OPENROUTER_API_KEY` with `qwen/qwen3.6-plus`. Replace with:
+- Endpoint: `https://ai.gateway.lovable.dev/v1/chat/completions`
+- Auth: `LOVABLE_API_KEY` (already provisioned)
+- Model: `google/gemini-3-flash-preview` (fast, cheap, plenty for structured extraction)
+- Use **tool calling** for structured output instead of `response_format: json_schema` (per Lovable AI guidance) — tool name `extract_product_profile` with the same field set we have today (company_description, target_audience, value_proposition, key_features[], competitor_names[], pricing_model, unique_differentiators, common_objections[], success_stories, tone, suggested_keywords[]).
+- Keep Firecrawl for scraping the page markdown — only the LLM step changes.
+- Keep the silent-error contract: return HTTP 200 with `{ success: false, error: '...' }` on 429/402/parse failures.
 
-- In `handleAnalyzeAndContinue`:
-  - If `analyzeWebsite` returns `success: false` or no usable fields, surface a toast ("We couldn't read your site — you can refine details later") and still let the user continue, but log which fields are empty.
-  - After the profile update succeeds, kick off `firecrawlApi.discoverSubreddits()` **in the background** (no await blocking the UI) and upsert the top 5 into `monitored_subreddits`. This uses the freshly-analyzed profile, so suggestions are good, and it runs in parallel with the user picking a plan + paying.
-  - Also kick off `autoGenerateKeywords()` at the same time so keywords are ready.
+Benefit: one less paid API, faster, consistent with `discover-subreddits` and `auto-generate-keywords` which already use Lovable AI.
 
-### 2. `triggerAutoSetup` (called after paywall completes)
+### 2. Post-checkout lands on Scanner, not Dashboard
+`OnboardingWizard.handleComplete` and the `checkout=success` effect both `navigate('/dashboard')`. Change both to `navigate('/scanner')` so the user immediately sees their 5 preselected subreddits + Scan Now.
 
-- Remove `await firecrawlApi.scanForLeads('auto')` — violates manual-scan-only constraint.
-- Keep the subreddit + keywords calls as a safety net (idempotent upsert), in case Step 1's background tasks didn't finish before Stripe checkout.
-- Make subreddit preselection robust: if `discoverSubreddits` returns `< 5` good suggestions, top up from a static fallback list (`SaaS`, `Entrepreneur`, `smallbusiness`, `startups`, `marketing`) so the user always lands on Scanner with 5 active subreddits.
+### 3. Close the preseed race
+`preseedScannerSetup()` is fire-and-forget. Two safeguards:
+- On post-checkout success, **await** `triggerAutoSetup()` with a ~6s max timeout before navigating.
+- On `Scanner.tsx` mount, if `subreddits.length === 0` and `profile.product_url` exists, run the preseed once (idempotent upsert) before the first scan.
 
-### 3. `supabase/functions/discover-subreddits/index.ts`
-
-- Return HTTP 200 with `{ success: false, error: '...' }` on logical errors (currently 401/404/500) so the client can handle gracefully and the fallback list can fill in.
-- No prompt changes.
-
-### 4. UX copy on Step 1
-
-- Update the helper text under Website URL: "We'll analyze your site and preselect 5 subreddits to monitor."
+### 4. Copy tweak (Step 1 helper text)
+"We'll analyze your site, build your product profile, and preselect 5 subreddits — so you can scan immediately after subscribing."
 
 ## Out of scope
 
 - No DB schema changes.
-- No changes to the paywall, Stripe flow, or `scan-reddit` itself.
-- No changes to the Scanner page UI.
+- No changes to `scan-reddit`, `discover-subreddits`, Stripe, or pricing.
+- Manual-scan-only constraint stays — no auto scan after checkout.
+- `OPENROUTER_API_KEY` secret stays in place (not deleted) in case other functions still use it; we just stop calling it from `analyze-website`.
 
-## Confirm before I build
+## Files touched
 
-1. **Fallback subreddit list** — OK with `SaaS, Entrepreneur, smallbusiness, startups, marketing`, or do you want a different default set?
-2. **Block vs background on Step 1** — should subreddit discovery run in the background (user is not blocked, faster) or block "Analyze & Continue" until subreddits are saved (slower step 1, but guaranteed ready)? My recommendation: background.
-3. **Re-running on re-analyze** — if a returning user re-enters onboarding with an updated URL, should we clear their existing monitored subreddits and re-discover, or only top up to 5?
+- `supabase/functions/analyze-website/index.ts` — swap to Lovable AI + Gemini with tool calling.
+- `src/components/onboarding/OnboardingWizard.tsx` — redirect to `/scanner`, await safety-net preseed with timeout, copy tweak.
+- `src/pages/Scanner.tsx` — idempotent preseed on mount when empty.
+
+## One confirmation
+
+OK to proceed with `google/gemini-3-flash-preview` for the analyzer, or do you want the stronger `google/gemini-2.5-pro` (slightly slower/more expensive, marginally better extraction on messy sites)?

@@ -96,6 +96,47 @@ const Scanner = () => {
     }
   }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
 
+  // Safety net: if user landed on Scanner with zero subreddits but has a product_url,
+  // run preseed once so they always have a working setup.
+  const preseedRanRef = useRef(false);
+  useEffect(() => {
+    if (preseedRanRef.current) return;
+    if (subredditsLoading || profileLoading) return;
+    if (!user || !profile?.product_url) return;
+    if (subreddits.length > 0) return;
+
+    preseedRanRef.current = true;
+    (async () => {
+      try {
+        const FALLBACK = ['SaaS', 'Entrepreneur', 'smallbusiness', 'startups', 'marketing'];
+        const result = await firecrawlApi.discoverSubreddits().catch(() => null);
+        const fromAI = (result?.success && result.suggestions)
+          ? result.suggestions.slice(0, 5).map((s: any) => s.name)
+          : [];
+        const merged: string[] = [];
+        const seen = new Set<string>();
+        for (const name of [...fromAI, ...FALLBACK]) {
+          const clean = (name || '').replace(/^r\//i, '').toLowerCase().trim();
+          if (clean && !seen.has(clean)) {
+            seen.add(clean);
+            merged.push(clean);
+            if (merged.length >= 5) break;
+          }
+        }
+        for (const sub of merged) {
+          await supabase.from('monitored_subreddits').upsert({
+            user_id: user.id,
+            subreddit_name: sub,
+            is_active: true,
+          }, { onConflict: 'user_id,subreddit_name' });
+        }
+        queryClient.invalidateQueries({ queryKey: ['subreddits', user.id] });
+      } catch (e) {
+        console.error('Scanner preseed error:', e);
+      }
+    })();
+  }, [user, profile, profileLoading, subreddits, subredditsLoading, queryClient]);
+
   // Mutations — must be before any early return (Rules of Hooks)
   const addSubreddit = useMutation({
     mutationFn: async (name: string) => {
