@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -13,6 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { BadgesSection } from '@/components/badges/BadgesSection';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { resolveDestination, safeNavigate } from '@/lib/routing';
 
 export default function Dashboard() {
   usePageMeta({
@@ -26,21 +27,18 @@ export default function Dashboard() {
   const { subscribed, isLoading: subLoading, refreshSubscription } = useSubscription();
   const { stats, recentLeads, isLoading: statsLoading } = useDashboardStats();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isVerifyingSubscription, setIsVerifyingSubscription] = useState(false);
   const hasRefreshedRef = useRef(false);
 
-  // Handle checkout success - refresh subscription status
+  // Handle checkout success - refresh subscription status (once).
   useEffect(() => {
     const checkoutSuccess = searchParams.get('checkout');
     if (checkoutSuccess === 'success' && !hasRefreshedRef.current) {
       hasRefreshedRef.current = true;
       setIsVerifyingSubscription(true);
-      
-      // Clear the query param
       setSearchParams({}, { replace: true });
-      
-      // Refresh subscription status
       refreshSubscription().finally(() => {
         setIsVerifyingSubscription(false);
       });
@@ -48,23 +46,17 @@ export default function Dashboard() {
   }, [searchParams, setSearchParams, refreshSubscription]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-      return;
-    }
-
-    // Check subscription (allow free plan users through)
-    if (!subLoading && !isVerifyingSubscription && !subscribed && profile) {
-      navigate('/onboarding');
-      return;
-    }
-
-    // Check onboarding completion
-    if (!profileLoading && profile && subscribed && !profile.onboarding_completed) {
-      navigate('/onboarding');
-      return;
-    }
-  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, isVerifyingSubscription, navigate]);
+    if (isVerifyingSubscription) return;
+    const dest = resolveDestination({
+      user,
+      profile,
+      subscribed,
+      authLoading,
+      profileLoading,
+      subLoading,
+    });
+    safeNavigate(location.pathname, dest, navigate);
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, isVerifyingSubscription, navigate, location.pathname]);
 
   if (authLoading || profileLoading || subLoading || isVerifyingSubscription) {
     return (
