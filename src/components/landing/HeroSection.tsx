@@ -23,7 +23,7 @@ export function HeroSection() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 50% 50%, hsl(0, 75%, 50%) 0%, hsl(0, 70%, 32%) 100%)',
+            'radial-gradient(circle at 50% 50%, #FF4500 0%, #CC3700 100%)',
         }}
       />
 
