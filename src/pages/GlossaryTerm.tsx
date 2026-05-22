@@ -102,7 +102,7 @@ export default function GlossaryTerm() {
         title={
           <span className="text-[clamp(32px,5vw,56px)] font-bold leading-[1.1] text-white">
             What is{' '}
-            <span className="italic font-serif">{term.title}</span>?
+            <span className="italic">{term.title}</span>?
           </span>
         }
         subtitle={term.shortDef}
