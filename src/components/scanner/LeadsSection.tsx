@@ -192,6 +192,28 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     }
   };
 
+  const handleAnalyze = async (leadId: string) => {
+    setAnalyzingLeadId(leadId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data, error } = await supabase.functions.invoke('analyze-lead', {
+        body: { lead_id: leadId },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error || !data?.success) {
+        console.error('Analyze failed:', data?.error || error?.message);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['leads', userId] });
+      toast({ title: "Lead analyzed", description: `${data.lead.intent_level?.toUpperCase()} — score ${data.lead.intent_score}` });
+    } catch (err) {
+      console.error('Analyze error:', err);
+    } finally {
+      setAnalyzingLeadId(null);
+    }
+  };
+
   const handleDismiss = async (leadId: string) => {
     try {
       const { error } = await supabase
