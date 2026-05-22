@@ -1,38 +1,78 @@
-## Goal
+## Where credits are spent today
 
-On `/onboarding` step 2 (plan selection), add a prominent card above the 3 plan tiles that says something like:
+Quick audit of the four AI-using edge functions:
 
-> **We found 247 high-intent leads in the last hour** asking for solutions like **{their business}**.
+| Function | Model | Calls per invocation | Notes |
+|---|---|---|---|
+| `scan-reddit` — `generateSearchTerms` | gemini-2.5-flash-lite | 1 (cached) | Already cached on profile ✅ |
+| `scan-reddit` — `batchScorePass1` | gemini-2.5-flash-lite | ~3 (30 posts / BATCH_SIZE) | Cheap, fine |
+| `scan-reddit` — `deepAnalyzePost` | **gemini-2.5-flash** | 1 per Pass-1 qualifier (up to ~30) | **Biggest cost driver** |
+| `generate-reply` | gemini-2.5-flash | **2 per click** (analyze + generate, possibly ×3 variants) | Second biggest |
+| `auto-generate-keywords` | gemini-2.5-flash | 1 per onboarding | Fine |
+| `discover-subreddits` | gemini-2.5-flash | 1 per click | Fine |
 
-This adds FOMO/social proof right at the paywall decision point.
+The two functions doing most of the spend are `scan-reddit` (every scheduled + manual scan) and `generate-reply` (every reply click).
 
-## What to build
+---
 
-**Location:** `src/components/onboarding/OnboardingWizard.tsx`, inside the `step === 2` block, rendered just above the existing `grid grid-cols-1 sm:grid-cols-3 gap-4` plan grid.
+## Plan — 6 changes, biggest impact first
 
-**Card design (matches Framer-grade + brand red):**
-- Full-width card, glassmorphism: `rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background backdrop-blur-xl p-5`
-- Left: pulsing red dot + small uppercase label "Live on Reddit · last 60 min"
-- Center headline: large number (Instrument Serif) + "high-intent leads detected" + their `product_name` inlined ("…asking for solutions like Acme Analytics")
-- Right: tiny sparkline / 3 mini avatars of subreddit chips (r/SaaS, r/Entrepreneur, r/smallbusiness) for visual texture
-- Subtle red glow behind the number
+### 1. Downgrade Pass-2 deep analysis to `gemini-2.5-flash-lite`
+`deepAnalyzePost` runs up to ~30 times per scan on `gemini-2.5-flash`. Flash-lite is ~5–8× cheaper and the task (scoring with a rubric + short notes via tool calling) is well within its ability. Pass-1 already uses flash-lite successfully.
+- File: `supabase/functions/scan-reddit/index.ts` line 327
+- Expected savings: **~60–70% of scan cost**.
 
-**Where the number comes from:**
-Real aggregate count from the `leads` table — `count(*) where created_at > now() - interval '1 hour'` across all users. This is honest social proof (platform-wide activity), not a fake. If the count is < 50, floor it to a believable baseline (e.g. `Math.max(count, 127)`) so the message always lands during low-traffic moments.
+### 2. Tighten Pass-1 → Pass-2 funnel
+Currently `PASS1_THRESHOLD` lets a lot of posts through to the expensive Pass 2. Raise the bar and cap Pass-2 to the top N.
+- Raise `PASS1_THRESHOLD` (e.g. 25 → 35).
+- Cap Pass-2 to top 15 posts by Pass-1 score (`pass1Qualified.sort(...).slice(0,15)`).
+- Expected savings: **~30–50% of Pass-2 calls**.
 
-Fetch via a lightweight `supabase.from('leads').select('*', { count: 'exact', head: true }).gte('created_at', oneHourAgo)` call in a `useEffect` when step 2 mounts. Cache for the session.
+### 3. Truncate prompt inputs in Pass-2
+`deepAnalyzePost` sends up to 3,000 chars of post content. Reddit posts rarely need >1,200 chars to score intent.
+- Change `.slice(0, 3000)` → `.slice(0, 1200)` (line 316).
+- Expected savings: **~30–50% of input tokens on Pass-2**.
 
-**Fallback:** if the query fails (silent error policy), show a static "200+ high-intent leads detected in the last hour" — no error toast.
+### 4. Collapse `generate-reply` two-stage pipeline
+Today every reply does an Analyze call **then** a Generate call. Merge them into a single call that uses tool-calling to return both the analysis JSON and reply variants. One round-trip instead of two.
+- File: `supabase/functions/generate-reply/index.ts`
+- Also downgrade analyze step to flash-lite if kept separate.
+- Expected savings: **~50% of reply cost**.
 
-## Technical notes
+### 5. Cache replies per lead
+A user often clicks "Generate reply" multiple times on the same lead while iterating. Store the generated variants on the `leads` row (or a `lead_replies` table) and reuse on subsequent opens unless the user clicks "Regenerate".
+- DB: add `cached_replies jsonb`, `replies_generated_at timestamptz` to `leads`.
+- Edge function: short-circuit if cache exists and `regenerate=false`.
+- Expected savings: **~70% of repeat reply calls**.
 
-- Add a small `useLeadsLastHour()` hook (inline or in `src/hooks/`) returning `{ count, isLoading }`.
-- Number animates from 0 → final value with a 600ms count-up (reuse `AnimatedCounter` from `src/components/ui/animated-counter.tsx`).
-- Personalize with `data.product_name` (already in wizard state); fall back to "your product" if empty.
-- Mobile: stack vertically, keep the number prominent.
-- No new dependencies.
+### 6. Reduce scheduled-scan frequency for inactive users
+If `scheduled-scan` runs on a fixed cron for every user, idle users still consume AI. Skip the scan when:
+- The user hasn't logged in for 7+ days, OR
+- The last scan returned 0 new posts (back off to daily instead of hourly).
+
+Expected savings: variable but meaningful for the long tail.
+
+---
+
+## Smaller wins (optional)
+
+- **Re-use the cached search terms TTL more aggressively** — currently regenerated whenever cache misses. Extend to 14 days.
+- **Skip Pass-2 when Pass-1 confidence is already 80+** — promote directly as a hot lead with Pass-1 notes.
+- **Set `max_tokens` explicitly** on every AI call (e.g. 400 for analysis, 300 for reply variants) to bound runaway responses.
+- **Add a `gemini-2.5-flash-lite` fallback** when a 429 is hit on the larger model, instead of failing the whole scan.
+
+---
 
 ## Out of scope
 
-- No backend changes, no new RLS policies (leads table is already readable per existing policies — will verify during build).
-- No changes to plan tiles, CTA, or pricing copy.
+- No UI changes — these are all backend edge-function and DB tweaks.
+- No paywall/quota changes (already in place).
+- No model switching to non-Lovable providers (would require external API keys).
+
+## Suggested order
+
+1. Quick wins first: changes **#1, #2, #3** in `scan-reddit` — one file, ~10 minute edit, biggest dollar impact.
+2. Then **#4 + #5** in `generate-reply` (requires a small migration for the cache).
+3. Then **#6** in `scheduled-scan`.
+
+Want me to implement all six, or just the scan-reddit quick wins (#1–3) first?
