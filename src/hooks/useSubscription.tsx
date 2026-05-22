@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { SubscriptionPlan } from '@/lib/subscriptionTiers';
@@ -14,14 +14,18 @@ interface SubscriptionContextType {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [subscribed, setSubscribed] = useState(false);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Collapse concurrent invocations into a single in-flight call.
+  const inFlightRef = useRef<Promise<void> | null>(null);
+
   const checkSubscription = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setSubscribed(false);
       setPlan(null);
       setSubscriptionEnd(null);
@@ -29,89 +33,58 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    try {
-      // First try to get current session
-      let { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      // If session exists but might be expired, try to refresh it
-      if (sessionData.session) {
-        const tokenExpiry = sessionData.session.expires_at;
-        const now = Math.floor(Date.now() / 1000);
-        
-        // If token is expired or about to expire (within 60 seconds), refresh it
-        if (tokenExpiry && tokenExpiry - now < 60) {
-          const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.error('Failed to refresh session:', refreshError);
-            // Sign out the user if refresh fails
-            await supabase.auth.signOut();
-            setSubscribed(false);
-            setPlan(null);
-            setSubscriptionEnd(null);
-            setIsLoading(false);
-            return;
-          }
-          sessionData = refreshedData;
-        }
-      }
-      
-      if (sessionError || !sessionData.session?.access_token) {
-        console.error('Failed to get session:', sessionError);
-        setSubscribed(false);
-        setPlan(null);
-        setSubscriptionEnd(null);
-        setIsLoading(false);
-        return;
-      }
+    if (inFlightRef.current) return inFlightRef.current;
 
-      const invokeCheck = async (accessToken: string) => {
-        return await supabase.functions.invoke('check-subscription', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+    const run = (async () => {
+      try {
+        // supabase-js auto-refreshes tokens; just read the current session.
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          setSubscribed(false);
+          setPlan(null);
+          setSubscriptionEnd(null);
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('check-subscription', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-      };
 
-      let { data, error } = await invokeCheck(sessionData.session.access_token);
-
-      // If the backend says the JWT is expired/invalid, refresh and retry once.
-      if (error && (error as any)?.status === 401) {
-        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-        if (!refreshError && refreshed.session?.access_token) {
-          ({ data, error } = await invokeCheck(refreshed.session.access_token));
+        if (error) {
+          setSubscribed(false);
+          setPlan(null);
+          setSubscriptionEnd(null);
+        } else {
+          setSubscribed(data?.subscribed ?? false);
+          setPlan(data?.plan ?? null);
+          setSubscriptionEnd(data?.subscriptionEnd ?? null);
         }
-      }
-
-      if (error) {
-        console.error('Error checking subscription:', error);
+      } catch {
         setSubscribed(false);
         setPlan(null);
         setSubscriptionEnd(null);
-      } else {
-        setSubscribed(data?.subscribed ?? false);
-        setPlan(data?.plan ?? null);
-        setSubscriptionEnd(data?.subscriptionEnd ?? null);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to check subscription:', err);
-      setSubscribed(false);
-      setPlan(null);
-      setSubscriptionEnd(null);
+    })();
+
+    inFlightRef.current = run;
+    try {
+      await run;
     } finally {
-      setIsLoading(false);
+      inFlightRef.current = null;
     }
-  }, [user]);
+  }, [userId]);
 
   const refreshSubscription = useCallback(async () => {
     setIsLoading(true);
     await checkSubscription();
   }, [checkSubscription]);
 
-  // Check subscription on mount and when session changes
   useEffect(() => {
     checkSubscription();
   }, [checkSubscription]);
-
 
   return (
     <SubscriptionContext.Provider value={{ subscribed, plan, subscriptionEnd, isLoading, refreshSubscription }}>

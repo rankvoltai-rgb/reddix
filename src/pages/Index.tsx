@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useCanonical } from '@/hooks/useCanonical';
+import { resolveDestination, safeNavigate } from '@/lib/routing';
 import { Loader2 } from 'lucide-react';
 
 import { Navbar } from '@/components/landing/Navbar';
@@ -23,15 +25,26 @@ import { Footer } from '@/components/landing/Footer';
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  const { subscribed, isLoading: subLoading } = useSubscription();
   useCanonical('/');
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (authLoading || profileLoading) return;
-    if (user) {
-      navigate(!profile?.onboarding_completed ? '/onboarding' : '/dashboard');
+    // Only redirect signed-in users away from the landing page.
+    if (!user) return;
+    const dest = resolveDestination({
+      user,
+      profile,
+      subscribed,
+      authLoading,
+      profileLoading,
+      subLoading,
+    });
+    if (dest && dest !== '/auth') {
+      safeNavigate(location.pathname, dest, navigate);
     }
-  }, [user, authLoading, profile, profileLoading, navigate]);
+  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate, location.pathname]);
 
   if (authLoading) {
     return (
