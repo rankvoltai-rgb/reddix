@@ -15,8 +15,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
+      return new Response(JSON.stringify({ success: false, error: 'No authorization header' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -29,8 +29,8 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -43,8 +43,8 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      return new Response(JSON.stringify({ error: 'Profile not found' }), {
-        status: 404,
+      return new Response(JSON.stringify({ success: false, error: 'Profile not found' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
