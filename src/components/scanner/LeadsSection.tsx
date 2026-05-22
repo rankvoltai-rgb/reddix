@@ -306,9 +306,11 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
                   key={lead.id}
                   lead={lead}
                   onGenerateReply={handleGenerateReply}
+                  onAnalyze={handleAnalyze}
                   onSaveLead={handleSaveLead}
                   onDismiss={handleDismiss}
                   isGenerating={generatingLeadId === lead.id}
+                  isAnalyzing={analyzingLeadId === lead.id}
                   isSaving={savingLeadId === lead.id}
                 />
               ))}
