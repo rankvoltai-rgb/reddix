@@ -53,10 +53,14 @@ export default function OnboardingWizard() {
           onboarding_completed: true,
         } as any,
         {
-          onSuccess: () => {
-            toast({ title: 'Setup complete!', description: 'Configuring your scanner automatically...' });
-            triggerAutoSetup();
-            navigate('/dashboard', { replace: true });
+          onSuccess: async () => {
+            toast({ title: 'Setup complete!', description: 'Configuring your scanner...' });
+            // Await preseed (with timeout) so Scanner has subreddits ready.
+            await Promise.race([
+              triggerAutoSetup(),
+              new Promise(resolve => setTimeout(resolve, 6000)),
+            ]);
+            navigate('/scanner', { replace: true });
           },
         }
       );
