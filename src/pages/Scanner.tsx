@@ -238,155 +238,206 @@ const Scanner = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4">
-        {/* ── Command Bar ── */}
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-          <Button
-            onClick={handleScan}
-            disabled={isScanning || !isConfigured || scanCooldown}
-            className="gap-2"
-          >
-            {isScanning ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Scanning…
-              </>
-            ) : scanCooldown ? (
-              <>
-                <Clock className="h-4 w-4" />
-                Wait {cooldownSeconds}s
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4" />
-                Scan Now
-              </>
-            )}
-          </Button>
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        {/* ── Hero: Scan Command ── */}
+        <section className="relative overflow-hidden rounded-2xl border bg-card">
+          {/* subtle red glow */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
 
-          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
-            {/* Free plan daily count indicator */}
-            {isFreePlan && (
-              <Badge
-                variant={todayLeadCount >= FREE_DAILY_LIMIT ? "destructive" : "outline"}
-                className="gap-1 text-xs"
-              >
-                <Flame className="h-3 w-3" />
-                {todayLeadCount}/{FREE_DAILY_LIMIT} leads today
-              </Badge>
-            )}
-            {lastScan && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatDistanceToNow(lastScan, { addSuffix: true })}
-              </span>
-            )}
-            {isConfigured && (
-              <span>{subreddits.length} subreddit{subreddits.length !== 1 ? 's' : ''}</span>
-            )}
-          </div>
-        </div>
-
-        {/* ── Product Context Pill ── */}
-        {profile?.product_name && (
-          <div className="flex items-center gap-2 px-1">
-            <Badge variant="outline" className="gap-1.5 text-xs font-normal py-1">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Scanning for: <span className="font-medium">{profile.product_name}</span>
-            </Badge>
-            <button
-              onClick={() => navigate("/settings")}
-              className="text-xs text-muted-foreground hover:text-primary transition-colors"
-            >
-              Edit
-            </button>
-          </div>
-        )}
-
-        {/* ── Config Strip ── */}
-        <div className="space-y-3 rounded-lg border bg-card p-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary">r/</span>
-              <span className="text-sm font-medium">Subreddits</span>
-              <Dialog open={discoveryOpen} onOpenChange={setDiscoveryOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="ml-auto gap-1 h-7 text-xs">
-                    <Sparkles className="h-3 w-3" />
-                    Discover
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      Smart Subreddit Discovery
-                    </DialogTitle>
-                  </DialogHeader>
-                  {user && (
-                    <SubredditDiscovery
-                      userId={user.id}
-                      existingSubreddits={subreddits.map(s => s.subreddit_name.toLowerCase())}
-                      onAddSubreddit={(name) => addSubreddit.mutate(name)}
-                    />
-                  )}
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {subredditsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                subreddits.map((sub) => (
-                  <Badge key={sub.id} variant="secondary" className="gap-1 pr-1">
-                    r/{sub.subreddit_name}
-                    <button
-                      onClick={() => removeSubreddit.mutate(sub.id)}
-                      className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))
-              )}
-              <div className="flex items-center gap-1">
-                <Input
-                  placeholder="Add subreddit…"
-                  value={newSubreddit}
-                  onChange={(e) => setNewSubreddit(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && newSubreddit && addSubreddit.mutate(newSubreddit)}
-                  className="h-7 w-36 text-xs"
-                />
-                <Button
-                  onClick={() => newSubreddit && addSubreddit.mutate(newSubreddit)}
-                  disabled={!newSubreddit || addSubreddit.isPending}
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
+          <div className="relative grid gap-6 p-6 md:p-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+            {/* Left: title + meta */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Reddit Intent Scanner
+                </span>
               </div>
+
+              <h1 className="font-serif text-3xl leading-tight tracking-tight md:text-4xl">
+                Find buyers talking about <span className="italic text-primary">your product</span> right now.
+              </h1>
+
+              {profile?.product_name && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="gap-1.5 rounded-full py-1 text-xs font-normal">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    Scanning for <span className="font-medium">{profile.product_name}</span>
+                  </Badge>
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                  >
+                    Edit context
+                  </button>
+                </div>
+              )}
             </div>
-            {subreddits.length === 0 && (
-              <div className="flex flex-wrap gap-1">
+
+            {/* Right: scan action + stats */}
+            <div className="space-y-4">
+              <Button
+                onClick={handleScan}
+                disabled={isScanning || !isConfigured || scanCooldown}
+                size="lg"
+                className="group h-14 w-full justify-center gap-2 rounded-xl text-base shadow-lg shadow-primary/20"
+              >
+                {isScanning ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Scanning Reddit…
+                  </>
+                ) : scanCooldown ? (
+                  <>
+                    <Clock className="h-5 w-5" />
+                    Ready in {cooldownSeconds}s
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-5 w-5 transition-transform group-hover:scale-110" />
+                    Scan Now
+                  </>
+                )}
+              </Button>
+
+              <div className="grid grid-cols-3 divide-x divide-border rounded-xl border bg-background/60 backdrop-blur">
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-lg font-semibold tabular-nums">
+                    {subredditsLoading ? '—' : subreddits.length}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Subreddits
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-lg font-semibold tabular-nums">
+                    {isFreePlan ? `${todayLeadCount}/${FREE_DAILY_LIMIT}` : '∞'}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Today
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-xs font-medium text-center leading-tight">
+                    {lastScan ? formatDistanceToNow(lastScan, { addSuffix: false }) : 'Never'}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Last scan
+                  </span>
+                </div>
+              </div>
+
+              {!isConfigured && !subredditsLoading && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Add at least one subreddit below to start scanning.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Subreddit Manager ── */}
+        <section className="rounded-2xl border bg-card p-5 md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <h2 className="font-serif text-lg tracking-tight">Monitored subreddits</h2>
+              <p className="text-xs text-muted-foreground">
+                Where Reddix listens for buying intent.
+              </p>
+            </div>
+            <Dialog open={discoveryOpen} onOpenChange={setDiscoveryOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 rounded-full">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Discover
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Smart Subreddit Discovery
+                  </DialogTitle>
+                </DialogHeader>
+                {user && (
+                  <SubredditDiscovery
+                    userId={user.id}
+                    existingSubreddits={subreddits.map(s => s.subreddit_name.toLowerCase())}
+                    onAddSubreddit={(name) => addSubreddit.mutate(name)}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {subredditsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              subreddits.map((sub) => (
+                <Badge
+                  key={sub.id}
+                  variant="secondary"
+                  className="group gap-1 rounded-full pl-3 pr-1 py-1 text-xs transition-colors hover:bg-secondary/80"
+                >
+                  <span className="text-muted-foreground">r/</span>
+                  <span className="font-medium">{sub.subreddit_name}</span>
+                  <button
+                    onClick={() => removeSubreddit.mutate(sub.id)}
+                    className="ml-1 rounded-full p-0.5 opacity-50 transition-opacity hover:bg-background hover:opacity-100"
+                    aria-label="Remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))
+            )}
+
+            <div className="flex items-center gap-1 rounded-full border bg-background pl-2 pr-1 py-0.5 focus-within:ring-1 focus-within:ring-ring">
+              <span className="text-xs text-muted-foreground">r/</span>
+              <Input
+                placeholder="add subreddit"
+                value={newSubreddit}
+                onChange={(e) => setNewSubreddit(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && newSubreddit && addSubreddit.mutate(newSubreddit)}
+                className="h-7 w-28 border-0 px-1 text-xs shadow-none focus-visible:ring-0"
+              />
+              <Button
+                onClick={() => newSubreddit && addSubreddit.mutate(newSubreddit)}
+                disabled={!newSubreddit || addSubreddit.isPending}
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 rounded-full"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {subreddits.length === 0 && !subredditsLoading && (
+            <div className="mt-4 space-y-2 border-t pt-4">
+              <p className="text-xs text-muted-foreground">Quick add:</p>
+              <div className="flex flex-wrap gap-1.5">
                 {["webdev", "SaaS", "startups", "Entrepreneur", "smallbusiness"].map((sub) => (
                   <Badge
                     key={sub}
                     variant="outline"
-                    className="cursor-pointer hover:bg-accent text-xs"
+                    className="cursor-pointer rounded-full text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
                     onClick={() => addSubreddit.mutate(sub)}
                   >
                     + r/{sub}
                   </Badge>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
+        </section>
 
-        {/* ── Leads (Hero) ── */}
-        {user && <LeadsSection userId={user.id} isScanning={isScanning} />}
+        {/* ── Leads ── */}
+        <section>
+          {user && <LeadsSection userId={user.id} isScanning={isScanning} />}
+        </section>
       </div>
 
       {/* ── Upgrade Dialog ── */}
