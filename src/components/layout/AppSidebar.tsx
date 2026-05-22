@@ -45,15 +45,15 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50">
-      <SidebarHeader className="p-3 border-b border-border/50">
+    <Sidebar collapsible="icon" className="border-r border-white/10 bg-primary">
+      <SidebarHeader className="p-3 border-b border-white/10">
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3 px-2")}>
           <img src={logo} alt="Ai Co-pilot" className="h-8 w-8 flex-shrink-0" />
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-foreground tracking-tight text-sm">Lead Generation</span>
+              <span className="font-semibold text-white tracking-tight text-sm">Lead Generation</span>
               {profile?.product_name && (
-                <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                <span className="text-xs text-white/60 truncate max-w-[140px]">
                   {profile.product_name}
                 </span>
               )}
@@ -72,20 +72,20 @@ export function AppSidebar() {
                     <TooltipTrigger asChild>
                       <SidebarMenuButton asChild disabled={item.disabled}>
                         {item.disabled ? (
-                          <div className="flex items-center gap-3 px-3 py-2.5 text-muted-foreground/60 cursor-not-allowed rounded-lg">
+                          <div className="flex items-center gap-3 px-3 py-2.5 text-white/40 cursor-not-allowed rounded-lg">
                             <item.icon className="h-4 w-4 flex-shrink-0" />
                             {!isCollapsed && (
                               <>
                                 <span className="text-sm">{item.title}</span>
-                                <span className="ml-auto text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded-full font-medium">Soon</span>
+                                <span className="ml-auto text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full font-medium">Soon</span>
                               </>
                             )}
                           </div>
                         ) : (
                           <NavLink 
                             to={item.url} 
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors" 
-                            activeClassName="bg-primary/10 text-primary font-medium"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" 
+                            activeClassName="bg-white/20 text-white font-medium"
                           >
                             <item.icon className="h-4 w-4 flex-shrink-0" />
                             {!isCollapsed && <span className="text-sm">{item.title}</span>}
@@ -96,7 +96,7 @@ export function AppSidebar() {
                     {isCollapsed && (
                       <TooltipContent side="right" className="flex items-center gap-2">
                         {item.title}
-                        {item.disabled && <span className="text-xs text-muted-foreground">(Soon)</span>}
+                        {item.disabled && <span className="text-xs text-white/50">(Soon)</span>}
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -107,11 +107,11 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border/50">
+      <SidebarFooter className="p-4 border-t border-white/10">
         <div className="flex items-center justify-between gap-2">
           {!isCollapsed && (
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-sm font-medium text-foreground truncate">
+              <span className="text-sm font-medium text-white truncate">
                 {profile?.email || "User"}
               </span>
             </div>
@@ -122,7 +122,7 @@ export function AppSidebar() {
                 variant="ghost" 
                 size="icon" 
                 onClick={handleSignOut} 
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                className="text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
