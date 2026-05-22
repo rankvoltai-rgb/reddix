@@ -43,9 +43,11 @@ export type Database = {
       }
       leads: {
         Row: {
+          analyzed_at: string | null
           author: string | null
           cached_replies: Json | null
           created_at: string | null
+          deep_analyzed: boolean
           discovered_at: string | null
           id: string
           intent_level: Database["public"]["Enums"]["intent_level"] | null
@@ -62,9 +64,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          analyzed_at?: string | null
           author?: string | null
           cached_replies?: Json | null
           created_at?: string | null
+          deep_analyzed?: boolean
           discovered_at?: string | null
           id?: string
           intent_level?: Database["public"]["Enums"]["intent_level"] | null
@@ -81,9 +85,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          analyzed_at?: string | null
           author?: string | null
           cached_replies?: Json | null
           created_at?: string | null
+          deep_analyzed?: boolean
           discovered_at?: string | null
           id?: string
           intent_level?: Database["public"]["Enums"]["intent_level"] | null

@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X } from "lucide-react";
+import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -12,9 +12,11 @@ type Lead = Tables<"leads">;
 interface LeadCardProps {
   lead: Lead;
   onGenerateReply: (leadId: string) => void;
+  onAnalyze?: (leadId: string) => void;
   onSaveLead?: (leadId: string) => void;
   onDismiss?: (leadId: string) => void;
   isGenerating: boolean;
+  isAnalyzing?: boolean;
   isSaving?: boolean;
   showSaveButton?: boolean;
 }
@@ -42,12 +44,13 @@ const intentConfig = {
   },
 };
 
-export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGenerating, isSaving = false, showSaveButton = true }: LeadCardProps) {
+export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismiss, isGenerating, isAnalyzing = false, isSaving = false, showSaveButton = true }: LeadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
+  const isAnalyzed = (lead as any).deep_analyzed === true;
   const intentLevel = lead.intent_level || "low";
   const config = intentConfig[intentLevel as keyof typeof intentConfig] || intentConfig.low;
-  
+
   const truncatedContent = lead.thread_content && lead.thread_content.length > 150
     ? lead.thread_content.slice(0, 150) + "..."
     : lead.thread_content;
@@ -55,7 +58,10 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
   const shouldShowExpand = lead.thread_content && lead.thread_content.length > 150;
 
   return (
-    <Card className={cn("border-l-4 hover:shadow-md transition-shadow group relative", config.borderColor)}>
+    <Card className={cn(
+      "border-l-4 hover:shadow-md transition-shadow group relative",
+      isAnalyzed ? config.borderColor : "border-l-muted-foreground/30"
+    )}>
       {/* Dismiss button */}
       {onDismiss && (
         <button
@@ -71,19 +77,27 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
           <div className="flex-1 min-w-0">
             {/* Intent & Score Row */}
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className={cn("text-xs font-medium", config.className)}>
-                {config.label}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Score: {lead.intent_score || 0}
-              </span>
+              {isAnalyzed ? (
+                <>
+                  <Badge variant="outline" className={cn("text-xs font-medium", config.className)}>
+                    {config.label}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Score: {lead.intent_score || 0}
+                  </span>
+                </>
+              ) : (
+                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-dashed">
+                  Unanalyzed
+                </Badge>
+              )}
               {lead.status && lead.status !== "new" && (
                 <Badge variant="secondary" className="text-xs capitalize">
                   {lead.status}
                 </Badge>
               )}
             </div>
-            
+
             {/* Title */}
             <h3 className="font-semibold text-base leading-tight line-clamp-2 mb-2">
               {lead.thread_title || "Untitled Post"}
@@ -106,12 +120,22 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
               </div>
             )}
             
+            {/* AI Analysis Notes (only if deep-analyzed) */}
+            {isAnalyzed && lead.relevance_notes && (
+              <div className="mb-3 rounded-md border-l-2 border-primary/40 bg-muted/40 px-3 py-2">
+                <p className="text-xs italic text-muted-foreground leading-relaxed">
+                  <Brain className="inline h-3 w-3 mr-1 text-primary" />
+                  {lead.relevance_notes}
+                </p>
+              </div>
+            )}
+
             {/* Meta Row */}
             <div className="flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal">
                 r/{lead.subreddit}
               </Badge>
-              {lead.author && (
+              {lead.author && lead.author !== 'unknown' && (
                 <span className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   u/{lead.author}
@@ -124,7 +148,7 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
               )}
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 shrink-0">
             <div className="flex gap-2">
@@ -152,9 +176,9 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
                 className="w-9 h-9 p-0"
                 asChild
               >
-                <a 
-                  href={lead.thread_url} 
-                  target="_blank" 
+                <a
+                  href={lead.thread_url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   title="Open in Reddit"
                 >
@@ -162,6 +186,27 @@ export function LeadCard({ lead, onGenerateReply, onSaveLead, onDismiss, isGener
                 </a>
               </Button>
             </div>
+
+            {!isAnalyzed && onAnalyze && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => onAnalyze(lead.id)}
+                disabled={isAnalyzing}
+                title="Run AI deep analysis (1 credit)"
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Analyze
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button
               size="sm"
               className="gap-1.5"

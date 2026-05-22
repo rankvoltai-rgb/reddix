@@ -1,51 +1,65 @@
-## Goal
+## Problem
 
-Lock in the flow: Landing → Auth → Onboarding (analyze site with Gemini) → Subscribe → Scanner with 5 AI-picked subreddits already active. Clicking **Scan Now** uses the analyzed profile to find leads.
+Two things to address:
 
-## What's already in place
+1. **Scans often return 0 (or partial) leads.** The most recent `scan-reddit` invocation hit the 50s edge-function timeout. Pass 1 (batch score) + Pass 2 (deep per-post Gemini analysis, up to 15 sequential-ish calls) burns the budget — when timeout fires, partial results are saved but the deep-analysis step usually never runs, so very few or zero leads land in the DB.
+2. **AI costs scale with every scan**, even on posts the user never opens. The user wants control: scan should be cheap and broad, and deep analysis should happen only when the user clicks a button on a lead card.
 
-- Step 1 of `OnboardingWizard.tsx` calls `firecrawlApi.analyzeWebsite(url)` and writes the analyzed product fields to `profiles`.
-- `preseedScannerSetup()` runs in the background after Step 1 — calls `discoverSubreddits()` (already on Gemini via Lovable AI) + `autoGenerateKeywords()`, merges AI picks with a fallback list, and upserts 5 into `monitored_subreddits`.
-- `triggerAutoSetup()` re-runs `preseedScannerSetup()` after Stripe checkout as a safety net.
-- `scan-reddit` reads the profile + subreddits + keywords on manual Scan Now.
+## Plan
 
-## Changes
+### 1. Make `scan-reddit` cheap and fast (remove Pass 2)
 
-### 1. Swap `analyze-website` from OpenRouter/Qwen → Lovable AI (Gemini)
-`supabase/functions/analyze-website/index.ts` currently uses `OPENROUTER_API_KEY` with `qwen/qwen3.6-plus`. Replace with:
-- Endpoint: `https://ai.gateway.lovable.dev/v1/chat/completions`
-- Auth: `LOVABLE_API_KEY` (already provisioned)
-- Model: `google/gemini-3-flash-preview` (fast, cheap, plenty for structured extraction)
-- Use **tool calling** for structured output instead of `response_format: json_schema` (per Lovable AI guidance) — tool name `extract_product_profile` with the same field set we have today (company_description, target_audience, value_proposition, key_features[], competitor_names[], pricing_model, unique_differentiators, common_objections[], success_stories, tone, suggested_keywords[]).
-- Keep Firecrawl for scraping the page markdown — only the LLM step changes.
-- Keep the silent-error contract: return HTTP 200 with `{ success: false, error: '...' }` on 429/402/parse failures.
+In `supabase/functions/scan-reddit/index.ts`:
+- Keep Firecrawl search + dedupe + seen-posts logic as-is.
+- Keep Pass 1 batch scoring (cheap, `gemini-2.5-flash-lite`, ~5 batches of 6 posts) to filter obvious junk.
+- **Remove Pass 2 entirely** from the scan path.
+- Insert every Pass-1-qualified post (score ≥ `PASS1_THRESHOLD`, e.g. lower it back to 25 so we surface more candidates) as a lead with:
+  - `intent_score` = pass-1 score
+  - `intent_level` = `'research'` (provisional, neutral)
+  - `relevance_notes` = `null`
+  - new flag `deep_analyzed = false`
+- Drop `PASS2_MAX_POSTS` cap; raise candidate pool to ~40 posts.
+- Result: scan completes in ~15–20s instead of timing out, and consistently returns a populated lead list.
 
-Benefit: one less paid API, faster, consistent with `discover-subreddits` and `auto-generate-keywords` which already use Lovable AI.
+### 2. New `analyze-lead` edge function (per-card deep analysis)
 
-### 2. Post-checkout lands on Scanner, not Dashboard
-`OnboardingWizard.handleComplete` and the `checkout=success` effect both `navigate('/dashboard')`. Change both to `navigate('/scanner')` so the user immediately sees their 5 preselected subreddits + Scan Now.
+Create `supabase/functions/analyze-lead/index.ts`:
+- POST `{ lead_id }`, auth required, validates the lead belongs to caller.
+- Loads the lead's stored `thread_title` + `thread_content` + caller's profile.
+- Calls existing `deepAnalyzePost` logic (Gemini 2.5 flash-lite, tool-calling) — exactly one AI call.
+- Updates the lead row: `intent_score`, `intent_level` (hot/warm/research/low), `relevance_notes`, `deep_analyzed = true`, `analyzed_at = now()`.
+- Returns 200 with `{ success: true, lead: {...} }` or `{ success: false, error }` per the silent-error contract.
 
-### 3. Close the preseed race
-`preseedScannerSetup()` is fire-and-forget. Two safeguards:
-- On post-checkout success, **await** `triggerAutoSetup()` with a ~6s max timeout before navigating.
-- On `Scanner.tsx` mount, if `subreddits.length === 0` and `profile.product_url` exists, run the preseed once (idempotent upsert) before the first scan.
+### 3. Schema migration
 
-### 4. Copy tweak (Step 1 helper text)
-"We'll analyze your site, build your product profile, and preselect 5 subreddits — so you can scan immediately after subscribing."
+Add two columns to `public.leads`:
+- `deep_analyzed boolean DEFAULT false`
+- `analyzed_at timestamptz`
+
+(RLS unchanged — user-scoped policies already cover it.)
+
+### 4. LeadCard UI: "Analyze" button
+
+In `src/components/scanner/LeadCard.tsx`:
+- When `lead.deep_analyzed === false`: hide the score badge, show provisional `🔍 Unanalyzed` intent label, add an **Analyze** button (Sparkles icon) alongside Reply/Save.
+- When clicked: call `supabase.functions.invoke('analyze-lead', { body: { lead_id } })`, show spinner, then invalidate the leads query so the card re-renders with the real intent label, score, and `relevance_notes`.
+- When `deep_analyzed === true`: render the badge/score exactly as today, and surface `relevance_notes` as a small italic line under the content preview.
+
+### 5. Scanner copy tweak
+
+Tiny meta line above the leads list: "Scans surface candidates fast — click **Analyze** on any card to spend 1 AI credit and get a full intent score + notes." Reinforces the cost model.
 
 ## Out of scope
 
-- No DB schema changes.
-- No changes to `scan-reddit`, `discover-subreddits`, Stripe, or pricing.
-- Manual-scan-only constraint stays — no auto scan after checkout.
-- `OPENROUTER_API_KEY` secret stays in place (not deleted) in case other functions still use it; we just stop calling it from `analyze-website`.
+- No changes to `generate-reply`, billing, onboarding, Stripe, or subreddit preseed.
+- No changes to scan rate limit, search strategies, or Firecrawl quotas.
+- Existing leads in the DB simply behave as `deep_analyzed = false` (default) and get an Analyze button.
 
 ## Files touched
 
-- `supabase/functions/analyze-website/index.ts` — swap to Lovable AI + Gemini with tool calling.
-- `src/components/onboarding/OnboardingWizard.tsx` — redirect to `/scanner`, await safety-net preseed with timeout, copy tweak.
-- `src/pages/Scanner.tsx` — idempotent preseed on mount when empty.
-
-## One confirmation
-
-OK to proceed with `google/gemini-3-flash-preview` for the analyzer, or do you want the stronger `google/gemini-2.5-pro` (slightly slower/more expensive, marginally better extraction on messy sites)?
+- `supabase/functions/scan-reddit/index.ts` (remove Pass 2, lower threshold, insert as provisional)
+- `supabase/functions/analyze-lead/index.ts` (new)
+- `src/components/scanner/LeadCard.tsx` (Analyze button, provisional state, notes display)
+- `src/components/scanner/LeadsSection.tsx` (wire `onAnalyze` mutation)
+- `src/pages/Scanner.tsx` (one-line helper copy above leads)
+- Migration: `leads.deep_analyzed`, `leads.analyzed_at`
