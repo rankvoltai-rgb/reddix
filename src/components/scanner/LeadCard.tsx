@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X } from "lucide-react";
+import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -12,9 +12,11 @@ type Lead = Tables<"leads">;
 interface LeadCardProps {
   lead: Lead;
   onGenerateReply: (leadId: string) => void;
+  onAnalyze?: (leadId: string) => void;
   onSaveLead?: (leadId: string) => void;
   onDismiss?: (leadId: string) => void;
   isGenerating: boolean;
+  isAnalyzing?: boolean;
   isSaving?: boolean;
   showSaveButton?: boolean;
 }
