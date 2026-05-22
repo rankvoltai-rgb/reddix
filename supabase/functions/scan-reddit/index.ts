@@ -680,8 +680,14 @@ serve(async (req) => {
         }
       }
 
-      const pass1Qualified = postsToAnalyze.filter((_, idx) => (pass1Results.get(idx) || 0) >= PASS1_THRESHOLD);
-      console.log(`Pass 1: ${pass1Qualified.length}/${postsToAnalyze.length} posts scored >= ${PASS1_THRESHOLD}`);
+      const pass1QualifiedAll = postsToAnalyze
+        .map((post, idx) => ({ post, score: pass1Results.get(idx) || 0 }))
+        .filter(x => x.score >= PASS1_THRESHOLD)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, PASS2_MAX_POSTS);
+      const pass1Qualified = pass1QualifiedAll.map(x => x.post);
+      console.log(`Pass 1: ${pass1Qualified.length} posts kept (>= ${PASS1_THRESHOLD}, capped at ${PASS2_MAX_POSTS}) of ${postsToAnalyze.length}`);
+
 
       // Check time budget before Pass 2
       if (Date.now() - startTime > TIMEOUT_MS - 5_000) {
