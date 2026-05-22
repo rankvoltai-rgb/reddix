@@ -680,55 +680,29 @@ serve(async (req) => {
         }
       }
 
-      const pass1QualifiedAll = postsToAnalyze
+      const pass1Qualified = postsToAnalyze
         .map((post, idx) => ({ post, score: pass1Results.get(idx) || 0 }))
         .filter(x => x.score >= PASS1_THRESHOLD)
         .sort((a, b) => b.score - a.score)
-        .slice(0, PASS2_MAX_POSTS);
-      const pass1Qualified = pass1QualifiedAll.map(x => x.post);
-      console.log(`Pass 1: ${pass1Qualified.length} posts kept (>= ${PASS1_THRESHOLD}, capped at ${PASS2_MAX_POSTS}) of ${postsToAnalyze.length}`);
+        .slice(0, PASS1_MAX_LEADS);
+      console.log(`Pass 1: ${pass1Qualified.length} posts kept (>= ${PASS1_THRESHOLD}) of ${postsToAnalyze.length}`);
 
+      // ── Insert as provisional leads (deep analysis on-demand) ──
+      for (const { post, score } of pass1Qualified) {
+        const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
+        const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
 
-      // Check time budget before Pass 2
-      if (Date.now() - startTime > TIMEOUT_MS - 5_000) {
-        console.log('TIMEOUT WARNING: Skipping Pass 2 — not enough time');
-        return;
-      }
-
-      // ── PASS 2: Deep Analysis (all in parallel) ──
-      console.log('=== PASS 2: Deep Analysis ===');
-      const analyses = await Promise.all(
-        pass1Qualified.map(post => deepAnalyzePost(post, profile, lovableKey))
-      );
-
-      for (let j = 0; j < pass1Qualified.length; j++) {
-        const post = pass1Qualified[j];
-        const analysis = analyses[j];
-        if (!analysis) continue;
-
-        console.log(`Deep: "${post.title.slice(0, 40)}..." => Score: ${analysis.score}, Level: ${analysis.level}`);
-
-        if (analysis.score >= PASS1_THRESHOLD) {
-          const subredditMatch = post.url.match(/reddit\.com\/r\/([^\/]+)/);
-          const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
-
-          let intentLevel: 'low' | 'warm' | 'hot' | 'research' = 'low';
-          if (analysis.score >= 70) intentLevel = 'hot';
-          else if (analysis.score >= 40) intentLevel = 'warm';
-          else if (analysis.score >= 25) intentLevel = 'research';
-
-          leadsCollected.push({
-            thread_url: post.url,
-            thread_title: post.title,
-            thread_content: (post.markdown || post.description || '').slice(0, 5000),
-            subreddit,
-            author: analysis.author || 'unknown',
-            intent_score: analysis.score,
-            intent_level: intentLevel,
-            relevance_notes: analysis.notes,
-            user_id: userId,
-          });
-        }
+        leadsCollected.push({
+          thread_url: post.url,
+          thread_title: post.title,
+          thread_content: (post.markdown || post.description || '').slice(0, 5000),
+          subreddit,
+          author: 'unknown',
+          intent_score: score,
+          intent_level: 'research', // provisional — user clicks Analyze for real classification
+          relevance_notes: '',
+          user_id: userId,
+        });
       }
     };
 
