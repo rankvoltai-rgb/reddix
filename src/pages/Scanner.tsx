@@ -255,7 +255,7 @@ const Scanner = () => {
                 </span>
               </div>
 
-              <h1 className="font-serif text-3xl leading-tight tracking-tight md:text-4xl">
+              <h1 className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
                 Find buyers talking about <span className="italic text-primary">your product</span> right now.
               </h1>
 
@@ -341,7 +341,7 @@ const Scanner = () => {
         <section className="rounded-2xl border bg-card p-5 md:p-6">
           <div className="mb-4 flex items-center justify-between gap-2">
             <div className="space-y-0.5">
-              <h2 className="font-serif text-lg tracking-tight">Monitored subreddits</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Monitored subreddits</h2>
               <p className="text-xs text-muted-foreground">
                 Where Reddix listens for buying intent.
               </p>
