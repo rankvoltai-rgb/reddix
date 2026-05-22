@@ -23,7 +23,7 @@ export function HeroSection() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 50% 50%, #FF4500 0%, #CC3700 100%)',
+            'radial-gradient(circle at 50% 50%, #FF1A1A 0%, #E60000 100%)',
         }}
       />
 
@@ -81,7 +81,7 @@ export function HeroSection() {
         {/* Bottom Right — Reddit Logo Card */}
         <div className="absolute bottom-[22%] right-[4%] xl:right-[5%] -rotate-[10deg] hover:rotate-0 transition-transform duration-700 floating">
           <div className="p-5 rounded-3xl bg-white/[0.07] border border-white/20 backdrop-blur-xl shadow-2xl flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#FF4500]/30 flex items-center justify-center shrink-1">
+            <div className="w-14 h-14 rounded-2xl bg-[#FF1A1A]/30 flex items-center justify-center shrink-1">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white">
                 <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
                 <circle cx="8.5" cy="10.5" r="1.2" fill="currentColor"/>
