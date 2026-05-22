@@ -15,8 +15,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
+      return new Response(JSON.stringify({ success: false, error: 'No authorization header' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -29,8 +29,8 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -43,8 +43,8 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      return new Response(JSON.stringify({ error: 'Profile not found' }), {
-        status: 404,
+      return new Response(JSON.stringify({ success: false, error: 'Profile not found' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -70,8 +70,8 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), {
-        status: 500,
+      return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -138,29 +138,29 @@ Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI API error:', response.status, errorText);
-      
+
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
+        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded. Please try again later.' }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add credits.' }), {
-          status: 402,
+        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted.' }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({ error: 'AI service error' }), {
-        status: 500,
+
+      return new Response(JSON.stringify({ success: false, error: 'AI service error' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    
+
     console.log('AI response received, parsing...');
 
     // Extract JSON from response
@@ -174,8 +174,8 @@ Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError, content);
-      return new Response(JSON.stringify({ error: 'Failed to parse AI suggestions' }), {
-        status: 500,
+      return new Response(JSON.stringify({ success: false, error: 'Failed to parse AI suggestions' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -192,8 +192,8 @@ Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`
   } catch (error) {
     console.error('Error in discover-subreddits:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

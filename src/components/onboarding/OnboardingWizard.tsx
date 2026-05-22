@@ -116,8 +116,9 @@ export default function OnboardingWizard() {
         if (d.unique_differentiators) profileUpdate.unique_differentiators = d.unique_differentiators;
         if ((d as any).tone) profileUpdate.tone = (d as any).tone;
 
-
-        toast({ title: '✨ Website analyzed!', description: 'Your product details have been auto-filled.' });
+        toast({ title: '✨ Website analyzed!', description: 'Product details auto-filled. Finding subreddits in the background…' });
+      } else {
+        toast({ title: 'Heads up', description: "We couldn't fully read your site — you can refine details later in Settings." });
       }
     } catch (error) {
       console.error('Analyze error:', error);
@@ -126,12 +127,54 @@ export default function OnboardingWizard() {
     updateProfile(profileUpdate as any, {
       onSuccess: () => {
         setIsAnalyzing(false);
+        // Background: discover + preselect 5 subreddits and generate keywords
+        // using freshly-analyzed profile, in parallel with plan selection.
+        void preseedScannerSetup();
         setStep(2);
       },
       onError: () => {
         setIsAnalyzing(false);
       },
     });
+  };
+
+  const preseedScannerSetup = async () => {
+    try {
+      const { firecrawlApi } = await import('@/lib/api/firecrawl');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [, subredditsResult] = await Promise.all([
+        firecrawlApi.autoGenerateKeywords().catch(() => null),
+        firecrawlApi.discoverSubreddits().catch(() => null),
+      ]);
+
+      const FALLBACK = ['SaaS', 'Entrepreneur', 'smallbusiness', 'startups', 'marketing'];
+      const fromAI = (subredditsResult?.success && subredditsResult.suggestions)
+        ? subredditsResult.suggestions.slice(0, 5).map(s => s.name)
+        : [];
+
+      const merged: string[] = [];
+      const seen = new Set<string>();
+      for (const name of [...fromAI, ...FALLBACK]) {
+        const clean = (name || '').replace(/^r\//i, '').toLowerCase().trim();
+        if (clean && !seen.has(clean)) {
+          seen.add(clean);
+          merged.push(clean);
+          if (merged.length >= 5) break;
+        }
+      }
+
+      for (const sub of merged) {
+        await supabase.from('monitored_subreddits').upsert({
+          user_id: user.id,
+          subreddit_name: sub,
+          is_active: true,
+        }, { onConflict: 'user_id,subreddit_name' });
+      }
+    } catch (error) {
+      console.error('preseedScannerSetup error:', error);
+    }
   };
 
   const canProceed = () => {
@@ -184,30 +227,10 @@ export default function OnboardingWizard() {
   };
 
   const triggerAutoSetup = async () => {
-    try {
-      const { firecrawlApi } = await import('@/lib/api/firecrawl');
-      const keywordsResult = await firecrawlApi.autoGenerateKeywords();
-      if (keywordsResult.success) console.log(`Generated ${keywordsResult.inserted} keywords`);
-
-      const subredditsResult = await firecrawlApi.discoverSubreddits();
-      if (subredditsResult.success && subredditsResult.suggestions) {
-        const topSubreddits = subredditsResult.suggestions.slice(0, 5);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          for (const sub of topSubreddits) {
-            await supabase.from('monitored_subreddits').upsert({
-              user_id: user.id,
-              subreddit_name: sub.name.toLowerCase(),
-              is_active: true,
-            }, { onConflict: 'user_id,subreddit_name' }).select();
-          }
-        }
-      }
-
-      await firecrawlApi.scanForLeads('auto');
-    } catch (error) {
-      console.error('Auto-setup error:', error);
-    }
+    // Safety net after paywall — ensures keywords + 5 subreddits exist even if
+    // the background step-1 preseed didn't complete before checkout. No auto scan
+    // (manual-only constraint).
+    await preseedScannerSetup();
   };
 
   const progressPercentage = Math.round((step / TOTAL_STEPS) * 100);
@@ -244,7 +267,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Website URL <span className="text-primary">*</span></label>
                     <Input placeholder="yourproduct.com" value={data.product_url} onChange={(e) => updateField('product_url', e.target.value)} className="h-11" />
-                    <p className="text-xs text-muted-foreground">We'll analyze your website to auto-fill your product details</p>
+                    <p className="text-xs text-muted-foreground">We'll analyze your site and preselect 5 subreddits to monitor.</p>
                   </div>
                 </div>
               )}
