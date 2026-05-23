@@ -98,6 +98,13 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const sub = await verifySubscription(user.email ?? "");
+    if (!sub.subscribed) {
+      return new Response(JSON.stringify({ success: false, error: 'Active subscription required.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+
     const { lead_id } = await req.json();
     if (!lead_id) {
       return new Response(JSON.stringify({ success: false, error: 'lead_id required' }),
