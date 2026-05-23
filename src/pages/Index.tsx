@@ -91,7 +91,7 @@ export default function Index() {
     "@type": "Organization",
     "name": "Reddix",
     "url": "https://reddix.info",
-    "logo": "https://reddix.info/placeholder.svg",
+    "logo": "https://reddix.info/favicon.png",
     "sameAs": []
   };
 
