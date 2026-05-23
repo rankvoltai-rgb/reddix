@@ -56,7 +56,10 @@ export default function UseCaseDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <Navbar />
+
       <UseCaseHero useCase={useCase} />
       <UseCaseScenario useCase={useCase} />
       <UseCaseBenefits useCase={useCase} />
