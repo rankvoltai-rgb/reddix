@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -7,20 +7,23 @@ import { useCanonical } from '@/hooks/useCanonical';
 import { resolveDestination, safeNavigate } from '@/lib/routing';
 import { Loader2 } from 'lucide-react';
 
+// Eager: above-the-fold for first paint.
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { LogoBar } from '@/components/landing/LogoBar';
-import { ProductDemo } from '@/components/landing/ProductDemo';
-import { StatsBar } from '@/components/landing/StatsBar';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { FeatureShowcase } from '@/components/landing/FeatureShowcase';
-import { FeaturesGrid } from '@/components/landing/FeaturesGrid';
-import { Testimonials } from '@/components/landing/Testimonials';
-import { ComparisonSection } from '@/components/landing/ComparisonSection';
-import { PricingSection } from '@/components/landing/PricingSection';
-import { FAQSection } from '@/components/landing/FAQSection';
-import { FinalCTA } from '@/components/landing/FinalCTA';
-import { Footer } from '@/components/landing/Footer';
+
+// Lazy: everything below the fold streams in after hero is interactive.
+const LogoBar = lazy(() => import('@/components/landing/LogoBar').then(m => ({ default: m.LogoBar })));
+const ProductDemo = lazy(() => import('@/components/landing/ProductDemo').then(m => ({ default: m.ProductDemo })));
+const StatsBar = lazy(() => import('@/components/landing/StatsBar').then(m => ({ default: m.StatsBar })));
+const HowItWorks = lazy(() => import('@/components/landing/HowItWorks').then(m => ({ default: m.HowItWorks })));
+const FeatureShowcase = lazy(() => import('@/components/landing/FeatureShowcase').then(m => ({ default: m.FeatureShowcase })));
+const FeaturesGrid = lazy(() => import('@/components/landing/FeaturesGrid').then(m => ({ default: m.FeaturesGrid })));
+const Testimonials = lazy(() => import('@/components/landing/Testimonials').then(m => ({ default: m.Testimonials })));
+const ComparisonSection = lazy(() => import('@/components/landing/ComparisonSection').then(m => ({ default: m.ComparisonSection })));
+const PricingSection = lazy(() => import('@/components/landing/PricingSection').then(m => ({ default: m.PricingSection })));
+const FAQSection = lazy(() => import('@/components/landing/FAQSection').then(m => ({ default: m.FAQSection })));
+const FinalCTA = lazy(() => import('@/components/landing/FinalCTA').then(m => ({ default: m.FinalCTA })));
+const Footer = lazy(() => import('@/components/landing/Footer').then(m => ({ default: m.Footer })));
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
