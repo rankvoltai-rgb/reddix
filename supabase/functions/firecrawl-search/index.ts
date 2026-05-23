@@ -39,6 +39,15 @@ serve(async (req) => {
       );
     }
 
+    const sub = await verifySubscription(user.email ?? "");
+    if (!sub.subscribed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Active subscription required.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+
     const { query, options } = await req.json();
 
     // Input validation
