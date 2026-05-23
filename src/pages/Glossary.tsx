@@ -41,7 +41,9 @@ export default function Glossary() {
 
   return (
     <div className="min-h-screen bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(glossaryJsonLd) }} />
       <Navbar />
+
 
       <AlternativeHero
         pill="45+ terms defined"
