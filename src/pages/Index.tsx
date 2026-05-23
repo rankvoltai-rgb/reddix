@@ -127,18 +127,20 @@ export default function Index() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <Navbar />
       <HeroSection />
-      <LogoBar />
-      <ProductDemo />
-      <StatsBar />
-      <HowItWorks />
-      <FeatureShowcase />
-      <FeaturesGrid />
-      <Testimonials />
-      <ComparisonSection />
-      <PricingSection />
-      <FAQSection />
-      <FinalCTA />
-      <Footer />
+      <Suspense fallback={null}>
+        <LogoBar />
+        <ProductDemo />
+        <StatsBar />
+        <HowItWorks />
+        <FeatureShowcase />
+        <FeaturesGrid />
+        <Testimonials />
+        <ComparisonSection />
+        <PricingSection />
+        <FAQSection />
+        <FinalCTA />
+        <Footer />
+      </Suspense>
     </div>
   );
 }
