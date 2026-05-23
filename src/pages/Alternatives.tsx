@@ -57,7 +57,9 @@ export default function Alternatives() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
       <Navbar />
+
 
       <AlternativeHero
         pill="Compare Reddit Lead Gen Tools"
