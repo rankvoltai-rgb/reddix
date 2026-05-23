@@ -57,8 +57,9 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    logStep("Origin detected", { origin });
+    const origin = safeOrigin(req);
+    logStep("Origin resolved", { origin });
+
     
     const successUrl = `${origin}/onboarding?checkout=success&step=3`;
     const cancelUrl = `${origin}/onboarding`;
