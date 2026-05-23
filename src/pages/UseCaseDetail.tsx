@@ -1,6 +1,6 @@
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { getUseCaseBySlug, useCases } from '@/lib/useCases';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
@@ -17,24 +17,38 @@ export default function UseCaseDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const useCase = slug ? getUseCaseBySlug(slug) : undefined;
-  useCanonical(`/use-cases/${slug || ''}`);
+
+  usePageMeta({
+    title: useCase?.metaTitle ?? 'Use Case | Reddix',
+    description: useCase?.metaDescription ?? 'Reddit lead generation use case.',
+    path: `/use-cases/${slug || ''}`,
+  });
 
   useEffect(() => {
-    if (useCase) {
-      document.title = useCase.metaTitle;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute('content', useCase.metaDescription);
-      else {
-        const m = document.createElement('meta');
-        m.name = 'description';
-        m.content = useCase.metaDescription;
-        document.head.appendChild(m);
-      }
-    }
     window.scrollTo(0, 0);
-  }, [useCase]);
+  }, [slug]);
 
   if (!useCase) return <Navigate to="/404" replace />;
+
+  const webPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": useCase.metaTitle,
+    "description": useCase.metaDescription,
+    "url": `https://reddix.info/use-cases/${useCase.slug}`,
+    "isPartOf": { "@type": "WebSite", "name": "Reddix", "url": "https://reddix.info" },
+  };
+
+  const faqJsonLd = useCase.faq?.length ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": useCase.faq.map((item) => ({
+      "@type": "Question",
+      "name": item.q,
+      "acceptedAnswer": { "@type": "Answer", "text": item.a },
+    })),
+  } : null;
+
 
   const related = useCase.relatedSlugs
     .map((s) => useCases.find((uc) => uc.slug === s))
