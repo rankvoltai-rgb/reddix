@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -8,6 +7,7 @@ import { competitors } from '@/lib/alternatives';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Shield, Zap, Clock, CheckCircle2 } from 'lucide-react';
+
 
 const whyReddix = [
   {
