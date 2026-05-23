@@ -468,9 +468,17 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      const sub = await verifySubscription(user.email ?? "");
+      if (!sub.subscribed) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Active subscription required.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       userId = user.id;
       console.log('Manual scan for user:', userId);
     }
+
 
     // Create scan history
     const { data: scanRecord } = await supabase
