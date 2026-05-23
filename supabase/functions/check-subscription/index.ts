@@ -47,16 +47,14 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) {
       const msg = userError.message || "";
-      // If the token is expired/invalid, return a 401 instead of 500 so the client can recover gracefully
-      if (msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid jwt")) {
-        logStep("Auth token invalid/expired", { message: msg });
-        return new Response(JSON.stringify({ error: `Unauthorized: ${msg}` }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
-        });
-      }
-      throw new Error(`Authentication error: ${msg}`);
+      logStep("Auth error", { message: msg });
+      const isAuth = msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid jwt");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: isAuth ? 401 : 401,
+      });
     }
+
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
@@ -143,9 +141,10 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred. Please try again." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
   }
+
 });

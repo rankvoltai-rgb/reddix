@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { safeOrigin } from "../_shared/origin.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,8 +57,9 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    logStep("Origin detected", { origin });
+    const origin = safeOrigin(req);
+    logStep("Origin resolved", { origin });
+
     
     const successUrl = `${origin}/onboarding?checkout=success&step=3`;
     const cancelUrl = `${origin}/onboarding`;
@@ -87,9 +90,10 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Unable to start checkout. Please try again." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
   }
 });
+

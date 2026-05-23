@@ -57,7 +57,10 @@ const Scanner = () => {
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isFreePlan = false;
+  // Free plan = not currently subscribed. The server-side edge functions are the source of truth;
+  // this client flag only drives UI like the daily-lead counter.
+  const isFreePlan = !subscribed;
+
 
   // Query today's high-intent lead count for free users
   const { data: todayLeadCount = 0, refetch: refetchLeadCount } = useQuery({

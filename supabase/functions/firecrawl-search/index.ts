@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { verifySubscription } from "../_shared/subscription.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +38,15 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const sub = await verifySubscription(user.email ?? "");
+    if (!sub.subscribed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Active subscription required.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
 
     const { query, options } = await req.json();
 
