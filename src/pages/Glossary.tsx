@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useCanonical } from '@/hooks/useCanonical';
+import { useState, useMemo } from 'react';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -10,13 +10,26 @@ import { Search } from 'lucide-react';
 export default function Glossary() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('All');
-  useCanonical('/glossary');
+  usePageMeta({
+    title: 'Reddit Marketing Glossary — 45+ Terms Defined | Reddix',
+    description: 'The most comprehensive Reddit marketing glossary. 45+ terms covering Reddit, lead generation, AI, and SaaS marketing — all defined and explained.',
+    path: '/glossary',
+  });
 
-  useEffect(() => {
-    document.title = 'Reddit Marketing Glossary — 45+ Terms Defined | Reddix';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'The most comprehensive Reddit marketing glossary. 45+ terms covering Reddit, lead generation, AI, and SaaS marketing — all defined and explained.');
-  }, []);
+  const glossaryJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "DefinedTermSet",
+    "name": "Reddit Marketing Glossary",
+    "description": "Definitions for Reddit, lead generation, AI, and SaaS marketing terms.",
+    "url": "https://reddix.info/glossary",
+    "hasDefinedTerm": glossaryTerms.map((t) => ({
+      "@type": "DefinedTerm",
+      "name": t.title,
+      "description": t.shortDef,
+      "url": `https://reddix.info/glossary/${t.slug}`,
+    })),
+  };
+
 
   const filtered = useMemo(() => {
     return glossaryTerms.filter((t) => {
@@ -28,7 +41,9 @@ export default function Glossary() {
 
   return (
     <div className="min-h-screen bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(glossaryJsonLd) }} />
       <Navbar />
+
 
       <AlternativeHero
         pill="45+ terms defined"

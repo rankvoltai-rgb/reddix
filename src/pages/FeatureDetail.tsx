@@ -1,6 +1,6 @@
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { getFeatureBySlug, features } from '@/lib/features';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
@@ -16,24 +16,19 @@ export default function FeatureDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const feature = slug ? getFeatureBySlug(slug) : undefined;
-  useCanonical(`/features/${slug || ''}`);
+
+  usePageMeta({
+    title: feature?.metaTitle ?? 'Feature | Reddix',
+    description: feature?.metaDescription ?? 'Reddix feature details.',
+    path: `/features/${slug || ''}`,
+  });
 
   useEffect(() => {
-    if (feature) {
-      document.title = feature.metaTitle;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute('content', feature.metaDescription);
-      else {
-        const m = document.createElement('meta');
-        m.name = 'description';
-        m.content = feature.metaDescription;
-        document.head.appendChild(m);
-      }
-    }
     window.scrollTo(0, 0);
-  }, [feature]);
+  }, [slug]);
 
   if (!feature) return <Navigate to="/404" replace />;
+
 
   const related = feature.relatedSlugs
     .map((s) => features.find((f) => f.slug === s))

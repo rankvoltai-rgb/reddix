@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useCanonical } from '@/hooks/useCanonical';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { AlternativeHero } from '@/components/alternatives/AlternativeHero';
@@ -8,6 +7,7 @@ import { competitors } from '@/lib/alternatives';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Shield, Zap, Clock, CheckCircle2 } from 'lucide-react';
+
 
 const whyReddix = [
   {
@@ -34,17 +34,32 @@ const whyReddix = [
 
 export default function Alternatives() {
   const navigate = useNavigate();
-  useCanonical('/alternatives');
+  usePageMeta({
+    title: 'Reddit Lead Gen Tools Compared | Reddix',
+    description: 'Compare Reddix to GummySearch, RedReach, Redditor AI and more. AI intent scoring, 24/7 Reddit scanning, and human-in-the-loop reply drafts.',
+    path: '/alternatives',
+  });
 
-  useEffect(() => {
-    document.title = 'Reddit Lead Gen Tools Compared | Reddix';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Compare the best Reddit lead generation tools. See how Reddix stacks up against GummySearch, RedReach, Redditor AI, and more. AI-powered scoring, 24/7 scanning, and smart replies.');
-  }, []);
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Reddit Lead Generation Tools Compared",
+    "description": "Side-by-side comparisons of Reddix and other Reddit lead generation tools.",
+    "url": "https://reddix.info/alternatives",
+    "isPartOf": { "@type": "WebSite", "name": "Reddix", "url": "https://reddix.info" },
+    "hasPart": competitors.map((c) => ({
+      "@type": "WebPage",
+      "name": `Reddix vs ${c.name}`,
+      "url": `https://reddix.info/alternatives/${c.slug}`,
+    })),
+  };
+
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
       <Navbar />
+
 
       <AlternativeHero
         pill="Compare Reddit Lead Gen Tools"
