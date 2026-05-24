@@ -65,6 +65,8 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
   const [postAnalysis, setPostAnalysis] = useState<AnalysisResult | undefined>();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [activeFilter, setActiveFilter] = useState<IntentFilter>("all");
+  const [pageSize, setPageSize] = useState<PageSize>(15);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch leads (exclude archived)
   const { data: leads = [], isLoading } = useQuery({
