@@ -30,6 +30,26 @@ export function Footer() {
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               All systems operational
             </div>
+            <div className="mt-4">
+              <div
+                className="trustpilot-widget"
+                data-locale="en-US"
+                data-template-id="56278e9abfbbba0bdcd568bc"
+                data-businessunit-id="6953ba7474cf034e3abcff6b"
+                data-style-height="52px"
+                data-style-width="100%"
+                data-token="d04813d0-c51e-40a9-b1ff-79cc082f8602"
+              >
+                <a
+                  href="https://www.trustpilot.com/review/reddix.info"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Trustpilot
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Product */}
