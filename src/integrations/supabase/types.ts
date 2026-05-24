@@ -46,13 +46,16 @@ export type Database = {
           analyzed_at: string | null
           author: string | null
           cached_replies: Json | null
+          confidence: number | null
           created_at: string | null
           deep_analyzed: boolean
           discovered_at: string | null
+          has_competitor_mention: boolean
           id: string
           intent_level: Database["public"]["Enums"]["intent_level"] | null
           intent_score: number | null
           notes: string | null
+          quality_score: number
           relevance_notes: string | null
           replies_generated_at: string | null
           status: Database["public"]["Enums"]["lead_status"] | null
@@ -67,13 +70,16 @@ export type Database = {
           analyzed_at?: string | null
           author?: string | null
           cached_replies?: Json | null
+          confidence?: number | null
           created_at?: string | null
           deep_analyzed?: boolean
           discovered_at?: string | null
+          has_competitor_mention?: boolean
           id?: string
           intent_level?: Database["public"]["Enums"]["intent_level"] | null
           intent_score?: number | null
           notes?: string | null
+          quality_score?: number
           relevance_notes?: string | null
           replies_generated_at?: string | null
           status?: Database["public"]["Enums"]["lead_status"] | null
@@ -88,13 +94,16 @@ export type Database = {
           analyzed_at?: string | null
           author?: string | null
           cached_replies?: Json | null
+          confidence?: number | null
           created_at?: string | null
           deep_analyzed?: boolean
           discovered_at?: string | null
+          has_competitor_mention?: boolean
           id?: string
           intent_level?: Database["public"]["Enums"]["intent_level"] | null
           intent_score?: number | null
           notes?: string | null
+          quality_score?: number
           relevance_notes?: string | null
           replies_generated_at?: string | null
           status?: Database["public"]["Enums"]["lead_status"] | null
@@ -313,6 +322,8 @@ export type Database = {
         Row: {
           first_seen_at: string | null
           id: string
+          last_score: number | null
+          last_scored_at: string | null
           last_seen_at: string | null
           post_hash: string | null
           post_url: string
@@ -321,6 +332,8 @@ export type Database = {
         Insert: {
           first_seen_at?: string | null
           id?: string
+          last_score?: number | null
+          last_scored_at?: string | null
           last_seen_at?: string | null
           post_hash?: string | null
           post_url: string
@@ -329,6 +342,8 @@ export type Database = {
         Update: {
           first_seen_at?: string | null
           id?: string
+          last_score?: number | null
+          last_scored_at?: string | null
           last_seen_at?: string | null
           post_hash?: string | null
           post_url?: string
