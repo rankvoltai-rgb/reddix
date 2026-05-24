@@ -50,18 +50,6 @@ export function Footer() {
                 </a>
               </div>
             </div>
-            <div className="mt-4">
-              <a href="https://smollaunch.com" target="_blank" rel="noopener noreferrer">
-                <img
-                  src="https://smollaunch.com/badges/featured.svg"
-                  alt="Featured on Smol Launch"
-                  loading="lazy"
-                  width={250}
-                  height={60}
-                  className="max-w-[180px] h-auto opacity-80 hover:opacity-100 transition-opacity"
-                />
-              </a>
-            </div>
           </div>
 
           {/* Product */}
