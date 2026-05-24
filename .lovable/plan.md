@@ -1,33 +1,74 @@
-## Problem
+## Smarter, cheaper Reddit lead generation
 
-From `/dashboard`, clicking **Scanner**, **Leads**, or **Settings** in the sidebar does nothing visible. Root cause:
+### Goals
+- Cut AI spend ~50–65% per scan.
+- Surface higher-converting leads first (competitor mentions, budget talk, direct asks).
+- Stop polluting the CRM with provisional low-score noise.
 
-1. Each of those pages has a guard: if `!subscribed && onboarding_completed`, it calls `navigate('/onboarding')`.
-2. `/onboarding` runs `resolveDestination`, sees `onboarding_completed=true`, and immediately sends the user back to `/dashboard`.
-3. Net effect: click → flash → back on dashboard.
+### Changes
 
-`/dashboard` does NOT bounce unsubscribed users — it relies on its own hard-paywall overlay. Scanner/Leads/Settings should follow the same pattern (server-side edge functions are already the real gate for premium actions).
+**1. Heuristic prefilter (zero AI cost)**
+New `supabase/functions/_shared/intent-heuristics.ts`:
+- Whitelist regex: `recommend|suggest|looking for|best .* for|alternative to|vs\.?|switching from|tired of|stuck with|budget|pricing|anyone use|worth it`.
+- Blacklist regex: `i built|i made|check out my|launching|showcase|\[OC\]|hiring|for sale|giveaway`.
+- Competitor matcher built from `profile.competitor_names`.
+- Returns `{ skip: boolean, boost: number, hasCompetitor: boolean }`.
 
-## Fix
+**2. Two-tier Firecrawl**
+- Search calls drop `scrapeOptions` → titles + descriptions only (cheaper + faster).
+- Top 8 prefiltered candidates get a single targeted Firecrawl scrape for full markdown.
 
-Align Scanner, Leads, and Settings with Dashboard's gating model: only redirect for missing auth or incomplete onboarding. Drop the `!subscribed` redirect.
+**3. Collapse Pass 1 + Pass 2 into one batched call**
+- Batch size 10 (was 6), model `google/gemini-3.1-flash-lite-preview`.
+- Returns `{ score, intent_level, notes, confidence }`.
+- Confidence ≥ 0.8 → write final with `deep_analyzed=true`.
+- Lower confidence → write provisional; "Analyze" button does the second pass.
 
-Use the shared helper for consistency.
+**4. Heuristic boosters applied after AI**
+- +25 competitor mention, +15 pricing/budget, +10 "alternative to". Stored in new `quality_score`.
+
+**5. Comment-aware deep analysis**
+- `analyze-lead` fetches `${thread_url}.json` from Reddit (free, no Firecrawl) and feeds top 5 comments into the prompt for richer qualification.
+
+**6. Stop polluting the leads table**
+- Remove fallback-floor insert.
+- Raise insert threshold to score ≥ 35.
+- Sub-threshold posts only land in `seen_posts` with their score.
+
+**7. Post-quality cache**
+- `seen_posts` gains `last_score` + `last_scored_at`; rotation skips low-scoring posts for 7 days.
+
+**8. UI**
+- Sort leads by `quality_score DESC`.
+- New competitor-mention badge on `LeadCard`.
+- Confidence indicator on provisional leads.
+
+### Database migration
+
+```text
+ALTER TABLE seen_posts
+  ADD COLUMN last_score INTEGER,
+  ADD COLUMN last_scored_at TIMESTAMPTZ;
+
+ALTER TABLE leads
+  ADD COLUMN quality_score INTEGER DEFAULT 0,
+  ADD COLUMN confidence NUMERIC(3,2),
+  ADD COLUMN has_competitor_mention BOOLEAN DEFAULT false;
+
+CREATE INDEX idx_leads_user_quality
+  ON leads (user_id, quality_score DESC);
+```
 
 ### Files
 
-- `src/pages/Scanner.tsx` — replace the manual auth/onboarding/subscription `useEffect` with `resolveDestination` + `safeNavigate` (same shape as Dashboard). Keep `isFreePlan = !subscribed` so the in-page paywall UI still renders.
-- `src/pages/Leads.tsx` — same replacement.
-- `src/pages/Settings.tsx` — same replacement. Settings should remain reachable for unsubscribed users so they can manage their account.
+- new: `supabase/functions/_shared/intent-heuristics.ts`
+- new: `supabase/migrations/<ts>_lead_quality.sql`
+- edit: `supabase/functions/scan-reddit/index.ts`
+- edit: `supabase/functions/analyze-lead/index.ts`
+- edit: `src/components/scanner/LeadsSection.tsx`
+- edit: `src/components/scanner/LeadCard.tsx`
 
-### Notes
-
-- No backend changes. Premium edge functions already verify subscription server-side via `_shared/subscription.ts`, so removing the client redirect does not weaken security.
-- Dashboard's paywall overlay continues to be the primary purchase prompt. Scanner already has inline paywall UI gated on `isFreePlan`; Leads/Settings will simply be viewable.
-- No changes to `resolveDestination` itself — its behavior (onboarded → `/dashboard`) is correct for `/` and `/onboarding`, and we only invoke it from the three pages to enforce auth + onboarding, not to redirect off the current page.
-
-### Verification
-
-- From `/dashboard`, sidebar links to `/scanner`, `/leads`, `/settings` navigate successfully whether subscribed or not.
-- Unauthenticated user hitting any of those routes still gets sent to `/auth`.
-- User with `onboarding_completed=false` still gets sent to `/onboarding`.
+### Expected impact
+- AI cost: −50 to −65% per scan.
+- Lead quality: hot/warm pre-qualified, competitor leads surfaced first.
+- Scan latency: ~−30% (no scrapeOptions on initial search).
