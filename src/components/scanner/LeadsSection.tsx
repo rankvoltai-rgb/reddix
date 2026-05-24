@@ -7,11 +7,22 @@ import { LeadCard } from "./LeadCard";
 import { ReplyDialog } from "./ReplyDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Target, Inbox } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
 
 type IntentFilter = "all" | "hot" | "warm" | "research" | "low";
+type PageSize = 15 | 25 | 50;
 
 interface ReplyVariant {
   type: 'direct' | 'story' | 'expert';
@@ -54,6 +65,8 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
   const [postAnalysis, setPostAnalysis] = useState<AnalysisResult | undefined>();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [activeFilter, setActiveFilter] = useState<IntentFilter>("all");
+  const [pageSize, setPageSize] = useState<PageSize>(15);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch leads (exclude archived)
   const { data: leads = [], isLoading } = useQuery({
@@ -119,6 +132,34 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     if (activeFilter === "all") return leads;
     return leads.filter((l) => (l.intent_level || "low") === activeFilter);
   }, [leads, activeFilter]);
+
+  // Reset page when filter or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIdx = (safePage - 1) * pageSize;
+  const pagedLeads = filteredLeads.slice(startIdx, startIdx + pageSize);
+  const showFooter = filteredLeads.length > 15;
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (safePage > 3) pages.push("ellipsis");
+      const start = Math.max(2, safePage - 1);
+      const end = Math.min(totalPages - 1, safePage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (safePage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [safePage, totalPages]);
+
 
   const generateReplyForLead = async (leadId: string, isRegenerate = false) => {
     const lead = leads.find(l => l.id === leadId);
@@ -302,7 +343,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredLeads.map((lead) => (
+              {pagedLeads.map((lead) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
@@ -315,6 +356,64 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
                   isSaving={savingLeadId === lead.id}
                 />
               ))}
+
+              {showFooter && (
+                <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Showing {startIdx + 1}–{Math.min(startIdx + pageSize, filteredLeads.length)} of {filteredLeads.length}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Per page</span>
+                      <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v) as PageSize)}>
+                        <SelectTrigger className="h-8 w-[72px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {totalPages > 1 && (
+                      <Pagination className="mx-0 w-auto justify-end">
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => { e.preventDefault(); if (safePage > 1) setCurrentPage(safePage - 1); }}
+                              className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
+                            />
+                          </PaginationItem>
+                          {pageNumbers.map((p, idx) =>
+                            p === "ellipsis" ? (
+                              <PaginationItem key={`e-${idx}`}><PaginationEllipsis /></PaginationItem>
+                            ) : (
+                              <PaginationItem key={p}>
+                                <PaginationLink
+                                  href="#"
+                                  isActive={p === safePage}
+                                  onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}
+                                >
+                                  {p}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          )}
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => { e.preventDefault(); if (safePage < totalPages) setCurrentPage(safePage + 1); }}
+                              className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
