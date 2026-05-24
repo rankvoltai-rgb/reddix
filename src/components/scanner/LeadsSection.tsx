@@ -121,12 +121,14 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     return c;
   }, [leads]);
 
-  // Auto-select "hot" if there are hot leads, otherwise "all"
+  // Auto-select "hot" once on first load if there are hot leads
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   useEffect(() => {
-    if (counts.hot > 0 && activeFilter === "all") {
-      setActiveFilter("hot");
+    if (!hasAutoSelected && leads.length > 0) {
+      if (counts.hot > 0) setActiveFilter("hot");
+      setHasAutoSelected(true);
     }
-  }, [counts.hot, activeFilter]);
+  }, [hasAutoSelected, leads.length, counts.hot]);
 
   const filteredLeads = useMemo(() => {
     if (activeFilter === "all") return leads;
