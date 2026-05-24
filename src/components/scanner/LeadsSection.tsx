@@ -7,11 +7,22 @@ import { LeadCard } from "./LeadCard";
 import { ReplyDialog } from "./ReplyDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Target, Inbox } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
 
 type IntentFilter = "all" | "hot" | "warm" | "research" | "low";
+type PageSize = 15 | 25 | 50;
 
 interface ReplyVariant {
   type: 'direct' | 'story' | 'expert';
