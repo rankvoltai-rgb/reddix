@@ -343,7 +343,7 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredLeads.map((lead) => (
+              {pagedLeads.map((lead) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
@@ -356,6 +356,64 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
                   isSaving={savingLeadId === lead.id}
                 />
               ))}
+
+              {showFooter && (
+                <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Showing {startIdx + 1}–{Math.min(startIdx + pageSize, filteredLeads.length)} of {filteredLeads.length}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Per page</span>
+                      <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v) as PageSize)}>
+                        <SelectTrigger className="h-8 w-[72px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {totalPages > 1 && (
+                      <Pagination className="mx-0 w-auto justify-end">
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => { e.preventDefault(); if (safePage > 1) setCurrentPage(safePage - 1); }}
+                              className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
+                            />
+                          </PaginationItem>
+                          {pageNumbers.map((p, idx) =>
+                            p === "ellipsis" ? (
+                              <PaginationItem key={`e-${idx}`}><PaginationEllipsis /></PaginationItem>
+                            ) : (
+                              <PaginationItem key={p}>
+                                <PaginationLink
+                                  href="#"
+                                  isActive={p === safePage}
+                                  onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}
+                                >
+                                  {p}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          )}
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => { e.preventDefault(); if (safePage < totalPages) setCurrentPage(safePage + 1); }}
+                              className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
