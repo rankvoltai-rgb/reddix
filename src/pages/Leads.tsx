@@ -79,13 +79,9 @@ export default function Leads() {
 
     if (!profileLoading && profile && !profile.onboarding_completed) {
       navigate("/onboarding");
-      return;
     }
-
-    if (!subLoading && !subscribed && profile?.onboarding_completed) {
-      navigate("/onboarding");
-    }
-  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
+    // Unsubscribed users can view leads; premium actions are gated server-side.
+  }, [user, authLoading, profile, profileLoading, navigate]);
 
   const { data: leads, isLoading } = useQuery({
     queryKey: ['saved-leads', user?.id],
