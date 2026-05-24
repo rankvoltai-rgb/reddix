@@ -92,12 +92,9 @@ const Scanner = () => {
     }
     if (!profileLoading && profile && !profile.onboarding_completed) {
       navigate("/onboarding");
-      return;
     }
-    if (!subLoading && !subscribed && profile?.onboarding_completed) {
-      navigate("/onboarding");
-    }
-  }, [user, authLoading, profile, profileLoading, subscribed, subLoading, navigate]);
+    // Unsubscribed users stay on the page; in-page paywall UI handles gating.
+  }, [user, authLoading, profile, profileLoading, navigate]);
 
   // Safety net: if user landed on Scanner with zero subreddits but has a product_url,
   // run preseed once so they always have a working setup.
