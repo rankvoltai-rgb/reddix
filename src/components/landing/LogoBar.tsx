@@ -20,6 +20,18 @@ export function LogoBar() {
             </span>
           ))}
         </div>
+        <div className="mt-10 flex justify-center">
+          <a href="https://smollaunch.com" target="_blank" rel="noopener">
+            <img
+              src="https://smollaunch.com/badges/featured.svg"
+              alt="Featured on Smol Launch"
+              loading="lazy"
+              width="250"
+              height="60"
+              className="w-[180px] h-auto opacity-80 hover:opacity-100 transition-opacity duration-300"
+            />
+          </a>
+        </div>
       </div>
     </section>
   );
