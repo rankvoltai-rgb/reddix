@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X, Brain } from "lucide-react";
+import { ExternalLink, Sparkles, Loader2, User, Bookmark, BookmarkCheck, X, Brain, Crosshair } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -95,6 +95,17 @@ export function LeadCard({ lead, onGenerateReply, onAnalyze, onSaveLead, onDismi
                 <Badge variant="secondary" className="text-xs capitalize">
                   {lead.status}
                 </Badge>
+              )}
+              {(lead as any).has_competitor_mention && (
+                <Badge variant="outline" className="text-xs font-medium border-primary/40 text-primary gap-1">
+                  <Crosshair className="h-3 w-3" />
+                  Competitor
+                </Badge>
+              )}
+              {isAnalyzed && typeof (lead as any).confidence === "number" && (lead as any).confidence < 0.6 && (
+                <span className="text-[10px] text-muted-foreground">
+                  ~{Math.round((lead as any).confidence * 100)}% conf
+                </span>
               )}
             </div>
 
