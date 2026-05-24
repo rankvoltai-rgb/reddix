@@ -133,6 +133,34 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
     return leads.filter((l) => (l.intent_level || "low") === activeFilter);
   }, [leads, activeFilter]);
 
+  // Reset page when filter or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIdx = (safePage - 1) * pageSize;
+  const pagedLeads = filteredLeads.slice(startIdx, startIdx + pageSize);
+  const showFooter = filteredLeads.length > 15;
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (safePage > 3) pages.push("ellipsis");
+      const start = Math.max(2, safePage - 1);
+      const end = Math.min(totalPages - 1, safePage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (safePage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [safePage, totalPages]);
+
+
   const generateReplyForLead = async (leadId: string, isRegenerate = false) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
