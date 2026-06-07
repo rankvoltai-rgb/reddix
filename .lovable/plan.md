@@ -1,69 +1,50 @@
-# Sitemap Deep Analysis
+## Goal
+Fix two SEO/AI-crawler findings on every public page:
+1. **No date signals** — add `dateModified` (and `datePublished`) so crawlers know content is fresh.
+2. **Missing JSON-LD** — only `/` has structured data (it's React-rendered, invisible to non-JS crawlers). Bake JSON-LD into the raw HTML for every prerendered route.
 
-## Technical health check — everything passes
+Sitemap already has `<lastmod>` — good, leave it. The gap is in-page signals.
 
-- `https://reddix.info/sitemap.xml` returns **HTTP 200**, `content-type: text/xml`, 130 `<loc>` entries, valid XML.
-- `https://reddix.info/robots.txt` returns 200 and correctly declares `Sitemap: https://reddix.info/sitemap.xml`.
-- Disallow rules don't block any URL listed in the sitemap.
-- Every sampled URL (`/features/intent-detection`, `/glossary/karma`, etc.) returns HTTP 200.
+## Changes
 
-So the sitemap **is** being fetched. The real problem is what Google sees *after* it follows those URLs.
+### 1. `scripts/prerender.ts` — inject JSON-LD + dates into every prerendered page
 
-## The actual root cause: all 130 URLs serve identical HTML
+For each route, build a JSON-LD `@graph` and inject it as `<script type="application/ld+json">` into `<head>` (before `</head>`), and add a visible `<time datetime="...">Last updated: …</time>` line in the prerendered `<main>`.
 
-This is a Vite SPA. The server returns the same `index.html` shell for every route, and meta tags are only updated client-side via `usePageMeta` (React `useEffect`).
+Schema per route type:
+- **`/` (home)** — `Organization` + `WebSite` + `SoftwareApplication` (move the three blocks currently in `src/pages/Index.tsx` into the static HTML so non-JS crawlers see them; keep React copy too — duplicates are fine, Google dedupes by `@id`).
+- **`/features/*`** — `WebPage` + `FAQPage` (from `f.faq`) + `BreadcrumbList`.
+- **`/use-cases/*`** — `WebPage` + `FAQPage` (from `u.faq`) + `BreadcrumbList`.
+- **`/alternatives/*`** — `WebPage` (about: SoftwareApplication Reddix) + `BreadcrumbList`. Optional `ItemList` for the comparison rows.
+- **`/alternatives` index** — `CollectionPage` + `BreadcrumbList`.
+- **`/glossary` index** — `CollectionPage` + `BreadcrumbList` + `DefinedTermSet`.
+- **`/glossary/*`** — `DefinedTerm` + `BreadcrumbList`.
+- **`/terms`, `/refund-policy`** — `WebPage` + `BreadcrumbList`.
 
-Proof — raw HTML (no JS executed) for three different URLs:
+Every JSON-LD object includes:
+```json
+"datePublished": "2026-06-07",
+"dateModified": "<build-date>"
+```
+Build date = `new Date().toISOString().slice(0,10)`, computed once at the top of `prerender.ts`.
 
-```text
-/                            /features/intent-detection      /glossary/karma
-<title>Reddix | AI Reddit…   <title>Reddix | AI Reddit…      <title>Reddix | AI Reddit…
-<meta description …same      …same                            …same
-<link canonical → /          <link canonical → /              <link canonical → /
-<h1>Reddix — AI Reddit…      <h1>Reddix — AI Reddit…          <h1>Reddix — AI Reddit…
+Visible date line appended inside the prerendered `<main>`:
+```html
+<p><time datetime="2026-06-07" itemprop="dateModified">Last updated: June 7, 2026</time></p>
 ```
 
-Every entry in the sitemap appears to Google as:
+### 2. `index.html` — add a baseline JSON-LD for the SPA shell
+Inline `Organization` + `WebSite` JSON-LD so even non-prerendered routes (and the shell before prerender runs) carry structured data. Include `dateModified`.
 
-1. **The same title and meta description** as the homepage.
-2. **A `<link rel="canonical">` pointing back to `https://reddix.info/`** — you're literally telling Google "this page is a duplicate of the homepage, don't index it."
-3. **The same H1 and body content** in the initial HTML.
+### 3. Keep
+- `src/pages/Index.tsx` JSON-LD stays (hydrates for SPA navigation); prerender just adds the static copy.
+- `scripts/seo-routes.ts` and `generate-sitemap.ts` need no changes — sitemap `<lastmod>` is already there.
 
-Result in Search Console: pages get classified as
-- "Discovered – currently not indexed", or
-- "Duplicate, Google chose different canonical than user", or
-- "Alternate page with proper canonical tag"
+## Technical detail
+- Helper `buildJsonLd(route)` returns an array of schema objects → wrapped as `{"@context":"https://schema.org","@graph":[...]}` → one `<script>` tag injected via regex `out.replace('</head>', `${tag}\n</head>`)`.
+- Breadcrumbs derived from `route.path` segments.
+- All URLs absolute with `BASE_URL`.
+- Date strings ISO `YYYY-MM-DD`.
 
-…which from your side looks exactly like "Google is ignoring my sitemap."
-
-Googlebot *can* render JS, but (a) it does so on a delayed second pass, (b) it gives strong weight to the initial HTML signals, and (c) when the initial canonical points to `/`, the rendered version rarely overrides it.
-
-## Secondary issues
-
-- `lastmod` is hardcoded to `2026-04-02` on every URL. Not fatal, but signals a stale, machine-generated sitemap.
-- No `og:image` per page, no JSON-LD per page — weak signals for unique content.
-- Sitemap is a static hand-edited `public/sitemap.xml` — easy to drift out of sync with routes.
-
-## Fix plan (for the next build-mode turn)
-
-The sitemap itself doesn't need to change. We need to make each URL look like a real, unique page in the **initial HTML response**, not just after React mounts.
-
-Two paths:
-
-### Option A — Prerender static HTML at build time (recommended)
-Use `vite-plugin-prerender` or `react-snap` to crawl the known routes during `vite build` and write a real `dist/features/intent-detection/index.html` (etc.) with the correct title, description, canonical, H1, and content baked in. Lovable hosting will serve these directly; the SPA still hydrates afterward.
-
-Pros: real SSR-quality HTML, zero runtime cost, fixes the duplicate-content problem completely.
-Cons: build step grows; needs a route list (which we already have — it's the sitemap).
-
-### Option B — Server-side meta injection via a lightweight edge worker
-Less appropriate for Lovable's hosting model; only mention if Option A is rejected.
-
-### Other fixes regardless of path
-1. Auto-generate `sitemap.xml` from a route registry so `lastmod` and entries stay accurate (`scripts/generate-sitemap.ts` with a `prebuild` hook).
-2. Remove the hardcoded `2026-04-02` lastmod; use the file's git mtime or build date.
-3. Verify the domain in Google Search Console and submit the sitemap explicitly; check the Coverage report — it will confirm the "duplicate / canonical" diagnosis above.
-
-## What to do now
-
-Decide on Option A (prerender) vs leaving it as-is. If you greenlight A, I'll wire up the prerender step plus the auto-generated sitemap in build mode.
+## Verification
+After build, spot-check `dist/features/<slug>/index.html` and `dist/alternatives/<slug>/index.html` for the JSON-LD `<script>` and visible `<time>` element. Validate with Google's Rich Results Test on one URL of each type after deploy.
