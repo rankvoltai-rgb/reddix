@@ -403,10 +403,12 @@ function renderRoute(html: string, route: SeoRoute) {
   // replaces this on hydration. Kept in a non-hidden <main> so AI
   // crawlers don't discount it as cloaked / hidden content.
   const body = buildBody(route);
+  const dateLine = `<p><time datetime="${BUILD_DATE}" itemprop="dateModified">Last updated: ${BUILD_DATE_HUMAN}</time></p>`;
   const fallback = `
       <main data-prerendered="true">
         <h1>${esc(route.h1)}</h1>
         <p>${esc(route.lead)}</p>
+        ${dateLine}
         ${body}
         <nav aria-label="Site"><ul>
           <li><a href="/">Home</a></li>
@@ -421,6 +423,15 @@ function renderRoute(html: string, route: SeoRoute) {
     /<div id="root">[\s\S]*?<\/div>\s*<noscript>/i,
     `<div id="root">${fallback}</div>\n    <noscript>`,
   );
+
+  // Inject per-route JSON-LD into <head>. Strip any pre-existing JSON-LD
+  // from the shell first so we don't ship duplicates.
+  out = out.replace(
+    /<script\s+type="application\/ld\+json"[\s\S]*?<\/script>\s*/gi,
+    "",
+  );
+  const jsonLd = buildJsonLd(route);
+  out = out.replace(/<\/head>/i, `  ${jsonLd}\n  </head>`);
 
   return out;
 }
