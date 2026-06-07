@@ -20,12 +20,160 @@ import { glossaryTerms } from "../src/lib/glossary";
 const DIST = resolve("dist");
 const SHELL = readFileSync(resolve(DIST, "index.html"), "utf8");
 
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+const BUILD_DATE_HUMAN = new Date().toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
 function esc(s: string) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function jsonLdSafe(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
+function breadcrumbsNode(path: string, title: string) {
+  const parts = path.split("/").filter(Boolean);
+  const items = [{ name: "Home", item: `${BASE_URL}/` }];
+  let acc = "";
+  parts.forEach((p, i) => {
+    acc += `/${p}`;
+    const isLast = i === parts.length - 1;
+    const name = isLast
+      ? title
+      : p.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    items.push({ name, item: `${BASE_URL}${acc}` });
+  });
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${BASE_URL}${path}#breadcrumbs`,
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      item: it.item,
+    })),
+  };
+}
+
+function organizationNode() {
+  return {
+    "@type": "Organization",
+    "@id": `${BASE_URL}/#organization`,
+    name: "Reddix",
+    url: BASE_URL,
+    logo: `${BASE_URL}/favicon.png`,
+  };
+}
+
+function websiteNode() {
+  return {
+    "@type": "WebSite",
+    "@id": `${BASE_URL}/#website`,
+    url: BASE_URL,
+    name: "Reddix",
+    description: "AI-powered Reddit lead intelligence platform.",
+    publisher: { "@id": `${BASE_URL}/#organization` },
+    inLanguage: "en",
+    datePublished: "2026-01-01",
+    dateModified: BUILD_DATE,
+  };
+}
+
+function webPageNode(route: SeoRoute) {
+  return {
+    "@type": "WebPage",
+    "@id": `${BASE_URL}${route.path}#webpage`,
+    url: `${BASE_URL}${route.path}`,
+    name: route.title,
+    description: route.description,
+    inLanguage: "en",
+    isPartOf: { "@id": `${BASE_URL}/#website` },
+    datePublished: "2026-01-01",
+    dateModified: BUILD_DATE,
+  };
+}
+
+function faqNode(faq: Array<{ q: string; a: string }>, id: string) {
+  return {
+    "@type": "FAQPage",
+    "@id": id,
+    datePublished: "2026-01-01",
+    dateModified: BUILD_DATE,
+    mainEntity: faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
+function buildJsonLd(route: SeoRoute): string {
+  const p = route.path;
+  const graph: unknown[] = [organizationNode(), websiteNode()];
+
+  if (p === "/") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${BASE_URL}/#software`,
+      name: "Reddix",
+      url: BASE_URL,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description: route.description,
+      datePublished: "2026-01-01",
+      dateModified: BUILD_DATE,
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: "USD",
+        lowPrice: "45",
+        highPrice: "150",
+        offerCount: "2",
+      },
+      publisher: { "@id": `${BASE_URL}/#organization` },
+    });
+  } else {
+    graph.push(webPageNode(route));
+    graph.push(breadcrumbsNode(p, route.h1));
+
+    const fMatch = p.match(/^\/features\/(.+)$/);
+    if (fMatch) {
+      const f = features.find((x) => x.slug === fMatch[1]);
+      if (f?.faq?.length) graph.push(faqNode(f.faq, `${BASE_URL}${p}#faq`));
+    }
+    const uMatch = p.match(/^\/use-cases\/(.+)$/);
+    if (uMatch) {
+      const u = useCases.find((x) => x.slug === uMatch[1]);
+      if (u?.faq?.length) graph.push(faqNode(u.faq, `${BASE_URL}${p}#faq`));
+    }
+    const gMatch = p.match(/^\/glossary\/(.+)$/);
+    if (gMatch) {
+      const g = glossaryTerms.find((x) => x.slug === gMatch[1]);
+      if (g) {
+        graph.push({
+          "@type": "DefinedTerm",
+          "@id": `${BASE_URL}${p}#term`,
+          name: g.title,
+          description: g.shortDef,
+          inDefinedTermSet: `${BASE_URL}/glossary`,
+          datePublished: "2026-01-01",
+          dateModified: BUILD_DATE,
+        });
+      }
+    }
+  }
+
+  return `<script type="application/ld+json">${jsonLdSafe({
+    "@context": "https://schema.org",
+    "@graph": graph,
+  })}</script>`;
 }
 
 // ── Per-route-type body builders ─────────────────────────────────────
