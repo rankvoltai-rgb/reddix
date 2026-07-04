@@ -98,6 +98,11 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && profile) {
+      const nextParam = new URLSearchParams(window.location.search).get('next');
+      if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+        window.location.href = nextParam;
+        return;
+      }
       navigate(profile.onboarding_completed ? '/dashboard' : '/onboarding');
     }
   }, [user, profile, navigate]);
@@ -111,7 +116,7 @@ export default function Auth() {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: { email?: string; password?: string } = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0] === 'email') fieldErrors.email = err.message;
           if (err.path[0] === 'password') fieldErrors.password = err.message;
         });
