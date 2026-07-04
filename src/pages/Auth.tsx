@@ -98,6 +98,11 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && profile) {
+      const nextParam = new URLSearchParams(window.location.search).get('next');
+      if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+        window.location.href = nextParam;
+        return;
+      }
       navigate(profile.onboarding_completed ? '/dashboard' : '/onboarding');
     }
   }, [user, profile, navigate]);

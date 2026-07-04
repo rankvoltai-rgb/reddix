@@ -25,6 +25,7 @@ const FeatureDetail = lazy(() => import("./pages/FeatureDetail"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const UseCaseDetail = lazy(() => import("./pages/UseCaseDetail"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
