@@ -130,8 +130,6 @@ export default function OnboardingWizard() {
         if ((d as any).tone) profileUpdate.tone = (d as any).tone;
 
         toast({ title: '✨ Website analyzed!', description: 'Product details auto-filled. Finding subreddits in the background…' });
-      } else {
-        toast({ title: 'Heads up', description: "We couldn't fully read your site — you can refine details later in Settings." });
       }
     } catch (error) {
       console.error('Analyze error:', error);
