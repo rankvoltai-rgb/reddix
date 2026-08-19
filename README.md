@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# Reddit Lead Finder
 
-## Project info
+I am building a SaaS called Reddix.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Reddix is an AI-powered Reddit lead generation platform that identifies real buying intent in real time. The system continuously scans relevant subreddits, detects posts and comments where users are actively looking for products or services, filters out low-intent noise, and surfaces qualified conversations.
 
-## How can I edit this code?
+The product must have a clean, Notion-style UI, light mode only, minimal and fast—no clutter, no dark patterns.
 
-There are several ways of editing your application.
+Core features:
 
-**Use Lovable**
+Reddit Intent Scanner – Monitors selected subreddits and keywords to identify buyer-intent signals (e.g. “looking for,” “any recommendations,” “what tool should I use,” etc.).
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Conversation Qualification Engine – Ranks and labels threads by intent strength and relevance.
 
-Changes made via Lovable will be committed automatically to this repo.
+Built-in Lightweight CRM – Saves leads, tracks thread links, timestamps, subreddit, intent score, and engagement status.
 
-**Use your preferred IDE**
+AI Copilot for Replies – Generates context-aware, human-sounding Reddit comments and replies that are helpful and non-spammy. Responses must match Reddit culture and avoid promotional language.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Onboarding Personalization – On first use, collect product name, company description, target audience, value proposition, and tone. Use this data to personalize intent detection and AI reply generation automatically.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The goal is zero setup friction: once onboarding is complete, the dashboard is immediately populated with live Reddit opportunities and ready-to-use AI reply suggestions.
 
-Follow these steps:
+Optimize for founders, indie hackers, and SaaS teams who want warm conversations, not cold outreach.
+
+Build this as a scalable, modular SaaS with clear separation between scanning, intent analysis, CRM, and AI generation layers.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://reddix.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4b9beefe-81b0-4194-85a6-9d16efc33eb8).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
