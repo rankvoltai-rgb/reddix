@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 
 
 
@@ -126,14 +127,14 @@ Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`
 
     console.log('Calling Lovable AI for subreddit discovery...');
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch(QWEN_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${QWEN_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: QWEN_MODEL,
         messages: [
           { role: 'system', content: 'You are an expert at Reddit marketing and finding potential customers. Always return valid JSON.' },
           { role: 'user', content: prompt }

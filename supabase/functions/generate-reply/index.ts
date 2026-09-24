@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 import { verifySubscription } from "../_shared/subscription.ts";
 
 
@@ -81,14 +82,14 @@ ${toneGuide[profile.tone] || toneGuide.friendly}
 - story:  "I had this exact problem..." relatable
 - expert: educational breakdown, knowledgeable framing`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetch(QWEN_URL, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${QWEN_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: QWEN_MODEL,
       max_tokens: 1200,
       messages: [
         { role: 'system', content: 'You are a Reddit conversion expert. Always call the return_result tool.' },

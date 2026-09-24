@@ -83,33 +83,13 @@ export function LeadsSection({ userId, isScanning = false }: LeadsSectionProps) 
       return data as Lead[];
     },
     enabled: !!userId,
-    refetchOnMount: true,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
   });
 
-  // Realtime subscription for new leads
-  useEffect(() => {
-    const channel = supabase
-      .channel('leads-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'leads',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['leads', userId] });
-          toast({ title: "🆕 New lead discovered!", description: (payload.new as Lead).thread_title?.slice(0, 60) });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, queryClient, toast]);
+  // No live/auto refresh — leads update only when the user refreshes manually.
 
   // Count leads per intent level
   const counts = useMemo(() => {
