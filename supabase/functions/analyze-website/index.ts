@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,14 +94,14 @@ serve(async (req) => {
     const truncatedMarkdown = markdown.slice(0, 8000);
     console.log('Analyzing content with Gemini via Lovable AI, length:', truncatedMarkdown.length);
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch(QWEN_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${QWEN_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: QWEN_MODEL,
         messages: [
           {
             role: 'system',

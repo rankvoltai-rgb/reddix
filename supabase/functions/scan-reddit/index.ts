@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 import { verifySubscription } from "../_shared/subscription.ts";
 import { buildHeuristics, clampScore, levelFromScore } from "../_shared/intent-heuristics.ts";
 
@@ -21,7 +22,7 @@ const BATCH_TIMEOUT_MS = 12_000;
 const SEEN_WINDOW_DAYS = 7;                // skip previously low-scoring posts for 7d
 const LOWSCORE_SKIP_THRESHOLD = 25;        // posts scored below this are cached as 'seen'
 const MAX_FIRECRAWL_CALLS = 7;
-const MODEL = 'google/gemini-3.1-flash-lite-preview';
+const MODEL = QWEN_FAST_MODEL;
 
 interface RedditPost {
   url: string;
@@ -109,9 +110,9 @@ Key Features: ${(profile.key_features || []).join(', ') || 'Not specified'}
 Competitors: ${(profile.competitor_names || []).join(', ') || 'None'}
 
 Rules: pain-point phrasing from customer's view. Do NOT include the product name. No marketing jargon.`;
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const resp = await fetch(QWEN_URL, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
         messages: [{ role: 'user', content: prompt }],
@@ -169,9 +170,9 @@ For each post return: score (0-100), level, 1-sentence notes, confidence (0-1, h
 Posts:
 ${numbered}`;
 
-  const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const resp = await fetch(QWEN_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: MODEL,
       messages: [

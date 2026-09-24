@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 
 
 
@@ -123,14 +124,14 @@ Categories: core_niche, problem_solving, competitor_switch, industry_term, featu
 Focus on BROAD topic keywords, not intent phrases (we add intent modifiers automatically).
 Order by expected lead quality (best first).`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch(QWEN_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableKey}`,
+        'Authorization': `Bearer ${QWEN_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: QWEN_MODEL,
         messages: [
           { role: 'system', content: 'You are an expert at Reddit marketing and keyword research. Always return valid JSON.' },
           { role: 'user', content: prompt }

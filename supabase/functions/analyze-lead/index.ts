@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
 import { verifySubscription } from "../_shared/subscription.ts";
 import { buildHeuristics, clampScore, levelFromScore } from "../_shared/intent-heuristics.ts";
 
@@ -62,11 +63,11 @@ POST TITLE: ${lead.thread_title}
 POST CONTENT: ${(lead.thread_content || '').slice(0, 1500)}
 POST URL: ${lead.thread_url}${commentBlock}`;
 
-  const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const resp = await fetch(QWEN_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: QWEN_MODEL,
       max_tokens: 500,
       messages: [
         { role: 'system', content: 'Expert lead qualifier. Score Reddit posts honestly using both the post and any follow-up comments.' },
