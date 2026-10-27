@@ -173,7 +173,7 @@ function ResourcesBand() {
 /* ---------- page ---------- */
 
 export default function Blog() {
-  usePageMeta({ title: TITLE, description: DESCRIPTION, path: '/blog' });
+  usePageMeta({ title: TITLE, description: DESCRIPTION, path: '/blog', image: `${SITE_URL}/og/blog.jpg` });
   const posts = useMemo(() => listPosts(), []);
   const [params] = useSearchParams();
   const topic = params.get('topic');

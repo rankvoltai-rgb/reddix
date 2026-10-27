@@ -21,6 +21,20 @@ export interface SeoRoute {
 
 export const BASE_URL = "https://reddix.info";
 
+/** App and account pages: prerendered with their own title and noindex, so a
+ *  crawler never sees the homepage's title and canonical on them. Not in the
+ *  sitemap. */
+export const PRIVATE_ROUTES: { path: string; title: string }[] = [
+  { path: "/auth", title: "Sign in or create an account | Reddix" },
+  { path: "/onboarding", title: "Get started | Reddix" },
+  { path: "/setup", title: "Get started | Reddix" },
+  { path: "/subscribe", title: "Get started | Reddix" },
+  { path: "/dashboard", title: "Dashboard | Reddix" },
+  { path: "/scanner", title: "Scanner | Reddix" },
+  { path: "/leads", title: "Leads | Reddix" },
+  { path: "/settings", title: "Settings | Reddix" },
+];
+
 const HOME_TITLE = "Reddix | AI Reddit Lead Generation Tool";
 const HOME_DESC =
   "Reddix scans Reddit on demand, scores buying intent with AI (0–100), and drafts natural replies — turning Reddit threads into qualified leads for your SaaS.";

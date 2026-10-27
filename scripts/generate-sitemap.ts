@@ -84,5 +84,6 @@ const blogSection = [
   ...posts.map((p) => `- [${p.title}](${BASE_URL}/blog/${p.slug}): ${p.excerpt}`),
   "",
 ].join("\n");
-writeFileSync(llmsPath, llms.replace(/\n## Legal\n/, `\n${blogSection}\n## Legal\n`));
+// Collapse runs of blank lines so rebuilding never grows the file.
+writeFileSync(llmsPath, llms.replace(/\n## Legal\n/, `\n${blogSection}\n## Legal\n`).replace(/\n{3,}/g, "\n\n"));
 console.log("llms.txt Blog section updated");

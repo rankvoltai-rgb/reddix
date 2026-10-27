@@ -63,7 +63,6 @@ Reddix turns Reddit into a qualified lead source. You run a manual scan, the AI 
 - [Subreddit](https://reddix.info/glossary/subreddit): Topic-specific Reddit community
 - [Reddiquette](https://reddix.info/glossary/reddiquette): Community norms for engaging on Reddit
 
-
 ## Blog
 
 - [Reddix Blog](https://reddix.info/blog): Playbooks for finding customers on Reddit without getting banned

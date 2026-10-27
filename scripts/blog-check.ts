@@ -7,6 +7,8 @@
 //
 // See docs/blog/writing-guide.md for what each check asks for.
 
+import { existsSync } from "fs";
+import { resolve } from "path";
 import { readAllPosts } from "./blog-files";
 import { scorePost, type Check } from "../src/lib/blog/score";
 import { todayUTC } from "../src/lib/blog/posts";
@@ -26,6 +28,13 @@ let failed = 0;
 
 for (const post of posts) {
   const s = scorePost(post);
+  const hasImage = existsSync(resolve("public/og/blog", `${post.slug}.jpg`));
+  s.blueprint.push({
+    label: "Social image",
+    weight: 0,
+    status: hasImage ? "pass" : "fail",
+    detail: hasImage ? `public/og/blog/${post.slug}.jpg` : "Run `npx tsx scripts/og/render.ts` to create it.",
+  });
   const blueprintFail = s.blueprint.some((c) => c.status === "fail");
   const ok = s.score >= BAR && !blueprintFail;
   if (!ok) failed++;

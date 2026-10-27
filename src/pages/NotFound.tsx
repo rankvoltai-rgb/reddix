@@ -2,10 +2,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Home, Search, Sparkles } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  // Unknown URLs are served the app shell with a 200, so the page itself
+  // tells search engines not to index it.
+  usePageMeta({
+    title: "Page not found | Reddix",
+    description: "This page doesn't exist. Find warm Reddit leads with Reddix.",
+    path: location.pathname,
+    noindex: true,
+  });
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);

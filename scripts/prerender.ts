@@ -11,7 +11,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
-import { BASE_URL, getRoutes, type SeoRoute } from "./seo-routes";
+import { BASE_URL, PRIVATE_ROUTES, getRoutes, type SeoRoute } from "./seo-routes";
 import { features } from "../src/lib/features";
 import { useCases } from "../src/lib/useCases";
 import { competitors } from "../src/lib/alternatives";
@@ -22,6 +22,15 @@ import { faqForSchema } from "../src/lib/blog/outline";
 import { formatDate } from "../src/lib/blog/posts";
 
 const POSTS = readLivePosts();
+
+/** The social preview for a path: a post's own image when it has one
+ *  (scripts/og/render.ts), the blog's for the index, the default otherwise. */
+function ogImageFor(path: string): string {
+  const post = path.match(/^\/blog\/(.+)$/);
+  if (post && existsSync(resolve("public/og/blog", `${post[1]}.jpg`))) return `${BASE_URL}/og/blog/${post[1]}.jpg`;
+  if (path === "/blog") return `${BASE_URL}/og/blog.jpg`;
+  return `${BASE_URL}/og/default.jpg`;
+}
 const postFor = (path: string) => {
   const m = path.match(/^\/blog\/(.+)$/);
   return m ? POSTS.find((p) => p.slug === m[1]) : undefined;
@@ -471,6 +480,10 @@ function renderRoute(html: string, route: SeoRoute) {
     `<meta name="twitter:description" content="${desc}">`,
   );
 
+  const image = ogImageFor(route.path);
+  out = out.replace(/<meta\s+property="og:image"\s[^>]*>/i, `<meta property="og:image" content="${image}" />`);
+  out = out.replace(/<meta\s+name="twitter:image"\s[^>]*>/i, `<meta name="twitter:image" content="${image}" />`);
+
   const post = postFor(route.path);
   if (post) {
     out = out.replace(/<meta\s+property="og:type"[^>]*>/i, `<meta property="og:type" content="article" />`);
@@ -536,6 +549,26 @@ for (const route of routes) {
   const dir = dirname(outPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(outPath, renderRoute(SHELL, route));
+  written++;
+}
+
+// App and account pages: their own title, noindex, and no canonical, so they
+// never pass as copies of the homepage. The app replaces the body on load.
+for (const { path, title } of PRIVATE_ROUTES) {
+  let out = SHELL;
+  const t = esc(title);
+  out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${t}</title>`);
+  out = out.replace(/<meta\s+name="robots"[^>]*>/i, `<meta name="robots" content="noindex, nofollow">`);
+  out = out.replace(/\s*<link\s+rel="canonical"[^>]*>/i, "");
+  out = out.replace(/<meta\s+property="og:url"[^>]*>/i, `<meta property="og:url" content="${BASE_URL}${path}" />`);
+  out = out.replace(/<meta\s+property="og:title"[^>]*>/i, `<meta property="og:title" content="${t}">`);
+  out = out.replace(/<meta\s+name="twitter:title"[^>]*>/i, `<meta name="twitter:title" content="${t}">`);
+  out = out.replace(/<meta\s+property="og:image"\s[^>]*>/i, `<meta property="og:image" content="${BASE_URL}/og/default.jpg" />`);
+  out = out.replace(/<meta\s+name="twitter:image"\s[^>]*>/i, `<meta name="twitter:image" content="${BASE_URL}/og/default.jpg" />`);
+  out = out.replace(/<script\s+type="application\/ld\+json"[\s\S]*?<\/script>\s*/gi, "");
+  const dir = resolve(DIST, path.replace(/^\//, ""));
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(resolve(dir, "index.html"), out);
   written++;
 }
 

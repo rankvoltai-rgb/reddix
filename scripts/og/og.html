@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+  The social preview image (1200×630) for a page, rendered by render.ts with
+  headless Chrome. Query parameters: title, eyebrow, subtitle.
+
+  The landing page's look: white canvas inside hairline rails, the logo, a
+  pill, the title in Plus Jakarta Sans, and the red painting with the mark on
+  the right.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      html, body { width: 1200px; height: 630px; background: #fff; overflow: hidden; }
+      body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #14171c; -webkit-font-smoothing: antialiased; }
+      .frame { position: absolute; inset: 0 40px; border-left: 1.5px solid rgba(20,23,28,.08); border-right: 1.5px solid rgba(20,23,28,.08); }
+      .band-top, .band-bottom { position: absolute; left: 0; right: 0; height: 1.5px; background: rgba(20,23,28,.08); }
+      .band-top { top: 40px; } .band-bottom { bottom: 40px; }
+      .copy { position: absolute; left: 92px; top: 92px; bottom: 92px; width: 600px; display: flex; flex-direction: column; }
+      .brand { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+      .brand svg { width: 44px; height: 44px; }
+      .pill { margin-top: 44px; align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border: 1.5px solid rgba(20,23,28,.1); border-radius: 12px; font-size: 20px; font-weight: 500; }
+      .pill i { width: 10px; height: 10px; border-radius: 50%; background: #FF3130; }
+      h1 { margin-top: 22px; font-size: 58px; line-height: 1.08; font-weight: 600; letter-spacing: -0.035em; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+      h1.long { font-size: 48px; }
+      .sub { margin-top: auto; font-size: 22px; color: #6b7280; display: flex; align-items: center; gap: 12px; }
+      .sub b { color: #14171c; font-weight: 600; }
+      .art { position: absolute; right: 92px; top: 92px; bottom: 92px; width: 330px; border-radius: 22px; overflow: hidden; background: #8c0e12; }
+      .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .art svg { position: absolute; left: 50%; top: 50%; width: 140px; height: 140px; transform: translate(-50%, -50%); filter: drop-shadow(0 18px 30px rgba(60,0,4,.45)); }
+    </style>
+  </head>
+  <body>
+    <div class="frame"></div>
+    <div class="band-top"></div>
+    <div class="band-bottom"></div>
+    <div class="copy">
+      <div class="brand">
+        <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#FF3130" /><path d="M17.5 42.45 A32.5 33.05 0 0 0 82.5 42.45 Z" fill="#fff" /></svg>
+        Reddix
+      </div>
+      <div class="pill"><i></i><span id="eyebrow"></span></div>
+      <h1 id="title"></h1>
+      <p class="sub"><span id="subtitle"></span></p>
+    </div>
+    <div class="art">
+      <img src="../../public/assets/painting-red.webp" alt="" />
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#fff" /><path d="M17.5 42.45 A32.5 33.05 0 0 0 82.5 42.45 Z" fill="#FF3130" /></svg>
+    </div>
+    <script>
+      const q = new URLSearchParams(location.search);
+      const title = q.get('title') || 'Find warm leads on Reddit';
+      document.getElementById('title').textContent = title;
+      if (title.length > 52) document.getElementById('title').classList.add('long');
+      document.getElementById('eyebrow').textContent = q.get('eyebrow') || 'AI Reddit lead generation';
+      document.getElementById('subtitle').innerHTML = q.get('subtitle') || '<b>reddix.info</b>';
+    </script>
+  </body>
+</html>

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useCanonical } from './useCanonical';
 
+const DEFAULT_IMAGE = 'https://reddix.info/og/default.jpg';
+
 interface PageMetaOptions {
   title: string;
   description: string;
@@ -36,10 +38,8 @@ export function usePageMeta({ title, description, path, noindex, image, article 
     upsertMeta('og:url', url, 'property');
     upsertMeta('twitter:title', title);
     upsertMeta('twitter:description', description);
-    if (image) {
-      upsertMeta('og:image', image, 'property');
-      upsertMeta('twitter:image', image);
-    }
+    upsertMeta('og:image', image ?? DEFAULT_IMAGE, 'property');
+    upsertMeta('twitter:image', image ?? DEFAULT_IMAGE);
     if (noindex) {
       upsertMeta('robots', 'noindex, nofollow');
     }

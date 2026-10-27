@@ -114,9 +114,10 @@ More intro…
 
 ## 5. Check it, preview it, publish it
 
-1. `npm run blog:check -- <slug>` and fix everything it flags until it passes.
-2. Preview at `http://localhost:8080/blog/<slug>` on the dev server (`npx vite`).
-3. Commit and push to `main`. Lovable builds the site, and the build adds the post to `sitemap.xml`, `rss.xml` and `llms.txt` and prerenders its HTML for crawlers.
+1. `npx tsx scripts/og/render.ts` to create the post's social preview image (`public/og/blog/<slug>.jpg`). It needs Google Chrome; Lovable's build can't run it, so the image is committed with the post.
+2. `npm run blog:check -- <slug>` and fix everything it flags until it passes.
+3. Preview at `http://localhost:8080/blog/<slug>` on the dev server (`npx vite`).
+4. Commit and push to `main`. Lovable builds the site, and the build adds the post to `sitemap.xml`, `rss.xml` and `llms.txt` and prerenders its HTML for crawlers.
 
 ### Scheduling
 

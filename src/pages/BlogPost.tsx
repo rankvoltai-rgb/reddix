@@ -57,7 +57,13 @@ export default function BlogPost() {
 function Article({ post }: { post: PostFull }) {
   const url = `${SITE_URL}/blog/${post.slug}`;
   const article = useMemo(() => ({ published: post.date, modified: post.updated, tags: post.tags }), [post]);
-  usePageMeta({ title: `${post.title} | Reddix`, description: post.excerpt, path: `/blog/${post.slug}`, article });
+  usePageMeta({
+    title: `${post.title} | Reddix`,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    image: `${SITE_URL}/og/blog/${post.slug}.jpg`,
+    article,
+  });
 
   const outline = useMemo(() => outlineArticle(post.blocks), [post.blocks]);
   const toc = useMemo(() => tableOfContents(outline), [outline]);
