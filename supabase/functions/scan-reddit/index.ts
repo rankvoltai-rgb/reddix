@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL, QWEN_OPTIONS } from "../_shared/qwen.ts";
 import { verifySubscription } from "../_shared/subscription.ts";
 import { buildHeuristics, clampScore, levelFromScore } from "../_shared/intent-heuristics.ts";
 
@@ -84,12 +84,12 @@ async function runSearch(query: string, label: string, freshness: string, firecr
 }
 
 // ── Search-term caching ──
-async function getCachedOrGenerateTerms(supabase: any, userId: string, profile: any, lovableKey: string): Promise<string[]> {
+async function getCachedOrGenerateTerms(supabase: any, userId: string, profile: any, aiKey: string): Promise<string[]> {
   if (profile.cached_search_terms && profile.search_terms_cached_at) {
     const ageHours = (Date.now() - new Date(profile.search_terms_cached_at).getTime()) / 3_600_000;
     if (ageHours < 24) return profile.cached_search_terms as string[];
   }
-  const terms = await generateSearchTerms(profile, lovableKey);
+  const terms = await generateSearchTerms(profile, aiKey);
   if (terms.length > 0) {
     await supabase.from('profiles').update({
       cached_search_terms: terms,
@@ -99,7 +99,7 @@ async function getCachedOrGenerateTerms(supabase: any, userId: string, profile: 
   return terms;
 }
 
-async function generateSearchTerms(profile: any, lovableKey: string): Promise<string[]> {
+async function generateSearchTerms(profile: any, aiKey: string): Promise<string[]> {
   const productName = (profile.product_name || '').toLowerCase();
   try {
     const prompt = `Generate 6-8 short search phrases (3-6 words) that a potential CUSTOMER would write on Reddit when they have the problem this product solves.
@@ -115,6 +115,7 @@ Rules: pain-point phrasing from customer's view. Do NOT include the product name
       headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
+        ...QWEN_OPTIONS,
         messages: [{ role: 'user', content: prompt }],
         tools: [{
           type: 'function',
@@ -150,7 +151,7 @@ interface BatchScore {
 async function batchScore(
   posts: { index: number; title: string; content: string }[],
   profile: any,
-  lovableKey: string,
+  aiKey: string,
 ): Promise<BatchScore[]> {
   const numbered = posts.map(p => `[${p.index}] Title: "${p.title}"\nContent: "${p.content.slice(0, 500)}"`).join('\n\n');
   const prompt = `Score these Reddit posts for PURCHASE INTENT for:
@@ -175,6 +176,7 @@ ${numbered}`;
     headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: MODEL,
+      ...QWEN_OPTIONS,
       messages: [
         { role: 'system', content: 'Expert lead qualifier. Score honestly.' },
         { role: 'user', content: prompt },
@@ -322,9 +324,9 @@ serve(async (req) => {
 
     await supabase.from('profiles').update({ last_scan_at: new Date().toISOString() }).eq('id', userId);
 
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const aiKey = QWEN_KEY;
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY')!;
-    if (!firecrawlKey || !lovableKey) {
+    if (!firecrawlKey || !aiKey) {
       return new Response(JSON.stringify({ success: false, error: 'Services not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -342,7 +344,7 @@ serve(async (req) => {
     const doScan = async () => {
       const seenSince = new Date(Date.now() - SEEN_WINDOW_DAYS * 86_400_000).toISOString();
       const [topics, seenResult] = await Promise.all([
-        getCachedOrGenerateTerms(supabase, userId, profile, lovableKey),
+        getCachedOrGenerateTerms(supabase, userId, profile, aiKey),
         supabase.from('seen_posts').select('post_url, last_score').eq('user_id', userId).gte('last_seen_at', seenSince),
       ]);
 
@@ -445,7 +447,7 @@ serve(async (req) => {
         }));
         aiCalls++;
         batchPromises.push(Promise.race([
-          batchScore(batch, productCtx, lovableKey),
+          batchScore(batch, productCtx, aiKey),
           new Promise<BatchScore[]>((resolve) => setTimeout(() => {
             console.warn(`batch ${i} timed out`);
             resolve(batch.map(b => ({ post: b.index, score: 25, level: 'research' as const, notes: '', confidence: 0.3 })));

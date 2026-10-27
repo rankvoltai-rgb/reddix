@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL, QWEN_OPTIONS } from "../_shared/qwen.ts";
 import { verifySubscription } from "../_shared/subscription.ts";
 import { buildHeuristics, clampScore, levelFromScore } from "../_shared/intent-heuristics.ts";
 
@@ -38,7 +38,7 @@ async function fetchTopComments(threadUrl: string, limit = 5): Promise<string[]>
   }
 }
 
-async function deepAnalyze(lead: any, profile: any, comments: string[], lovableKey: string) {
+async function deepAnalyze(lead: any, profile: any, comments: string[], aiKey: string) {
   const commentBlock = comments.length > 0
     ? `\n\nTOP COMMENTS (use these to qualify intent — OP's follow-ups reveal budget, blockers, urgency):\n${comments.join('\n---\n')}`
     : '';
@@ -68,6 +68,7 @@ POST URL: ${lead.thread_url}${commentBlock}`;
     headers: { 'Authorization': `Bearer ${QWEN_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: QWEN_MODEL,
+      ...QWEN_OPTIONS,
       max_tokens: 500,
       messages: [
         { role: 'system', content: 'Expert lead qualifier. Score Reddit posts honestly using both the post and any follow-up comments.' },
@@ -124,7 +125,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const aiKey = QWEN_KEY;
 
     const anonClient = createClient(supabaseUrl, anonKey);
     const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
@@ -162,7 +163,7 @@ serve(async (req) => {
     const combinedText = `${lead.thread_content || ''}\n${comments.join('\n')}`;
     const heur = evalHeur(lead.thread_title || '', combinedText);
 
-    const result = await deepAnalyze(lead, profile || {}, comments, lovableKey);
+    const result = await deepAnalyze(lead, profile || {}, comments, aiKey);
     if ((result as any)._err) {
       return new Response(JSON.stringify({ success: false, error: (result as any)._err }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

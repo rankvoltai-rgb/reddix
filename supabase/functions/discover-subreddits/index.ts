@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL, QWEN_OPTIONS } from "../_shared/qwen.ts";
 
 
 
@@ -75,8 +75,8 @@ serve(async (req) => {
       pricingModel: profile.pricing_model || '',
     };
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    const AI_KEY = QWEN_KEY;
+    if (!AI_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -125,7 +125,7 @@ Focus on:
 
 Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`;
 
-    console.log('Calling Lovable AI for subreddit discovery...');
+    console.log('Calling Qwen for subreddit discovery...');
 
     const response = await fetch(QWEN_URL, {
       method: 'POST',
@@ -135,6 +135,7 @@ Order by relevance_score (highest first). Only suggest REAL, ACTIVE subreddits.`
       },
       body: JSON.stringify({
         model: QWEN_MODEL,
+        ...QWEN_OPTIONS,
         messages: [
           { role: 'system', content: 'You are an expert at Reddit marketing and finding potential customers. Always return valid JSON.' },
           { role: 'user', content: prompt }

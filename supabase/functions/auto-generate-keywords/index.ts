@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL, QWEN_OPTIONS } from "../_shared/qwen.ts";
 
 
 
@@ -26,9 +26,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const aiKey = QWEN_KEY;
 
-    if (!lovableKey) {
+    if (!aiKey) {
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -132,6 +132,7 @@ Order by expected lead quality (best first).`;
       },
       body: JSON.stringify({
         model: QWEN_MODEL,
+        ...QWEN_OPTIONS,
         messages: [
           { role: 'system', content: 'You are an expert at Reddit marketing and keyword research. Always return valid JSON.' },
           { role: 'user', content: prompt }

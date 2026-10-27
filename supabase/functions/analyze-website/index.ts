@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL } from "../_shared/qwen.ts";
+import { QWEN_URL, QWEN_KEY, QWEN_MODEL, QWEN_FAST_MODEL, QWEN_OPTIONS } from "../_shared/qwen.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,16 +83,16 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: Extract structured data via Lovable AI (Gemini) + tool calling
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    // Step 2: Extract structured data via Qwen (Alibaba Cloud Model Studio) + tool calling
+    const AI_KEY = QWEN_KEY;
+    if (!AI_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'AI service not configured' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const truncatedMarkdown = markdown.slice(0, 8000);
-    console.log('Analyzing content with Gemini via Lovable AI, length:', truncatedMarkdown.length);
+    console.log('Analyzing content with Qwen, length:', truncatedMarkdown.length);
 
     const aiResponse = await fetch(QWEN_URL, {
       method: 'POST',
@@ -102,6 +102,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: QWEN_MODEL,
+        ...QWEN_OPTIONS,
         messages: [
           {
             role: 'system',
