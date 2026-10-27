@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Open Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontWeight: {
         bold: "600",
@@ -71,6 +72,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        ink: "hsl(var(--ink) / <alpha-value>)",
+        surface: "hsl(var(--surface) / <alpha-value>)",
+        cta: {
+          DEFAULT: "hsl(var(--cta) / <alpha-value>)",
+          hover: "hsl(var(--cta-hover) / <alpha-value>)",
+          soft: "hsl(var(--cta-soft) / <alpha-value>)",
+          deep: "hsl(var(--cta-deep) / <alpha-value>)",
+        },
         intent: {
           hot: "hsl(var(--intent-hot))",
           warm: "hsl(var(--intent-warm))",
@@ -104,6 +113,16 @@ export default {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        // The track holds its items twice, so sliding it by half lands the
+        // second copy exactly where the first began and the loop never jumps.
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
+        "hero-rise": {
+          "0%": { opacity: "0", transform: "translateY(14px)", filter: "blur(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)", filter: "blur(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -111,6 +130,9 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         "stagger-fade-in": "stagger-fade-in 0.4s ease-out forwards",
+        // Each line passes its own --rise-delay for the stagger.
+        marquee: "marquee var(--marquee-duration, 60s) linear infinite",
+        "hero-rise": "hero-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0s) both",
       },
     },
   },

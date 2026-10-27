@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Reddix Blog</title>
+    <link>https://reddix.info/blog</link>
+    <atom:link href="https://reddix.info/rss.xml" rel="self" type="application/rss+xml" />
+    <description>Practical, sourced playbooks for finding customers on Reddit.</description>
+    <language>en</language>
+    <lastBuildDate>Mon, 26 Oct 2026 00:00:00 GMT</lastBuildDate>
+    <item>
+      <title>How to Find Customers on Reddit Without Getting Banned</title>
+      <link>https://reddix.info/blog/find-customers-on-reddit</link>
+      <guid isPermaLink="true">https://reddix.info/blog/find-customers-on-reddit</guid>
+      <pubDate>Mon, 26 Oct 2026 00:00:00 GMT</pubDate>
+      <description>Learn how to find customers on Reddit. Where buyers ask for tools, how to search for buying intent, and the rules that keep your account safe.</description>
+      <category>Lead Generation</category>
+      <category>Playbooks</category>
+    </item>
+    <item>
+      <title>Reddit Lead Generation: A Practical Guide for SaaS</title>
+      <link>https://reddix.info/blog/reddit-lead-generation</link>
+      <guid isPermaLink="true">https://reddix.info/blog/reddit-lead-generation</guid>
+      <pubDate>Mon, 26 Oct 2026 00:00:00 GMT</pubDate>
+      <description>Reddit lead generation for SaaS teams. Compare channels, spot buying intent, score threads by hand, and track each lead from reply to customer.</description>
+      <category>Lead Generation</category>
+      <category>Reddit Marketing</category>
+    </item>
+    <item>
+      <title>Reddit Self-Promotion Rules: What Moderators Allow</title>
+      <link>https://reddix.info/blog/reddit-self-promotion-rules</link>
+      <guid isPermaLink="true">https://reddix.info/blog/reddit-self-promotion-rules</guid>
+      <pubDate>Mon, 26 Oct 2026 00:00:00 GMT</pubDate>
+      <description>Reddit self-promotion rules explained. What the site-wide rules say, where the 90/10 rule stands today, and what each subreddit adds on top.</description>
+      <category>Community Rules</category>
+      <category>Reddit Marketing</category>
+    </item>
+  </channel>
+</rss>

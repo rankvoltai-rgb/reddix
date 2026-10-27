@@ -16,6 +16,16 @@ import { features } from "../src/lib/features";
 import { useCases } from "../src/lib/useCases";
 import { competitors } from "../src/lib/alternatives";
 import { glossaryTerms } from "../src/lib/glossary";
+import { marked } from "marked";
+import { readLivePosts } from "./blog-files";
+import { faqForSchema } from "../src/lib/blog/outline";
+import { formatDate } from "../src/lib/blog/posts";
+
+const POSTS = readLivePosts();
+const postFor = (path: string) => {
+  const m = path.match(/^\/blog\/(.+)$/);
+  return m ? POSTS.find((p) => p.slug === m[1]) : undefined;
+};
 
 const DIST = resolve("dist");
 const SHELL = readFileSync(resolve(DIST, "index.html"), "utf8");
@@ -152,6 +162,46 @@ function buildJsonLd(route: SeoRoute): string {
     if (uMatch) {
       const u = useCases.find((x) => x.slug === uMatch[1]);
       if (u?.faq?.length) graph.push(faqNode(u.faq, `${BASE_URL}${p}#faq`));
+    }
+    if (p === "/blog") {
+      graph.push({
+        "@type": "Blog",
+        "@id": `${BASE_URL}/blog#blog`,
+        name: "Reddix Blog",
+        url: `${BASE_URL}/blog`,
+        description: route.description,
+        publisher: { "@id": `${BASE_URL}/#organization` },
+        blogPost: POSTS.slice(0, 20).map((post) => ({
+          "@type": "BlogPosting",
+          headline: post.title,
+          url: `${BASE_URL}/blog/${post.slug}`,
+          datePublished: post.date,
+          dateModified: post.updated,
+          description: post.excerpt,
+        })),
+      });
+    }
+    const post = postFor(p);
+    if (post) {
+      graph.push({
+        "@type": "BlogPosting",
+        "@id": `${BASE_URL}${p}#article`,
+        headline: post.title,
+        description: post.excerpt,
+        datePublished: post.date,
+        dateModified: post.updated,
+        wordCount: post.wordCount,
+        keywords: [post.keyword, ...post.tags].filter(Boolean).join(", "),
+        articleSection: post.tags[0],
+        inLanguage: "en",
+        author: { "@type": "Organization", name: post.author, url: BASE_URL },
+        publisher: { "@id": `${BASE_URL}/#organization` },
+        mainEntityOfPage: { "@id": `${BASE_URL}${p}#webpage` },
+        isPartOf: { "@id": `${BASE_URL}/blog#blog` },
+        ...(post.cover ? { image: `${BASE_URL}${post.cover}` } : {}),
+      });
+      const faq = faqForSchema(post.blocks);
+      if (faq.length) graph.push(faqNode(faq, `${BASE_URL}${p}#faq`));
     }
     const gMatch = p.match(/^\/glossary\/(.+)$/);
     if (gMatch) {
@@ -334,6 +384,27 @@ function glossaryTermBody(slug: string): string {
   `;
 }
 
+function blogIndexBody(): string {
+  const items = POSTS.map(
+    (p) =>
+      `<li><a href="/blog/${p.slug}"><strong>${esc(p.title)}</strong></a> — ${esc(p.excerpt)} <time datetime="${p.date}">${formatDate(p.date)}</time></li>`,
+  ).join("");
+  return `<section><h2>Latest articles</h2><ul>${items}</ul></section>`;
+}
+
+// The whole article, rendered from its markdown, so crawlers that don't run
+// JavaScript read exactly what visitors do.
+function blogPostBody(path: string): string {
+  const post = postFor(path);
+  if (!post) return "";
+  const byline = `<p>By ${esc(post.author)} · Published <time datetime="${post.date}">${formatDate(post.date)}</time>${
+    post.updated !== post.date ? ` · Updated <time datetime="${post.updated}">${formatDate(post.updated)}</time>` : ""
+  } · ${post.readingMinutes} min read</p>`;
+  const html = marked.parse(post.body, { async: false, gfm: true }) as string;
+  const tags = post.tags.map((t) => `<li>${esc(t)}</li>`).join("");
+  return `${byline}<article>${html}</article>${tags ? `<ul aria-label="Topics">${tags}</ul>` : ""}<p><a href="/blog">More articles from the Reddix blog</a></p>`;
+}
+
 function staticBody(path: string): string {
   if (path === "/terms")
     return `<section><p>These terms of service govern use of Reddix.info. By using Reddix you agree to use the product lawfully, not to abuse the Reddit API through it, and to accept the all-sales-are-final refund policy. Full terms are available on this page once the app loads.</p></section>`;
@@ -348,6 +419,8 @@ function buildBody(route: SeoRoute): string {
   if (p === "/alternatives") return alternativesIndexBody();
   if (p === "/glossary") return glossaryIndexBody();
   if (p === "/terms" || p === "/refund-policy") return staticBody(p);
+  if (p === "/blog") return blogIndexBody();
+  if (p.startsWith("/blog/")) return blogPostBody(p);
   const featureMatch = p.match(/^\/features\/(.+)$/);
   if (featureMatch) return featureBody(featureMatch[1]);
   const useCaseMatch = p.match(/^\/use-cases\/(.+)$/);
@@ -398,12 +471,27 @@ function renderRoute(html: string, route: SeoRoute) {
     `<meta name="twitter:description" content="${desc}">`,
   );
 
+  const post = postFor(route.path);
+  if (post) {
+    out = out.replace(/<meta\s+property="og:type"[^>]*>/i, `<meta property="og:type" content="article" />`);
+    const articleMeta = [
+      `<meta property="article:published_time" content="${post.date}" />`,
+      `<meta property="article:modified_time" content="${post.updated}" />`,
+      ...post.tags.map((t) => `<meta property="article:tag" content="${esc(t)}" />`),
+    ].join("\n    ");
+    out = out.replace(/<\/head>/i, `    ${articleMeta}\n  </head>`);
+  }
+
   // Bake full visible content into #root so raw-HTML crawlers (LLMs,
   // social previews, Googlebot first pass) see real content. React
   // replaces this on hydration. Kept in a non-hidden <main> so AI
   // crawlers don't discount it as cloaked / hidden content.
   const body = buildBody(route);
-  const dateLine = `<p><time datetime="${BUILD_DATE}" itemprop="dateModified">Last updated: ${BUILD_DATE_HUMAN}</time></p>`;
+  const dateLine = post
+    ? ""
+    : `<p><time datetime="${route.lastmod ?? BUILD_DATE}" itemprop="dateModified">Last updated: ${
+        route.lastmod ? formatDate(route.lastmod) : BUILD_DATE_HUMAN
+      }</time></p>`;
   const fallback = `
       <main data-prerendered="true">
         <h1>${esc(route.h1)}</h1>
@@ -413,6 +501,7 @@ function renderRoute(html: string, route: SeoRoute) {
         <nav aria-label="Site"><ul>
           <li><a href="/">Home</a></li>
           <li><a href="/alternatives">Alternatives</a></li>
+          <li><a href="/blog">Blog</a></li>
           <li><a href="/glossary">Glossary</a></li>
           <li><a href="/terms">Terms</a></li>
           <li><a href="/refund-policy">Refund Policy</a></li>

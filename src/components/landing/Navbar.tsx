@@ -1,293 +1,536 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown, Zap, Target, MessageSquare, Compass, BarChart3, Clock, Repeat, Globe, Shield, ArrowRight, ArrowUpRight, BookOpen, Radar, Rocket, Users, User, Code, ShoppingCart, Briefcase, PenTool, TrendingUp } from 'lucide-react';
-import { competitors } from '@/lib/alternatives';
-import { DropdownPanel, type DropdownConfig, type DropdownItem } from './DropdownPanel';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
+import { flushSync } from 'react-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronDown, Menu, Radar, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { FeaturesMenu, NavLink, ResourcesMenu } from './nav-menus';
+import { useGoToSection } from './scroll';
+import { COMPARE_LINK, FEATURE_COLUMNS, LEARN_LINKS, NAV_COMPETITORS, PERSONA_COLUMNS, type GoToSection } from './nav-data';
 
-interface NavItem {
-  label: string;
-  scrollId?: string;
-  route?: string;
-  dropdown?: DropdownConfig;
+type MenuId = 'features' | 'resources';
+
+/* Landing-page sections. The navbar is shared by every public page, so these
+   always go to "/" first when you're elsewhere. */
+const LINKS: { label: string; section: string }[] = [
+  { label: 'How it works', section: 'how-it-works' },
+  { label: 'Pricing', section: 'pricing' },
+  { label: 'FAQ', section: 'faq' },
+];
+
+const MENUS: { id: MenuId; label: string; width: string; paths: string[] }[] = [
+  { id: 'features', label: 'Features', width: 'w-[min(60rem,calc(100vw-2rem))]', paths: ['/features', '/use-cases'] },
+  { id: 'resources', label: 'Resources', width: 'w-[min(40rem,calc(100vw-2rem))]', paths: ['/blog', '/glossary', '/alternatives'] },
+];
+
+const inSection = (pathname: string, paths: string[]) => paths.some((p) => pathname.startsWith(p));
+
+/* Long enough that sweeping the pointer across the bar doesn't flash a menu
+   open; short enough that reaching for one feels instant. */
+const OPEN_DELAY = 90;
+/* Long enough to cut the corner from a trigger to the far side of its panel. */
+const CLOSE_DELAY = 200;
+
+/* Where the panel sits: centred under the bar, just below it. The surface
+   behind the menus and the hairline over them share it. */
+const STAGE = 'absolute inset-x-0 top-[calc(100%+0.5rem)] mx-auto';
+
+const EASE = 'ease-[cubic-bezier(0.22,1,0.36,1)]';
+
+const TOP_ITEM =
+  'relative flex h-9 items-center gap-1 whitespace-nowrap rounded-md px-3 text-sm font-medium text-ink/65 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta/40 md:px-2 lg:px-3.5';
+
+/* Marks the top-level item for the section you're in. */
+function CurrentDot() {
+  return <span aria-hidden className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-ink" />;
 }
 
-const featureItems: DropdownItem[] = [
-  { label: 'Intent Detection', desc: 'AI spots genuine buying signals', icon: Zap, route: '/features/intent-detection' },
-  { label: 'Lead Scoring', desc: 'Every lead scored 0–100', icon: Target, route: '/features/lead-scoring' },
-  { label: 'AI Replies', desc: 'Context-aware reply drafts', icon: MessageSquare, route: '/features/ai-replies' },
-  { label: 'Subreddit Discovery', desc: 'Find communities where your ICP lives', icon: Compass, route: '/features/subreddit-discovery' },
-  { label: 'Analytics Dashboard', desc: 'Track leads and conversions', icon: BarChart3, route: '/features/analytics-dashboard' },
-  { label: 'Scheduled Scans', desc: 'Set it and forget it — 24/7', icon: Clock, route: '/features/scheduled-scans' },
-  { label: 'Deduplication', desc: 'Never see the same post twice', icon: Repeat, route: '/features/deduplication' },
-  { label: 'Website Analysis', desc: 'Auto-extract keywords from your URL', icon: Globe, route: '/features/website-analysis' },
-  { label: 'Natural Tone', desc: 'Replies that add value, not noise', icon: Shield, route: '/features/natural-tone' },
-];
+/* Hover belongs to mice and pens; a tap goes through click instead. */
+const hoverOnly = (fn: () => void) => (e: ReactPointerEvent) => {
+  if (e.pointerType !== 'touch') fn();
+};
 
-const useCaseItems: DropdownItem[] = [
-  { label: 'SaaS Founders', desc: 'Find users searching for your category', icon: Rocket, route: '/use-cases/saas-founders' },
-  { label: 'Marketing Agencies', desc: 'Scale across multiple clients', icon: Users, route: '/use-cases/marketing-agencies' },
-  { label: 'Solopreneurs', desc: 'Warm leads on autopilot', icon: User, route: '/use-cases/solopreneurs' },
-  { label: 'Developer Tools', desc: 'Reach devs where they hang out', icon: Code, route: '/use-cases/developer-tools' },
-  { label: 'E-commerce', desc: 'Product recommendation threads', icon: ShoppingCart, route: '/use-cases/ecommerce' },
-  { label: 'B2B Sales', desc: 'Enterprise buying signals', icon: Briefcase, route: '/use-cases/b2b-sales' },
-  { label: 'Content Marketers', desc: 'Content gaps & distribution', icon: PenTool, route: '/use-cases/content-marketers' },
-  { label: 'Startup Growth', desc: 'Early traction on Reddit', icon: TrendingUp, route: '/use-cases/startup-growth' },
-];
+interface MenuState {
+  active: MenuId | null;
+  /* The menu shown last, so the surface keeps its size while it fades out. */
+  last: MenuId;
+  /* True while switching between two open menus: the only time the surface
+     animates its size. Opening from closed sizes it at once. */
+  morph: boolean;
+}
 
-const resourceItems: DropdownItem[] = [
-  ...competitors.slice(0, 5).map((c) => ({
-    label: `vs ${c.name}`,
-    desc: c.weakness,
-    icon: ArrowUpRight,
-    route: `/alternatives/${c.slug}`,
-  })),
-  { label: 'Glossary', desc: '45+ Reddit marketing terms defined', icon: BookOpen, route: '/glossary' },
-];
+interface Pill {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  visible: boolean;
+  /* False when it appears from hidden, so it fades in where it lands instead
+     of sliding over from wherever it last was. */
+  slide: boolean;
+}
 
-const navItems: NavItem[] = [
-  {
-    label: 'Features',
-    scrollId: 'features',
-    dropdown: {
-      items: featureItems,
-      footer: { label: 'View all features', route: '/#features' },
-    },
-  },
-  { label: 'How it works', scrollId: 'how-it-works' },
-  { label: 'Pricing', scrollId: 'pricing' },
-  {
-    label: 'Use Cases',
-    route: '/use-cases/saas-founders',
-    dropdown: {
-      items: useCaseItems,
-      footer: { label: 'View all use cases', route: '/#features' },
-    },
-  },
-  {
-    label: 'Resources',
-    route: '/alternatives',
-    dropdown: {
-      items: resourceItems,
-      footer: { label: 'View all alternatives', route: '/alternatives' },
-    },
-  },
-];
-
-export function Navbar() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
+/**
+ * @param framed Draw the landing page's hairline rails on the bar, so they run
+ *               on into a page laid out in that frame.
+ */
+export function Navbar({ framed = false }: { framed?: boolean }) {
+  const { pathname } = useLocation();
+  const [menu, setMenu] = useState<MenuState>({ active: null, last: 'features', morph: false });
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [pill, setPill] = useState<Pill | null>(null);
+  const [sizes, setSizes] = useState<Partial<Record<MenuId, { w: number; h: number }>>>({});
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+  const headerRef = useRef<HTMLElement>(null);
+  const triggerRefs = useRef<Partial<Record<MenuId, HTMLButtonElement | null>>>({});
+  const panelRefs = useRef<Partial<Record<MenuId, HTMLDivElement | null>>>({});
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+  const timers = useRef<{ open?: number; close?: number }>({});
+  const lastPointer = useRef('mouse');
+
+  const active = menu.active;
+
+  const show = useCallback((id: MenuId | null) => {
+    setMenu((m) => (m.active === id ? m : { active: id, last: id ?? m.last, morph: m.active !== null && id !== null }));
   }, []);
 
+  // Navigating closes everything.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setMenu((m) => ({ ...m, active: null, morph: false }));
+    setMobileOpen(false);
+  }
+
+  const goHome = useGoToSection();
+  const goToSection: GoToSection = useCallback(
+    (id) => {
+      show(null);
+      setMobileOpen(false);
+      goHome(id);
+    },
+    [goHome, show],
+  );
+
+  const clearTimers = () => {
+    window.clearTimeout(timers.current.open);
+    window.clearTimeout(timers.current.close);
+  };
   useEffect(() => {
-    setActiveDropdown(null);
-    setMobileOpen(false);
-  }, [location.pathname]);
+    const t = timers.current;
+    return () => {
+      window.clearTimeout(t.open);
+      window.clearTimeout(t.close);
+    };
+  }, []);
 
-  const handleNavigate = (route?: string, scrollId?: string) => {
-    setActiveDropdown(null);
-    setMobileOpen(false);
-    setMobileExpanded(null);
+  // Once a menu is open, moving to the other trigger switches at once; only
+  // the first opening waits out the intent delay.
+  const hoverOpen = (id: MenuId) => {
+    clearTimers();
+    if (active) show(id);
+    else timers.current.open = window.setTimeout(() => show(id), OPEN_DELAY);
+  };
+  const scheduleClose = () => {
+    clearTimers();
+    timers.current.close = window.setTimeout(() => show(null), CLOSE_DELAY);
+  };
+  const cancelClose = () => window.clearTimeout(timers.current.close);
 
-    if (route) {
-      if (route.startsWith('/#')) {
-        if (location.pathname === '/') {
-          document.getElementById(route.slice(2))?.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          navigate('/');
-          setTimeout(() => {
-            document.getElementById(route.slice(2))?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
-        }
-      } else {
-        navigate(route);
+  // Escape closes (handing focus back to the trigger if it was in the menu);
+  // so does pressing anywhere outside the header.
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const focusInside = headerRef.current?.contains(document.activeElement);
+      show(null);
+      if (focusInside) triggerRefs.current[active]?.focus();
+    };
+    const onDown = (e: PointerEvent) => {
+      if (!headerRef.current?.contains(e.target as Node)) show(null);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, [active, show]);
+
+  // The surface takes the size of whichever menu is showing, so each menu is
+  // measured as it lays out.
+  useEffect(() => {
+    const measure = () => {
+      const next: Partial<Record<MenuId, { w: number; h: number }>> = {};
+      for (const { id } of MENUS) {
+        const el = panelRefs.current[id];
+        if (el) next[id] = { w: el.offsetWidth, h: el.offsetHeight };
       }
-    } else if (scrollId) {
-      if (location.pathname === '/') {
-        document.getElementById(scrollId)?.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        navigate('/');
-        setTimeout(() => {
-          document.getElementById(scrollId)?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
+      setSizes(next);
+    };
+    const observer = new ResizeObserver(measure);
+    for (const { id } of MENUS) {
+      const el = panelRefs.current[id];
+      if (el) observer.observe(el);
     }
+    return () => observer.disconnect();
+  }, []);
+
+  // The pill follows the pointer across the bar, and rests on the open
+  // menu's trigger while the pointer is inside that menu.
+  const pillKey = hovered ?? active;
+  useLayoutEffect(() => {
+    const el = pillKey ? itemRefs.current[pillKey] : null;
+    setPill((prev) =>
+      el
+        ? { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight, visible: true, slide: !!prev?.visible }
+        : prev && { ...prev, visible: false },
+    );
+  }, [pillKey]);
+
+  const order = (id: MenuId) => MENUS.findIndex((m) => m.id === id);
+
+  // An open menu sits in place; the others wait off to the side they'd slide
+  // in from, so moving between menus reads as moving along the bar.
+  // Visibility flips at once on the way in, so a link can take focus in the
+  // same frame, and waits for the fade on the way out.
+  const panelState = (id: MenuId) => {
+    if (active === id) {
+      return 'visible translate-x-0 translate-y-0 opacity-100 transition-[opacity,transform]';
+    }
+    return cn(
+      'invisible pointer-events-none opacity-0 transition-[opacity,transform,visibility]',
+      !active ? '-translate-y-1' : order(id) < order(active) ? '-translate-x-6' : 'translate-x-6',
+    );
   };
 
-  const handleMouseEnter = (label: string) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setActiveDropdown(label);
+  // Up and down arrows walk the menu's links; up from the first returns to
+  // the trigger.
+  const walkLinks = (e: ReactKeyboardEvent<HTMLDivElement>, id: MenuId) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const links = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('a[href]'));
+    const i = links.indexOf(document.activeElement as HTMLElement);
+    if (i === -1) return;
+    e.preventDefault();
+    if (e.key === 'ArrowUp' && i === 0) triggerRefs.current[id]?.focus();
+    else links[e.key === 'ArrowDown' ? Math.min(i + 1, links.length - 1) : i - 1]?.focus();
   };
 
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => setActiveDropdown(null), 200);
+  // On the landing page the logo scrolls back to the top instead.
+  const onLogo = (e: MouseEvent) => {
+    if (pathname !== '/') return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const size = sizes[menu.last];
+  const stageStyle = size ? { width: size.w, height: size.h } : undefined;
+  const stageMotion = cn(
+    menu.morph ? 'transition-[opacity,transform,width,height] duration-300' : 'transition-[opacity,transform] duration-200',
+    EASE,
+    'motion-reduce:transition-none',
+    active ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0',
+  );
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? 'bg-background/70 backdrop-blur-2xl border-b border-border/40'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-[1200px] mx-auto px-6">
-        <div className="flex items-center justify-between h-[64px]">
-          {/* Logo */}
-          <button
-            onClick={() => navigate('/')}
-            className={`flex items-center gap-2 text-[15px] font-bold tracking-tight transition-colors duration-300 ${scrolled ? 'text-foreground' : 'text-white'}`}
-          >
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-300 ${scrolled ? 'bg-primary' : 'bg-white/15'}`}>
-              <Radar className="w-3.5 h-3.5 text-white" />
-            </div>
-            Reddix
-          </button>
+    <header ref={headerRef} className="fixed inset-x-0 top-0 z-50 border-b border-ink/[0.07] bg-white font-jakarta">
+      {/* A faint wash over the page while a menu is open, lifting the menu
+          off the hero it opens over. Purely visual — never takes the pointer. */}
+      <div
+        aria-hidden
+        className={cn(
+          'pointer-events-none fixed inset-x-0 bottom-0 top-16 hidden bg-ink/[0.04] transition-opacity duration-300 md:block',
+          active ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+      <nav
+        aria-label="Main"
+        className={cn(
+          'relative mx-auto flex h-16 max-w-6xl items-center justify-between px-5 lg:px-6',
+          framed && 'border-x border-ink/[0.07]',
+        )}
+      >
+        {/* The panel's surface, behind both menus: one card that reshapes
+            between them rather than two cards that swap. */}
+        <div
+          aria-hidden
+          style={stageStyle}
+          className={cn(
+            STAGE,
+            'pointer-events-none hidden rounded-lg bg-white shadow-[0_2px_6px_-2px_rgba(16,24,40,0.06),0_16px_40px_-16px_rgba(16,24,40,0.2)] md:block',
+            stageMotion,
+          )}
+        />
+        <Link to="/" onClick={onLogo} className="relative flex shrink-0 items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cta">
+            <Radar className="h-4 w-4 text-white" />
+          </span>
+          <span className="text-[1.2rem] font-semibold tracking-tight text-ink">Reddix</span>
+        </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-0.5">
-            {navItems.map((item) => (
+        <div className="hidden items-center gap-0.5 md:flex" onPointerLeave={() => setHovered(null)}>
+          <span
+            aria-hidden
+            style={pill ? { transform: `translate(${pill.x}px, ${pill.y}px)`, width: pill.w, height: pill.h } : undefined}
+            className={cn(
+              'pointer-events-none absolute left-0 top-0 rounded-md bg-ink/[0.045]',
+              pill?.slide ? cn('transition-[transform,width,opacity] duration-300', EASE) : 'transition-opacity duration-150',
+              'motion-reduce:transition-none',
+              pill?.visible ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+          {/* Bridges the gap between the bar and the panel. */}
+          <div
+            aria-hidden
+            onPointerEnter={hoverOnly(cancelClose)}
+            onPointerLeave={hoverOnly(scheduleClose)}
+            className={cn('absolute inset-x-0 top-full h-2', active ? 'pointer-events-auto' : 'pointer-events-none')}
+          />
+          {MENUS.map(({ id, label, width, paths }) => {
+            const open = active === id;
+            return (
               <div
-                key={item.label}
-                className="relative"
-                onMouseEnter={() => item.dropdown ? handleMouseEnter(item.label) : undefined}
-                onMouseLeave={() => item.dropdown ? handleMouseLeave() : undefined}
+                key={id}
+                onBlur={(e) => {
+                  if (open && !e.currentTarget.contains(e.relatedTarget as Node)) show(null);
+                }}
               >
                 <button
-                  onClick={() => {
-                    if (item.dropdown) {
-                      setActiveDropdown(activeDropdown === item.label ? null : item.label);
-                    } else {
-                      handleNavigate(item.route, item.scrollId);
-                    }
+                  ref={(el) => {
+                    triggerRefs.current[id] = el;
+                    itemRefs.current[id] = el;
                   }}
-                  className={`flex items-center gap-1 px-3.5 py-1.5 text-[13px] rounded-lg transition-all duration-200 ${
-                    activeDropdown === item.label
-                      ? scrolled
-                        ? 'text-foreground bg-muted/60'
-                        : 'text-white bg-white/10'
-                      : scrolled
-                        ? 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                        : 'text-white/60 hover:text-white hover:bg-white/10'
-                  }`}
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={`nav-menu-${id}`}
+                  onPointerDown={(e) => {
+                    lastPointer.current = e.pointerType;
+                  }}
+                  onPointerEnter={(e) => {
+                    setHovered(id);
+                    if (e.pointerType !== 'touch') hoverOpen(id);
+                  }}
+                  onPointerLeave={hoverOnly(scheduleClose)}
+                  onClick={(e) => {
+                    clearTimers();
+                    // Hover already opened it: clicking the label the pointer
+                    // rests on shouldn't slam it shut. Taps and keys toggle.
+                    if (open && e.detail > 0 && lastPointer.current !== 'touch') return;
+                    show(open ? null : id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowDown') return;
+                    e.preventDefault();
+                    flushSync(() => show(id));
+                    panelRefs.current[id]?.querySelector<HTMLElement>('a[href]')?.focus();
+                  }}
+                  className={cn(TOP_ITEM, open && 'text-ink')}
                 >
-                  {item.label}
-                  {item.dropdown && (
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${activeDropdown === item.label ? 'rotate-180' : ''}`} />
-                  )}
-                </button>
-
-                {item.dropdown && activeDropdown === item.label && (
-                  <DropdownPanel
-                    dropdown={item.dropdown}
-                    onNavigate={handleNavigate}
+                  {label}
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 opacity-70 transition-transform duration-300 motion-reduce:transition-none',
+                      open && 'rotate-180',
+                    )}
                   />
-                )}
+                  {inSection(pathname, paths) && <CurrentDot />}
+                </button>
+                <div
+                  id={`nav-menu-${id}`}
+                  ref={(el) => {
+                    panelRefs.current[id] = el;
+                  }}
+                  onPointerEnter={hoverOnly(cancelClose)}
+                  onPointerLeave={hoverOnly(scheduleClose)}
+                  onClick={(e) => {
+                    if (!(e.target as HTMLElement).closest('a')) return;
+                    clearTimers();
+                    show(null);
+                  }}
+                  onKeyDown={(e) => walkLinks(e, id)}
+                  className={cn(
+                    STAGE,
+                    width,
+                    'max-h-[calc(100dvh-5.5rem)] overflow-y-auto overflow-x-hidden rounded-lg duration-200 ease-out motion-reduce:transition-none',
+                    panelState(id),
+                  )}
+                >
+                  {id === 'features' ? <FeaturesMenu goToSection={goToSection} /> : <ResourcesMenu goToSection={goToSection} />}
+                </div>
               </div>
-            ))}
-          </nav>
-
-          {/* Desktop CTA */}
-          <div className="hidden lg:flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/auth')}
-              className={`text-[13px] h-9 px-4 rounded-lg transition-colors duration-300 ${
-                scrolled ? 'text-muted-foreground' : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
+            );
+          })}
+          {LINKS.map((l) => (
+            <a
+              key={l.label}
+              ref={(el) => {
+                itemRefs.current[l.label] = el;
+              }}
+              href={`/#${l.section}`}
+              onClick={(e) => {
+                e.preventDefault();
+                goToSection(l.section);
+              }}
+              onPointerEnter={() => setHovered(l.label)}
+              className={TOP_ITEM}
             >
-              Log in
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate('/auth')}
-              className={`text-[13px] h-9 px-5 rounded-xl font-medium transition-all duration-300 ${
-                scrolled
-                  ? ''
-                  : 'bg-white text-foreground hover:bg-white/90 shadow-lg shadow-black/10'
-              }`}
-            >
-              Get started free
-            </Button>
-          </div>
+              {l.label}
+            </a>
+          ))}
+        </div>
 
-          {/* Mobile toggle */}
-          <button
-            className={`lg:hidden p-1.5 ${scrolled ? 'text-muted-foreground' : 'text-white/70'}`}
-            onClick={() => setMobileOpen(!mobileOpen)}
+        {/* Hairline over the menus, so their tinted zones can run right to
+            the panel's edge without covering its border. */}
+        <div
+          aria-hidden
+          style={stageStyle}
+          className={cn(STAGE, 'pointer-events-none hidden rounded-lg border border-ink/[0.08] md:block', stageMotion)}
+        />
+
+        <div className="flex items-center gap-2">
+          <Link
+            to="/auth"
+            className="hidden whitespace-nowrap rounded-lg border border-ink/[0.1] bg-white px-3 py-2 text-sm font-semibold text-ink shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-ink/[0.16] hover:bg-ink/[0.02] md:inline-flex lg:px-4"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            Sign In
+          </Link>
+          <Link
+            to="/auth"
+            className="hidden whitespace-nowrap rounded-lg bg-cta px-3 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(16,24,40,0.14)] transition-colors hover:bg-cta-hover md:inline-flex lg:px-4"
+          >
+            Get Started Free
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink/[0.1] bg-white text-ink md:hidden"
+          >
+            <Menu
+              className={cn(
+                'absolute h-5 w-5 transition-all duration-200 motion-reduce:transition-none',
+                mobileOpen && 'rotate-90 scale-50 opacity-0',
+              )}
+            />
+            <X
+              className={cn(
+                'absolute h-5 w-5 transition-all duration-200 motion-reduce:transition-none',
+                !mobileOpen && '-rotate-90 scale-50 opacity-0',
+              )}
+            />
           </button>
         </div>
-      </div>
+      </nav>
+      {mobileOpen && <MobileNav goToSection={goToSection} />}
+    </header>
+  );
+}
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="lg:hidden bg-background/95 backdrop-blur-2xl border-b border-border px-6 py-4 space-y-1 max-h-[80vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-          {navItems.map((item) => (
-            <div key={item.label}>
-              <button
-                onClick={() => {
-                  if (item.dropdown) {
-                    setMobileExpanded(mobileExpanded === item.label ? null : item.label);
-                  } else {
-                    handleNavigate(item.route, item.scrollId);
-                  }
-                }}
-                className="flex items-center justify-between w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground rounded-lg transition-colors"
-              >
-                {item.label}
-                {item.dropdown && (
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${mobileExpanded === item.label ? 'rotate-180' : ''}`} />
-                )}
-              </button>
+/* ---------- Mobile ---------- */
 
-              {item.dropdown && mobileExpanded === item.label && (
-                <div className="pl-3 pb-2 space-y-0.5">
-                  {item.dropdown.items.map((sub) => (
-                    <button
-                      key={sub.label}
-                      onClick={() => handleNavigate(sub.route, sub.scrollId)}
-                      className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-[13px] text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
-                    >
-                      <sub.icon className="w-3.5 h-3.5 text-primary/50" />
-                      {sub.label}
-                    </button>
-                  ))}
-                  {item.dropdown.footer && (
-                    <button
-                      onClick={() => handleNavigate(item.dropdown!.footer!.route)}
-                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12px] font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                    >
-                      <ArrowRight className="w-3 h-3" />
-                      {item.dropdown.footer.label}
-                    </button>
-                  )}
-                </div>
-              )}
+const MOBILE_ROW =
+  'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-[0.9rem] font-medium text-ink transition-colors hover:bg-ink/[0.03]';
+
+/** The phone sheet: each menu folds open in place; plain links sit below. */
+function MobileNav({ goToSection }: { goToSection: GoToSection }) {
+  const [open, setOpen] = useState<MenuId | null>(null);
+
+  const section = (id: MenuId, label: string, body: ReactNode) => (
+    <div className="border-b border-ink/[0.07] py-1">
+      <button
+        type="button"
+        aria-expanded={open === id}
+        onClick={() => setOpen(open === id ? null : id)}
+        className="flex w-full items-center justify-between px-2.5 py-3 text-[0.95rem] font-semibold text-ink"
+      >
+        {label}
+        <ChevronDown className={cn('h-4 w-4 opacity-60 transition-transform duration-200', open === id && 'rotate-180')} />
+      </button>
+      {open === id && <div className="pb-2">{body}</div>}
+    </div>
+  );
+
+  const label = (text: string) => (
+    <p className="px-2.5 pb-1 pt-2 text-[0.72rem] font-medium text-muted-foreground">{text}</p>
+  );
+
+  return (
+    <div
+      id="mobile-nav"
+      className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-ink/[0.07] bg-white px-4 pb-5 md:hidden animate-in fade-in slide-in-from-top-2 duration-200"
+    >
+      {section(
+        'features',
+        'Features',
+        <>
+          {FEATURE_COLUMNS.map((col) => (
+            <div key={col.label}>
+              {label(col.label)}
+              {col.items.map((f) => (
+                <NavLink key={f.title} target={f.target} goToSection={goToSection} className={MOBILE_ROW}>
+                  <f.icon className="h-4 w-4 text-ink/60" />
+                  {f.title}
+                </NavLink>
+              ))}
             </div>
           ))}
-          <div className="pt-3 flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="flex-1 text-[13px]">
-              Log in
-            </Button>
-            <Button size="sm" onClick={() => navigate('/auth')} className="flex-1 text-[13px]">
-              Get started
-            </Button>
+          {label('Who it’s for')}
+          <div className="grid grid-cols-2">
+            {PERSONA_COLUMNS.flatMap((g) => g.items).map((p) => (
+              <NavLink key={p.slug} target={{ to: `/use-cases/${p.slug}` }} goToSection={goToSection} className={MOBILE_ROW}>
+                <p.icon className="h-4 w-4 text-ink/60" />
+                {p.short}
+              </NavLink>
+            ))}
           </div>
-        </div>
+        </>,
       )}
-    </header>
+      {section(
+        'resources',
+        'Resources',
+        <>
+          {[...LEARN_LINKS, COMPARE_LINK].map((l) => (
+            <NavLink key={l.title} target={l.target} goToSection={goToSection} className={MOBILE_ROW}>
+              <l.icon className="h-4 w-4 text-ink/60" />
+              {l.title}
+            </NavLink>
+          ))}
+          {NAV_COMPETITORS.map((c) => (
+            <NavLink key={c.slug} target={{ to: `/alternatives/${c.slug}` }} goToSection={goToSection} className={MOBILE_ROW}>
+              <span className="w-4 text-center text-xs font-semibold text-ink/50">{c.name.charAt(0)}</span>
+              vs {c.name}
+            </NavLink>
+          ))}
+        </>,
+      )}
+      <div className="py-2">
+        {LINKS.map((l) => (
+          <NavLink key={l.label} target={{ section: l.section }} goToSection={goToSection} className="block px-2.5 py-3 text-[0.95rem] font-semibold text-ink">
+            {l.label}
+          </NavLink>
+        ))}
+      </div>
+      <div className="flex gap-2 pt-2">
+        <Link to="/auth" className="flex-1 rounded-lg border border-ink/[0.1] py-2.5 text-center text-sm font-semibold text-ink">
+          Sign In
+        </Link>
+        <Link to="/auth" className="flex-1 rounded-lg bg-cta py-2.5 text-center text-sm font-semibold text-white">
+          Get Started Free
+        </Link>
+      </div>
+    </div>
   );
 }

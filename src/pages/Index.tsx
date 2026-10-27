@@ -12,18 +12,7 @@ import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 
 // Lazy: everything below the fold streams in after hero is interactive.
-const LogoBar = lazy(() => import('@/components/landing/LogoBar').then(m => ({ default: m.LogoBar })));
-const ProductDemo = lazy(() => import('@/components/landing/ProductDemo').then(m => ({ default: m.ProductDemo })));
-const StatsBar = lazy(() => import('@/components/landing/StatsBar').then(m => ({ default: m.StatsBar })));
-const HowItWorks = lazy(() => import('@/components/landing/HowItWorks').then(m => ({ default: m.HowItWorks })));
-const FeatureShowcase = lazy(() => import('@/components/landing/FeatureShowcase').then(m => ({ default: m.FeatureShowcase })));
-const FeaturesGrid = lazy(() => import('@/components/landing/FeaturesGrid').then(m => ({ default: m.FeaturesGrid })));
-const Testimonials = lazy(() => import('@/components/landing/Testimonials').then(m => ({ default: m.Testimonials })));
-const ComparisonSection = lazy(() => import('@/components/landing/ComparisonSection').then(m => ({ default: m.ComparisonSection })));
-const PricingSection = lazy(() => import('@/components/landing/PricingSection').then(m => ({ default: m.PricingSection })));
-const FAQSection = lazy(() => import('@/components/landing/FAQSection').then(m => ({ default: m.FAQSection })));
-const FinalCTA = lazy(() => import('@/components/landing/FinalCTA').then(m => ({ default: m.FinalCTA })));
-const Footer = lazy(() => import('@/components/landing/Footer').then(m => ({ default: m.Footer })));
+const LandingSections = lazy(() => import('@/components/landing/LandingSections'));
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -125,21 +114,10 @@ export default function Index() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      <Navbar />
+      <Navbar framed />
       <HeroSection />
       <Suspense fallback={null}>
-        <LogoBar />
-        <ProductDemo />
-        <StatsBar />
-        <HowItWorks />
-        <FeatureShowcase />
-        <FeaturesGrid />
-        <Testimonials />
-        <ComparisonSection />
-        <PricingSection />
-        <FAQSection />
-        <FinalCTA />
-        <Footer />
+        <LandingSections />
       </Suspense>
     </div>
   );

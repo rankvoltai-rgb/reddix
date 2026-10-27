@@ -63,6 +63,14 @@ Reddix turns Reddit into a qualified lead source. You run a manual scan, the AI 
 - [Subreddit](https://reddix.info/glossary/subreddit): Topic-specific Reddit community
 - [Reddiquette](https://reddix.info/glossary/reddiquette): Community norms for engaging on Reddit
 
+
+## Blog
+
+- [Reddix Blog](https://reddix.info/blog): Playbooks for finding customers on Reddit without getting banned
+- [How to Find Customers on Reddit Without Getting Banned](https://reddix.info/blog/find-customers-on-reddit): Learn how to find customers on Reddit. Where buyers ask for tools, how to search for buying intent, and the rules that keep your account safe.
+- [Reddit Lead Generation: A Practical Guide for SaaS](https://reddix.info/blog/reddit-lead-generation): Reddit lead generation for SaaS teams. Compare channels, spot buying intent, score threads by hand, and track each lead from reply to customer.
+- [Reddit Self-Promotion Rules: What Moderators Allow](https://reddix.info/blog/reddit-self-promotion-rules): Reddit self-promotion rules explained. What the site-wide rules say, where the 90/10 rule stands today, and what each subreddit adds on top.
+
 ## Legal
 
 - [Terms of Service](https://reddix.info/terms)

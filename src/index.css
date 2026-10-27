@@ -57,6 +57,18 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 100% / 0.1;
     --sidebar-ring: 0 0% 100%;
+
+    /* Landing page: near-black text, and the call-to-action red. --primary
+       under white 14px text sits just short of AA, so the CTA is one step
+       deeper (4.6:1). */
+    --ink: 222 14% 9%;
+    --cta: 0 84% 47%;
+    --cta-hover: 0 84% 42%;
+    --cta-soft: 0 90% 96.5%;
+    /* The footer's field: deep enough that 75% white text still clears AA. */
+    --cta-deep: 0 80% 38%;
+    /* The soft grey that panels and menu rails sit on. */
+    --surface: 220 20% 97.5%;
   }
 }
 
@@ -311,6 +323,69 @@
   .reveal-delay-3 { animation-delay: 0.3s; }
   .reveal-delay-4 { animation-delay: 0.4s; }
   .reveal-delay-5 { animation-delay: 0.5s; }
+
+  /* Hero subreddit ticker: letters rise in from a blur, and the old word
+     dissolves upward. Per-letter delay comes from --i. */
+  @keyframes ticker-letter-in {
+    from { opacity: 0; transform: translateY(0.42em); filter: blur(10px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+  @keyframes ticker-letter-out {
+    from { opacity: 1; transform: translateY(0); filter: blur(0); }
+    to { opacity: 0; transform: translateY(-0.32em); filter: blur(8px); }
+  }
+  @keyframes ticker-tile-in {
+    from { opacity: 0; transform: rotateX(-90deg); }
+    to { opacity: 1; transform: rotateX(0); }
+  }
+  @keyframes ticker-tile-out {
+    from { opacity: 1; transform: rotateX(0); }
+    to { opacity: 0; transform: rotateX(90deg); }
+  }
+  .ticker-in {
+    animation: ticker-letter-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(0.2s + var(--i) * 0.032s);
+  }
+  .ticker-out {
+    animation: ticker-letter-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+    animation-delay: calc(var(--i) * 0.012s);
+  }
+  .ticker-tile-in { animation: ticker-tile-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .ticker-tile-out { animation: ticker-tile-out 0.35s ease-in both; }
+
+  /* Footer pixels fade in and out on their own staggered cycles. Peak
+     opacity is passed per pixel as --pixel-opacity. Backwards fill keeps a
+     square from flashing solid white before its delayed start. */
+  @keyframes pixel-blink {
+    0%, 100% { opacity: calc(var(--pixel-opacity, 0.06) * 0.2); }
+    50% { opacity: var(--pixel-opacity, 0.06); }
+  }
+  .animate-pixel-blink {
+    animation: pixel-blink var(--pixel-duration, 4s) ease-in-out infinite;
+    animation-delay: var(--pixel-delay, 0s);
+    animation-fill-mode: backwards;
+  }
+
+  /* Auth scene: specks drifting up through the painting, and the ring a
+     scanning card wears while it works. */
+  @keyframes particle-rise {
+    0% { transform: translateY(0); opacity: 0; }
+    15%, 85% { opacity: var(--particle-opacity, 0.5); }
+    100% { transform: translateY(var(--particle-travel, -160px)); opacity: 0; }
+  }
+  .animate-particle-rise {
+    animation: particle-rise var(--particle-duration, 12s) linear infinite;
+    animation-delay: var(--particle-delay, 0s);
+    animation-fill-mode: backwards;
+  }
+  @keyframes gradient-pan {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+  }
+  .animate-gradient-pan {
+    background-size: 200% 100%;
+    animation: gradient-pan 3s linear infinite;
+  }
 
   /* Tag pill */
   .tag-pill {

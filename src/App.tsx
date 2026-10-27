@@ -21,6 +21,8 @@ const AlternativeDetail = lazy(() => import("./pages/AlternativeDetail"));
 const Glossary = lazy(() => import("./pages/Glossary"));
 const GlossaryTerm = lazy(() => import("./pages/GlossaryTerm"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 const FeatureDetail = lazy(() => import("./pages/FeatureDetail"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -68,6 +70,8 @@ const App = () => (
                 <Route path="/glossary/:slug" element={<GlossaryTerm />} />
                 <Route path="/features/:slug" element={<FeatureDetail />} />
                 <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/use-cases/:slug" element={<UseCaseDetail />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />

@@ -5,6 +5,7 @@ import { features } from "../src/lib/features";
 import { glossaryTerms } from "../src/lib/glossary";
 import { competitors } from "../src/lib/alternatives";
 import { useCases } from "../src/lib/useCases";
+import { readLivePosts } from "./blog-files";
 
 export interface SeoRoute {
   path: string;
@@ -14,6 +15,8 @@ export interface SeoRoute {
   lead: string;
   changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
   priority?: string;
+  /** YYYY-MM-DD; the build date when absent. */
+  lastmod?: string;
 }
 
 export const BASE_URL = "https://reddix.info";
@@ -123,6 +126,32 @@ export function getRoutes(): SeoRoute[] {
       lead: g.shortDef,
       changefreq: "monthly",
       priority: "0.6",
+    });
+  }
+
+  // Dynamic: blog (posts whose date has come; scheduled ones wait)
+  const posts = readLivePosts();
+  routes.push({
+    path: "/blog",
+    title: "Reddit Marketing & Lead Generation Guides | Reddix Blog",
+    description:
+      "Practical, sourced playbooks for finding customers on Reddit: where buyers ask for tools, how to reply without getting banned, and how to turn threads into pipeline.",
+    h1: "Turn Reddit into a customer channel",
+    lead: "Practical, sourced playbooks for finding buyers on Reddit and replying without getting banned.",
+    changefreq: "weekly",
+    priority: "0.8",
+    lastmod: posts.reduce((d, p) => (p.updated > d ? p.updated : d), "2026-01-01"),
+  });
+  for (const p of posts) {
+    routes.push({
+      path: `/blog/${p.slug}`,
+      title: `${p.title} | Reddix`,
+      description: p.excerpt,
+      h1: p.title,
+      lead: p.excerpt,
+      changefreq: "monthly",
+      priority: "0.7",
+      lastmod: p.updated,
     });
   }
 
