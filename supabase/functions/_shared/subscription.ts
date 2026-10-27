@@ -29,7 +29,7 @@ export async function verifySubscription(email: string): Promise<SubscriptionSta
 
     const customerId = customers.data[0].id;
     const subs = await stripe.subscriptions.list({ customer: customerId, limit: 10 });
-    const valid = subs.data.find((s) => s.status === "active" || s.status === "trialing");
+    const valid = subs.data.find((s: Stripe.Subscription) => s.status === "active" || s.status === "trialing");
     if (valid) {
       const productId = valid.items.data[0]?.price.product as string;
       return { subscribed: true, plan: PRODUCT_TO_PLAN[productId] || "pro" };
@@ -37,7 +37,7 @@ export async function verifySubscription(email: string): Promise<SubscriptionSta
 
     // Check for lifetime one-time payment
     const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 100 });
-    const paid = sessions.data.find((s) => s.payment_status === "paid" && s.mode === "payment");
+    const paid = sessions.data.find((s: Stripe.Checkout.Session) => s.payment_status === "paid" && s.mode === "payment");
     if (paid) {
       const items = await stripe.checkout.sessions.listLineItems(paid.id);
       const lifetime = items.data.find((it: any) => PRODUCT_TO_PLAN[it.price?.product as string] === "lifetime");

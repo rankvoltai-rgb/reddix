@@ -94,7 +94,7 @@ export function Sandbox() {
                 type="button"
                 className={BUTTON}
                 disabled={account.subreddits.length === 0}
-                onClick={() => act({ ...account, subreddits: account.subreddits.slice(0, -1) }, `Removed ${account.subreddits.at(-1)}.`)}
+                onClick={() => act({ ...account, subreddits: account.subreddits.slice(0, -1) }, `Removed ${account.subreddits[account.subreddits.length - 1]}.`)}
               >
                 <Minus className="h-3.5 w-3.5" />
                 Remove
