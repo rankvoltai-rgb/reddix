@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { BASE_URL, PRIVATE_ROUTES, getRoutes, type SeoRoute } from "./seo-routes";
 import { features } from "../src/lib/features";
-import { SUBLANDING } from "./sublanding";
+import { ALTERNATIVES, SUBLANDING } from "./sublanding";
 import { useCases } from "../src/lib/useCases";
 import { competitors } from "../src/lib/alternatives";
 import { glossaryTerms } from "../src/lib/glossary";
@@ -163,6 +163,9 @@ function buildJsonLd(route: SeoRoute): string {
     graph.push(webPageNode(route));
     graph.push(breadcrumbsNode(p, route.h1));
 
+    // Comparison pages with their own design carry their own FAQ.
+    const own = p === "/alternatives" ? ALTERNATIVES.index : ALTERNATIVES[p.match(/^\/alternatives\/(.+)$/)?.[1] ?? ""];
+    if (own?.FAQ.length) graph.push(faqNode(own.FAQ, `${BASE_URL}${p}#faq`));
     const fMatch = p.match(/^\/features\/(.+)$/);
     if (fMatch) {
       const faq = SUBLANDING[fMatch[1]]?.FAQ;
@@ -311,38 +314,7 @@ function useCaseBody(slug: string): string {
 }
 
 function alternativeBody(slug: string): string {
-  const c = competitors.find((x) => x.slug === slug);
-  if (!c) return "";
-  const wins = c.whyReddixWins.map((w) => `<li>${esc(w)}</li>`).join("");
-  const rows = c.features
-    .map(
-      (row) =>
-        `<tr><td>${esc(row.name)}</td><td>${esc(String(row.competitor))}</td><td>${esc(String(row.reddix))}</td></tr>`,
-    )
-    .join("");
-  return `
-    <section><h2>About ${esc(c.name)}</h2><p>${esc(c.description)}</p>
-      <p><strong>Weakness:</strong> ${esc(c.weakness)}</p></section>
-    <section><h2>Why teams choose Reddix over ${esc(c.name)}</h2><ul>${wins}</ul></section>
-    <section><h2>Feature comparison</h2>
-      <table><thead><tr><th>Feature</th><th>${esc(c.name)}</th><th>Reddix</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-    </section>
-    <section><h2>Verdict</h2>
-      <p><strong>${esc(c.name)}:</strong> ${esc(c.verdict.competitor)}</p>
-      <p><strong>Reddix:</strong> ${esc(c.verdict.reddix)}</p>
-    </section>
-  `;
-}
-
-function alternativesIndexBody(): string {
-  const items = competitors
-    .map(
-      (c) =>
-        `<li><a href="/alternatives/${c.slug}"><strong>Reddix vs ${esc(c.name)}</strong></a> — ${esc(c.tagline)}. ${esc(c.description)}</li>`,
-    )
-    .join("");
-  return `<section><h2>Every major Reddit lead-gen tool, compared</h2><ul>${items}</ul></section>`;
+  return ALTERNATIVES[slug]?.crawlerBody(esc) ?? "";
 }
 
 function glossaryIndexBody(): string {
@@ -405,7 +377,7 @@ function staticBody(path: string): string {
 function buildBody(route: SeoRoute): string {
   const p = route.path;
   if (p === "/") return homeBody();
-  if (p === "/alternatives") return alternativesIndexBody();
+  if (p === "/alternatives") return ALTERNATIVES.index.crawlerBody(esc);
   if (p === "/glossary") return glossaryIndexBody();
   if (p === "/terms" || p === "/refund-policy") return staticBody(p);
   if (p === "/blog") return blogIndexBody();

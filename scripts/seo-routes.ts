@@ -2,7 +2,7 @@
 // Imports data modules directly so there is one source of truth.
 
 import { features } from "../src/lib/features";
-import { SUBLANDING } from "./sublanding";
+import { ALTERNATIVES, SUBLANDING } from "./sublanding";
 import { glossaryTerms } from "../src/lib/glossary";
 import { competitors } from "../src/lib/alternatives";
 import { useCases } from "../src/lib/useCases";
@@ -55,11 +55,10 @@ export function getRoutes(): SeoRoute[] {
   });
   routes.push({
     path: "/alternatives",
-    title: "Reddix Alternatives — Compare Reddit Lead Tools | Reddix",
-    description:
-      "Compare Reddix to every major Reddit lead-generation tool. See feature breakdowns, pricing, and why teams switch from GummySearch, RedReach, and more.",
-    h1: "Reddix Alternatives & Competitor Comparisons",
-    lead: "Side-by-side comparisons against every major Reddit lead-gen tool.",
+    title: ALTERNATIVES.index.META.title,
+    description: ALTERNATIVES.index.META.description,
+    h1: ALTERNATIVES.index.HERO.h1,
+    lead: ALTERNATIVES.index.HERO.answer,
     changefreq: "monthly",
     priority: "0.7",
   });
@@ -123,12 +122,15 @@ export function getRoutes(): SeoRoute[] {
 
   // Dynamic: alternatives
   for (const c of competitors) {
+    // Each comparison's page (src/sublanding/alternatives) carries its own words.
+    const own = ALTERNATIVES[c.slug];
+    if (!own) throw new Error(`No page for /alternatives/${c.slug} in src/sublanding/alternatives`);
     routes.push({
       path: `/alternatives/${c.slug}`,
-      title: c.metaTitle,
-      description: c.metaDescription,
-      h1: `Reddix vs ${c.name}`,
-      lead: c.heroSubtitle,
+      title: own.META.title,
+      description: own.META.description,
+      h1: own.HERO.h1,
+      lead: own.HERO.answer,
       changefreq: "monthly",
       priority: "0.7",
     });

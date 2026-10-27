@@ -139,37 +139,13 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/redreach</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reddix.info/alternatives/redditor-ai</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://reddix.info/alternatives/subredditsignals</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/communitytracker</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reddix.info/alternatives/replyagent</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reddix.info/alternatives/reddleads</loc>
+    <loc>https://reddix.info/alternatives/replydaddy</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -187,7 +163,25 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/catchintent</loc>
+    <loc>https://reddix.info/alternatives/redreach</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://reddix.info/alternatives/reddleads</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://reddix.info/alternatives/communitytracker</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://reddix.info/alternatives/replyagent</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -199,25 +193,19 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/replydaddy</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://reddix.info/alternatives/promotee</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/redditflow</loc>
+    <loc>https://reddix.info/alternatives/redditor-ai</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reddix.info/alternatives/leadhunter</loc>
+    <loc>https://reddix.info/alternatives/catchintent</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -230,18 +218,6 @@
   </url>
   <url>
     <loc>https://reddix.info/alternatives/redaccs</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reddix.info/alternatives/redditmonitor</loc>
-    <lastmod>2026-10-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reddix.info/alternatives/reddar</loc>
     <lastmod>2026-10-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

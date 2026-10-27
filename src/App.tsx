@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
+import { RETIRED_COMPARISONS } from "@/lib/alternatives";
 
 // Code-split every non-landing route so first-paint on / doesn't ship them.
 const Auth = lazy(() => import("./pages/Auth"));
@@ -16,8 +17,6 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Scanner = lazy(() => import("./pages/Scanner"));
 const Leads = lazy(() => import("./pages/Leads"));
 const Settings = lazy(() => import("./pages/Settings"));
-const Alternatives = lazy(() => import("./pages/Alternatives"));
-const AlternativeDetail = lazy(() => import("./pages/AlternativeDetail"));
 const Glossary = lazy(() => import("./pages/Glossary"));
 const GlossaryTerm = lazy(() => import("./pages/GlossaryTerm"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -32,6 +31,13 @@ const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const FEATURE_PAGES = Object.entries(
   import.meta.glob<{ default: ComponentType }>("./sublanding/features/*/Page.tsx"),
 ).map(([file, load]) => ({ slug: file.split("/")[3], Page: lazy(load) }));
+
+// Each comparison has a page of its own: src/sublanding/alternatives/<slug>/Page.tsx,
+// with alternatives/index as /alternatives.
+const ALTERNATIVE_PAGES = Object.entries(
+  import.meta.glob<{ default: ComponentType }>("./sublanding/alternatives/*/Page.tsx"),
+).map(([file, load]) => ({ slug: file.split("/")[3], Page: lazy(load) }));
+const AlternativesIndex = ALTERNATIVE_PAGES.find((p) => p.slug === "index")!.Page;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,8 +74,13 @@ const App = () => (
                 <Route path="/scanner" element={<Scanner />} />
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/alternatives" element={<Alternatives />} />
-                <Route path="/alternatives/:slug" element={<AlternativeDetail />} />
+                <Route path="/alternatives" element={<AlternativesIndex />} />
+                {ALTERNATIVE_PAGES.filter((p) => p.slug !== "index").map(({ slug, Page }) => (
+                  <Route key={slug} path={`/alternatives/${slug}`} element={<Page />} />
+                ))}
+                {RETIRED_COMPARISONS.map((slug) => (
+                  <Route key={slug} path={`/alternatives/${slug}`} element={<Navigate to="/alternatives" replace />} />
+                ))}
                 <Route path="/glossary" element={<Glossary />} />
                 <Route path="/glossary/:slug" element={<GlossaryTerm />} />
                 {FEATURE_PAGES.map(({ slug, Page }) => (
