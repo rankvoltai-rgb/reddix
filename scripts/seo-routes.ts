@@ -2,6 +2,7 @@
 // Imports data modules directly so there is one source of truth.
 
 import { features } from "../src/lib/features";
+import { SUBLANDING } from "./sublanding";
 import { glossaryTerms } from "../src/lib/glossary";
 import { competitors } from "../src/lib/alternatives";
 import { useCases } from "../src/lib/useCases";
@@ -93,12 +94,15 @@ export function getRoutes(): SeoRoute[] {
 
   // Dynamic: features
   for (const f of features) {
+    // Each feature's page (src/sublanding) carries its own words.
+    const own = SUBLANDING[f.slug];
+    if (!own) throw new Error(`No page for /features/${f.slug} in src/sublanding/features`);
     routes.push({
       path: `/features/${f.slug}`,
-      title: f.metaTitle,
-      description: f.metaDescription,
-      h1: f.title,
-      lead: f.heroSubtitle,
+      title: own.META.title,
+      description: own.META.description,
+      h1: own.HERO.h1,
+      lead: own.HERO.answer,
       changefreq: "monthly",
       priority: "0.8",
     });

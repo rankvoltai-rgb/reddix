@@ -1,12 +1,14 @@
 // Shared intent heuristics for Reddit lead qualification.
 // Zero-cost regex prefilter + booster signals applied before/after AI.
+// Also imported by the /features/intent-detection page, whose signal checker
+// runs these exact rules in the browser: keep it pure (no Deno APIs).
 
-const WHITELIST = /\b(recommend|recommendation|suggest|suggestion|looking for|searching for|need (?:a |an )?(?:tool|app|service|software)|best (?:\w+ )*?(?:for|to)|alternative to|alternatives to|vs\.?|switching from|moving (?:from|away)|tired of|stuck with|fed up|frustrated with|budget|pricing|how much|anyone (?:use|using|tried)|worth it|any good|opinions on|thoughts on|help (?:me )?(?:choose|pick|find)|what (?:do you|are you) us(?:e|ing))\b/i;
+export const WHITELIST = /\b(recommend|recommendation|suggest|suggestion|looking for|searching for|need (?:a |an )?(?:tool|app|service|software)|best (?:\w+ )*?(?:for|to)|alternative to|alternatives to|vs\.?|switching from|moving (?:from|away)|tired of|stuck with|fed up|frustrated with|budget|pricing|how much|anyone (?:use|using|tried)|worth it|any good|opinions on|thoughts on|help (?:me )?(?:choose|pick|find)|what (?:do you|are you) us(?:e|ing))\b/i;
 
-const BLACKLIST = /\b(i (?:built|made|created|launched)|check (?:out )?my|launching|showcase|show ?hn|\[oc\]|hiring|for sale|giveaway|promote|affiliate|self[- ]promo|just released|ama)\b/i;
+export const BLACKLIST = /\b(i (?:built|made|created|launched)|check (?:out )?my|launching|showcase|show ?hn|\[oc\]|hiring|for sale|giveaway|promote|affiliate|self[- ]promo|just released|ama)\b/i;
 
-const PRICING_RE = /\b(budget|pricing|how much|cost|costs|\$\d|per month|monthly|annual(?:ly)?|free tier|paid plan|cheap(?:er|est)?|expensive|afford)\b/i;
-const ALT_RE = /\balternative to\b/i;
+export const PRICING_RE = /\b(budget|pricing|how much|cost|costs|\$\d|per month|monthly|annual(?:ly)?|free tier|paid plan|cheap(?:er|est)?|expensive|afford)\b/i;
+export const ALT_RE = /\balternative to\b/i;
 
 export interface HeuristicResult {
   // True = skip AI scoring entirely; post is junk or pure self-promo.

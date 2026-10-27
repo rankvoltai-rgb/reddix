@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { BASE_URL, PRIVATE_ROUTES, getRoutes, type SeoRoute } from "./seo-routes";
 import { features } from "../src/lib/features";
+import { SUBLANDING } from "./sublanding";
 import { useCases } from "../src/lib/useCases";
 import { competitors } from "../src/lib/alternatives";
 import { glossaryTerms } from "../src/lib/glossary";
@@ -164,8 +165,8 @@ function buildJsonLd(route: SeoRoute): string {
 
     const fMatch = p.match(/^\/features\/(.+)$/);
     if (fMatch) {
-      const f = features.find((x) => x.slug === fMatch[1]);
-      if (f?.faq?.length) graph.push(faqNode(f.faq, `${BASE_URL}${p}#faq`));
+      const faq = SUBLANDING[fMatch[1]]?.FAQ;
+      if (faq?.length) graph.push(faqNode(faq, `${BASE_URL}${p}#faq`));
     }
     const uMatch = p.match(/^\/use-cases\/(.+)$/);
     if (uMatch) {
@@ -282,28 +283,7 @@ function homeBody(): string {
 }
 
 function featureBody(slug: string): string {
-  const f = features.find((x) => x.slug === slug);
-  if (!f) return "";
-  const benefits = f.benefits
-    .map((b) => `<li><strong>${esc(b.title)}</strong> — ${esc(b.desc)}</li>`)
-    .join("");
-  const useCasesHtml = f.useCases
-    .map(
-      (u) =>
-        `<li><strong>${esc(u.persona)}:</strong> ${esc(u.scenario)} <em>Outcome:</em> ${esc(u.outcome)}</li>`,
-    )
-    .join("");
-  const faq = f.faq
-    .map((q) => `<dt><strong>${esc(q.q)}</strong></dt><dd>${esc(q.a)}</dd>`)
-    .join("");
-  const stats = f.demoStats.map((s) => `<li>${esc(s.label)}: ${esc(s.value)}</li>`).join("");
-  return `
-    <section><h2>${esc(f.demoHeadline)}</h2><p>${esc(f.demoDescription)}</p>
-      <ul>${stats}</ul></section>
-    <section><h2>Key benefits</h2><ul>${benefits}</ul></section>
-    <section><h2>Who it's for</h2><ul>${useCasesHtml}</ul></section>
-    <section><h2>Frequently asked questions</h2><dl>${faq}</dl></section>
-  `;
+  return SUBLANDING[slug]?.crawlerBody(esc) ?? "";
 }
 
 function useCaseBody(slug: string): string {

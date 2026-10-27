@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,11 +23,15 @@ const GlossaryTerm = lazy(() => import("./pages/GlossaryTerm"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
-const FeatureDetail = lazy(() => import("./pages/FeatureDetail"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const UseCaseDetail = lazy(() => import("./pages/UseCaseDetail"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+
+// Each feature has a page of its own: src/sublanding/features/<slug>/Page.tsx.
+const FEATURE_PAGES = Object.entries(
+  import.meta.glob<{ default: ComponentType }>("./sublanding/features/*/Page.tsx"),
+).map(([file, load]) => ({ slug: file.split("/")[3], Page: lazy(load) }));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,7 +72,9 @@ const App = () => (
                 <Route path="/alternatives/:slug" element={<AlternativeDetail />} />
                 <Route path="/glossary" element={<Glossary />} />
                 <Route path="/glossary/:slug" element={<GlossaryTerm />} />
-                <Route path="/features/:slug" element={<FeatureDetail />} />
+                {FEATURE_PAGES.map(({ slug, Page }) => (
+                  <Route key={slug} path={`/features/${slug}`} element={<Page />} />
+                ))}
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
