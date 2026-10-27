@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import { z } from 'zod';
-import { AlertCircle, ArrowRight, Eye, EyeOff, Globe, Loader2, Radar } from 'lucide-react';
+import { AlertCircle, ArrowRight, Eye, EyeOff, Globe, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Reveal } from '@/components/landing/shared';
 import { LeadFloodScene } from '@/components/auth/LeadFloodScene';
+import { LogoMark } from '@/components/brand/Logo';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -175,9 +176,7 @@ export default function Auth() {
         {/* Form panel */}
         <div className="flex flex-col px-5 py-6 sm:px-10 lg:px-14">
           <Link to="/" className="flex w-fit shrink-0 items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cta">
-              <Radar className="h-4 w-4 text-white" />
-            </span>
+            <LogoMark className="h-7 w-7" />
             <span className="text-[1.2rem] font-semibold tracking-tight text-ink">Reddix</span>
           </Link>
 

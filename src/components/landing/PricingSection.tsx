@@ -15,7 +15,6 @@ import {
   LifeBuoy,
   Lock,
   Plug,
-  Radar,
   ShieldCheck,
   Sparkles,
   Tag,
@@ -27,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscriptionTiers';
 import { Avatar, Reveal, SubredditIcon } from './shared';
 import { Accent, Band, LINE, LINE_FILL, SectionHead, Spacer } from './frame';
+import { LogoMark } from '@/components/brand/Logo';
 
 type Icon = ComponentType<{ className?: string }>;
 interface Row {
@@ -187,9 +187,7 @@ export function PlanCards() {
         featured
         strip="7-day free trial"
         icon={
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cta">
-            <Radar className="h-4 w-4 text-white" />
-          </span>
+          <LogoMark className="mt-0.5 h-8 w-8" />
         }
         name={premium.name}
         tag="Most popular"

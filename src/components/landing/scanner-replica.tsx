@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SubredditIcon } from './shared';
+import { LogoMark } from '@/components/brand/Logo';
 
 /* How long each post takes to score before the next one lands. */
 const CYCLE_MS = 3200;
@@ -202,9 +203,7 @@ export function ScannerReplica() {
       {/* Sidebar — the app's own navigation, Scanner selected. */}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-ink/[0.06] bg-surface/60 p-3 md:flex lg:w-56">
         <div className="flex items-center justify-between px-1.5 pb-4 pt-1">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cta">
-            <Radar className="h-3.5 w-3.5 text-white" />
-          </span>
+          <LogoMark className="h-6 w-6" />
           <span className="flex items-center gap-1 rounded-md border border-ink/[0.08] bg-white px-2 py-0.5 text-[0.68rem] font-medium text-ink">
             yoursite.com
             <ChevronDown className="h-3 w-3 text-muted-foreground" />

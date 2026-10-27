@@ -58,12 +58,12 @@
     --sidebar-border: 0 0% 100% / 0.1;
     --sidebar-ring: 0 0% 100%;
 
-    /* Landing page: near-black text, and the call-to-action red. --primary
-       under white 14px text sits just short of AA, so the CTA is one step
-       deeper (4.6:1). */
+    /* Landing page: near-black text, and the call-to-action red, which is
+       the logo's red (#FF3130). White text on it is about 3.4:1: fine for
+       large type, under AA for small labels. */
     --ink: 222 14% 9%;
-    --cta: 0 84% 47%;
-    --cta-hover: 0 84% 42%;
+    --cta: 0.3 100% 59.4%;
+    --cta-hover: 0 88% 52%;
     --cta-soft: 0 90% 96.5%;
     /* The footer's field: deep enough that 75% white text still clears AA. */
     --cta-deep: 0 80% 38%;
@@ -324,34 +324,6 @@
   .reveal-delay-4 { animation-delay: 0.4s; }
   .reveal-delay-5 { animation-delay: 0.5s; }
 
-  /* Hero subreddit ticker: letters rise in from a blur, and the old word
-     dissolves upward. Per-letter delay comes from --i. */
-  @keyframes ticker-letter-in {
-    from { opacity: 0; transform: translateY(0.42em); filter: blur(10px); }
-    to { opacity: 1; transform: translateY(0); filter: blur(0); }
-  }
-  @keyframes ticker-letter-out {
-    from { opacity: 1; transform: translateY(0); filter: blur(0); }
-    to { opacity: 0; transform: translateY(-0.32em); filter: blur(8px); }
-  }
-  @keyframes ticker-tile-in {
-    from { opacity: 0; transform: rotateX(-90deg); }
-    to { opacity: 1; transform: rotateX(0); }
-  }
-  @keyframes ticker-tile-out {
-    from { opacity: 1; transform: rotateX(0); }
-    to { opacity: 0; transform: rotateX(90deg); }
-  }
-  .ticker-in {
-    animation: ticker-letter-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(0.2s + var(--i) * 0.032s);
-  }
-  .ticker-out {
-    animation: ticker-letter-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
-    animation-delay: calc(var(--i) * 0.012s);
-  }
-  .ticker-tile-in { animation: ticker-tile-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .ticker-tile-out { animation: ticker-tile-out 0.35s ease-in both; }
 
   /* Footer pixels fade in and out on their own staggered cycles. Peak
      opacity is passed per pixel as --pixel-opacity. Backwards fill keeps a

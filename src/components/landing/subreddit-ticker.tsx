@@ -1,26 +1,34 @@
 /**
- * The hero headline's moving part: a subreddit name that changes every few
- * seconds, behind a Reddit tile.
+ * The hero headline's moving part: a subreddit name that rolls to the next
+ * every few seconds, beside a Reddit tile.
  *
- * The outgoing name dissolves letter by letter (rising, blurring, fading)
- * while the next one assembles letter by letter from below, a beat behind.
- * The tile turns like the face of a cube. The name's width springs to fit the
- * new word, so "on autopilot" after it glides instead of jumping. All of it
- * is CSS keyframes (see .ticker-* in index.css).
+ * Every name sits in one vertical strip inside a clipped, soft-edged window,
+ * and the strip glides up one row at a time — a slot roll, moved only by
+ * transform so it stays on the compositor. The window's width eases to fit
+ * the incoming name over the same curve, so "on autopilot" after it slides
+ * rather than jumps. The first name repeats at the end of the strip: after
+ * rolling onto that copy, the strip snaps back to the top with no transition,
+ * so the loop always moves the same way and never rewinds.
+ *
+ * Nothing mounts or unmounts as it runs, so no animation can be cut short.
  *
  * Decorative (aria-hidden): the headline's screen-reader text names the
  * subreddits. Hovering holds the current name. With reduced motion it shows
- * the first subreddit and never changes.
+ * the first subreddit and never moves.
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
 const SUBREDDITS = ['r/SaaS', 'r/startups', 'r/Entrepreneur', 'r/marketing', 'r/smallbusiness'];
+/* The strip: every name, then the first again for a seamless wrap. */
+const STRIP = [...SUBREDDITS, SUBREDDITS[0]];
 
-/* How long each name holds before the next one arrives. */
+/* How long each name holds before the next one rolls in. */
 const HOLD_MS = 2600;
-/* Long enough for the slowest outgoing letter to finish. */
-const EXIT_MS = 420;
+/* The roll itself. Long enough to read as a glide, short enough to stay lively. */
+const ROLL_MS = 720;
+/* Ease-in-out with a soft landing: starts gently, settles without a bounce. */
+const EASE = 'cubic-bezier(0.65, 0, 0.25, 1)';
 
 export function RedditMark({ className }: { className?: string }) {
   return (
@@ -38,21 +46,18 @@ export function RedditMark({ className }: { className?: string }) {
   );
 }
 
-function Letters({ word, phase }: { word: string; phase: 'in' | 'out' }) {
-  return (
-    <>
-      {Array.from(word, (ch, i) => (
-        <span key={i} className={cn('inline-block', `ticker-${phase}`)} style={{ '--i': i } as CSSProperties}>
-          {ch}
-        </span>
-      ))}
-    </>
-  );
-}
+/* Fades the strip at the window's top and bottom edges, so names roll
+   through a soft opening instead of being sliced by a hard clip. */
+const WINDOW_MASK: CSSProperties = {
+  maskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 90%, transparent 100%)',
+  WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 90%, transparent 100%)',
+};
 
 export function SubredditTicker({ className }: { className?: string }) {
-  const [index, setIndex] = useState(0);
-  const [leaving, setLeaving] = useState<number | null>(null);
+  // Row of the strip in view; SUBREDDITS.length is the copy of the first.
+  const [row, setRow] = useState(0);
+  // Off for the instant snap from the copy back to the top.
+  const [animate, setAnimate] = useState(true);
   const [paused, setPaused] = useState(false);
   const [still, setStill] = useState(false);
   const [widths, setWidths] = useState<number[] | null>(null);
@@ -74,22 +79,38 @@ export function SubredditTicker({ className }: { className?: string }) {
     return () => observer.disconnect();
   }, []);
 
+  // Roll on to the next row after each hold.
   useEffect(() => {
-    if (still || paused) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => {
-        setLeaving(i);
-        return (i + 1) % SUBREDDITS.length;
-      });
+    if (still || paused || row >= SUBREDDITS.length) return;
+    const id = window.setTimeout(() => {
+      setAnimate(true);
+      setRow((r) => r + 1);
     }, HOLD_MS);
-    return () => window.clearInterval(id);
-  }, [still, paused]);
-
-  useEffect(() => {
-    if (leaving === null) return;
-    const id = window.setTimeout(() => setLeaving(null), EXIT_MS);
     return () => window.clearTimeout(id);
-  }, [leaving]);
+  }, [row, still, paused]);
+
+  // Landed on the copy of the first name: once the roll has finished, jump
+  // back to the real first row without a transition. It looks identical.
+  useEffect(() => {
+    if (row < SUBREDDITS.length) return;
+    const id = window.setTimeout(() => {
+      setAnimate(false);
+      setRow(0);
+    }, ROLL_MS);
+    return () => window.clearTimeout(id);
+  }, [row]);
+
+  // Turn the transition back on only after the snap has painted.
+  useEffect(() => {
+    if (animate) return;
+    let id = requestAnimationFrame(() => {
+      id = requestAnimationFrame(() => setAnimate(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [animate]);
+
+  const width = widths ? widths[row % SUBREDDITS.length] : undefined;
+  const transition = animate ? `transform ${ROLL_MS}ms ${EASE}` : 'none';
 
   return (
     <span
@@ -98,47 +119,33 @@ export function SubredditTicker({ className }: { className?: string }) {
       onMouseLeave={() => setPaused(false)}
       className={cn('relative inline-flex h-[1.18em] shrink-0 items-center gap-[0.2em] whitespace-nowrap align-middle', className)}
     >
-      {/* The tile: turns about its horizontal axis, like a cube showing its
-          next face. */}
-      <span className="relative inline-flex h-[0.84em] w-[0.84em] shrink-0 [perspective:28em]">
-        {leaving !== null && (
-          <span
-            key={`out-${leaving}`}
-            className="ticker-tile-out absolute inset-0 flex items-center justify-center rounded-[0.2em] border border-ink/[0.08] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)] [backface-visibility:hidden]"
-            style={{ transformOrigin: '50% 50% -0.42em' }}
-          >
-            <RedditMark className="h-[62%] w-[62%]" />
-          </span>
-        )}
-        <span
-          key={`in-${index}`}
-          className={cn(
-            'absolute inset-0 flex items-center justify-center rounded-[0.2em] border border-ink/[0.08] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)] [backface-visibility:hidden]',
-            leaving !== null && 'ticker-tile-in',
-          )}
-          style={{ transformOrigin: '50% 50% -0.42em' }}
-        >
-          <RedditMark className="h-[62%] w-[62%]" />
-        </span>
+      <span className="inline-flex h-[0.84em] w-[0.84em] shrink-0 items-center justify-center rounded-[0.2em] border border-ink/[0.08] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
+        <RedditMark className="h-[62%] w-[62%]" />
       </span>
 
-      {/* The name. Its box springs to the new word's width, after the old
-          word has cleared, and clips sideways so a fading letter is trimmed
-          at the edge rather than drifting over the words after it. */}
+      {/* The window: clipped to one row, soft at its top and bottom edges,
+          its width easing to the incoming name alongside the roll. */}
       <span
-        className="relative inline-flex h-[1.18em] items-center overflow-x-clip transition-[width] delay-150 duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-        style={widths ? { width: widths[index] } : undefined}
+        className="relative inline-block h-[1.18em] overflow-hidden"
+        style={{
+          ...WINDOW_MASK,
+          width,
+          transition: animate ? `width ${ROLL_MS}ms ${EASE}` : 'none',
+        }}
       >
-        {leaving !== null && (
-          <span key={`out-${leaving}`} className="absolute left-0 flex font-[700] text-cta">
-            <Letters word={SUBREDDITS[leaving]} phase="out" />
-          </span>
-        )}
-        <span key={`in-${index}`} className="absolute left-0 flex font-[700] text-cta">
-          {/* The first name is there on load, so it doesn't animate in. */}
-          {leaving === null && index === 0 ? SUBREDDITS[0] : <Letters word={SUBREDDITS[index]} phase="in" />}
+        <span
+          // Left-aligned: the headline is centred, and a centred row would
+          // push short names off the window's right edge.
+          className="absolute left-0 top-0 flex flex-col text-left font-[700] text-cta will-change-transform"
+          style={{ transform: `translate3d(0, ${-row * 1.18}em, 0)`, transition }}
+        >
+          {STRIP.map((name, i) => (
+            <span key={i} className="block h-[1.18em] whitespace-nowrap leading-[1.18em]">
+              {name}
+            </span>
+          ))}
         </span>
-        {/* Gives the box its width before the names are measured. */}
+        {/* Gives the window its width before the names are measured. */}
         {!widths && <span className="invisible font-[700]">{SUBREDDITS[0]}</span>}
       </span>
 

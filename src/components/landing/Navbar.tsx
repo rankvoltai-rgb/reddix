@@ -11,11 +11,12 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, Radar, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FeaturesMenu, NavLink, ResourcesMenu } from './nav-menus';
 import { useGoToSection } from './scroll';
 import { COMPARE_LINK, FEATURE_COLUMNS, LEARN_LINKS, NAV_COMPETITORS, PERSONA_COLUMNS, type GoToSection } from './nav-data';
+import { LogoMark } from '@/components/brand/Logo';
 
 type MenuId = 'features' | 'resources';
 
@@ -273,9 +274,7 @@ export function Navbar({ framed = false }: { framed?: boolean }) {
           )}
         />
         <Link to="/" onClick={onLogo} className="relative flex shrink-0 items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cta">
-            <Radar className="h-4 w-4 text-white" />
-          </span>
+          <LogoMark className="h-7 w-7" />
           <span className="text-[1.2rem] font-semibold tracking-tight text-ink">Reddix</span>
         </Link>
 

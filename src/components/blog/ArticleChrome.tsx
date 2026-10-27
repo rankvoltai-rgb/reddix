@@ -5,13 +5,14 @@
  */
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, Globe, Link2, Radar } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Globe, Link2 } from 'lucide-react';
 import { Reveal } from '@/components/landing/shared';
 import { Band, Spacer } from '@/components/landing/frame';
 import { HeroRadar } from '@/components/landing/hero-radar';
 import type { TocEntry } from '@/lib/blog/outline';
 import { DEFAULT_AUTHOR } from '@/lib/blog/posts';
 import { cn } from '@/lib/utils';
+import { LogoMark } from '@/components/brand/Logo';
 
 /* Clearance for the fixed navbar (h-16) plus breathing room, used both for
    scroll-spy and for jumping to a heading. Matches scroll-mt-28 on headings. */
@@ -22,9 +23,7 @@ const HEADING_OFFSET = 112;
 export function AuthorMark({ className }: { className?: string }) {
   return (
     <span className={cn('flex shrink-0 items-center justify-center rounded-full border border-ink/[0.08] bg-white', className)}>
-      <span className="flex h-[62%] w-[62%] items-center justify-center rounded-[28%] bg-cta">
-        <Radar className="h-[62%] w-[62%] text-white" />
-      </span>
+      <LogoMark className="h-[62%] w-[62%]" />
     </span>
   );
 }
@@ -217,9 +216,7 @@ export function ShareButtons({ url, title, className }: { url: string; title: st
 export function RailCta() {
   return (
     <div className="rounded-xl border border-ink/[0.08] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-18px_rgba(16,24,40,0.18)]">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-cta">
-        <Radar className="h-4.5 w-4.5 text-white" />
-      </span>
+      <LogoMark className="h-9 w-9" />
       <p className="mt-4 text-[1.05rem] font-medium leading-snug tracking-[-0.015em] text-ink">Find the threads asking for you</p>
       <p className="mt-1.5 text-[0.8rem] leading-relaxed text-muted-foreground">
         Reddix scans your subreddits, scores every post's buying intent, and drafts a reply you post yourself.
@@ -282,9 +279,7 @@ export function BlogCta({ title = 'Find the Reddit threads asking for you' }: { 
           <HeroRadar className="text-white" />
         </div>
         <Reveal className="relative mx-auto flex max-w-2xl flex-col items-center px-5 py-16 text-center sm:px-8 sm:py-20">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-[0_8px_24px_-12px_rgba(72,4,8,0.5)]">
-            <Radar className="h-5 w-5 text-cta" />
-          </span>
+          <LogoMark inverted className="h-11 w-11 drop-shadow-[0_8px_16px_rgba(72,4,8,0.35)]" />
           <h2 id="blog-cta-title" className="mt-6 text-balance text-[2rem] font-medium leading-[1.1] tracking-[-0.03em] text-white sm:text-[2.6rem]">
             {title}
           </h2>

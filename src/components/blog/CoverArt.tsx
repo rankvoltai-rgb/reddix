@@ -12,7 +12,7 @@ import { useId } from 'react';
 import { cn } from '@/lib/utils';
 import type { PostMeta } from '@/lib/blog/types';
 
-const RED = 'hsl(0 84% 47%)';
+const RED = '#FF3130';
 const RED_DEEP = 'hsl(0 80% 38%)';
 const INK = 'hsl(222 14% 9%)';
 const PAPER = '#ffffff';

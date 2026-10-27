@@ -4,7 +4,7 @@
  */
 import { useEffect, useId, useRef, useState, type ComponentType, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, ChevronDown, Radar } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { features } from '@/lib/features';
 import { useCases } from '@/lib/useCases';
@@ -12,6 +12,7 @@ import { competitors } from '@/lib/alternatives';
 import { ChatGPTMark, ClaudeMark, GoogleMark, PerplexityMark } from './ai-marks';
 import { CONTACT_EMAIL } from './PricingSection';
 import { useGoToSection } from './scroll';
+import { LogoMark } from '@/components/brand/Logo';
 
 /* ---------- Trustpilot ---------- */
 
@@ -407,9 +408,7 @@ export function Footer() {
         <div className="flex flex-col gap-10 border-b border-white/15 py-12 md:py-14 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
           <div className="max-w-sm">
             <Link to="/" aria-label="Reddix home" className={cn('inline-flex items-center gap-2.5', FOCUS_RING)}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white">
-                <Radar className="h-4 w-4 text-cta" />
-              </span>
+              <LogoMark inverted className="h-8 w-8" />
               <span className="text-[1.2rem] font-semibold tracking-tight text-white">Reddix</span>
             </Link>
             <p className="mt-4 text-[0.95rem] leading-relaxed text-white/75">

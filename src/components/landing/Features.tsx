@@ -8,7 +8,7 @@ import { Accent, Band, GHOST_BUTTON, SectionHead, Spacer } from './frame';
 /* Each feature's panel tint, so a long list of rows still reads as distinct
    tools. `ink` is the icon. */
 const TINTS = {
-  red: { panel: '#fdeeee', tile: '#fbdada', ink: '#d81b1b' },
+  red: { panel: '#fff0ef', tile: '#ffdcda', ink: '#FF3130' },
   amber: { panel: '#fdf4e4', tile: '#fbe7c4', ink: '#d97706' },
   blue: { panel: '#eaf2fe', tile: '#dbe8fd', ink: '#1877f2' },
   violet: { panel: '#f1eefd', tile: '#e3ddfb', ink: '#7c3aed' },

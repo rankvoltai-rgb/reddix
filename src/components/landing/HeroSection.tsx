@@ -59,7 +59,8 @@ export function HeroSection() {
               style={rise(0.14)}
             >
               <SubredditTicker />
-              <span>on autopilot</span>
+              {/* Its own line on phones, so a longer name never re-wraps the headline. */}
+              <span className="basis-full sm:basis-auto">on autopilot</span>
             </span>
           </h1>
 

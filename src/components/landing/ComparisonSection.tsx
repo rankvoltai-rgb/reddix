@@ -1,7 +1,8 @@
-import { Check, Clock, Radar, X } from 'lucide-react';
+import { Check, Clock, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Reveal } from './shared';
 import { Accent, Band, LINE, SectionHead, Spacer } from './frame';
+import { LogoMark } from '@/components/brand/Logo';
 
 const ROWS: { feature: string; manual: string | boolean; reddix: string | boolean }[] = [
   { feature: 'Time to first lead', manual: '2–4 hours a day', reddix: '2 minutes' },
@@ -65,9 +66,7 @@ export function ComparisonSection() {
                 By hand
               </span>
               <span role="columnheader" className={cn('flex items-center justify-center gap-2 border-l bg-cta-soft/60 px-3 py-4 text-[0.85rem] font-semibold text-cta', LINE)}>
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cta">
-                  <Radar className="h-3 w-3 text-white" />
-                </span>
+                <LogoMark className="h-5 w-5" />
                 Reddix
               </span>
             </div>
