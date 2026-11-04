@@ -10,8 +10,8 @@ import { CHECKED_LABEL, REDDIX } from '../reddix';
 export const PATH = '/alternatives/f5bot';
 
 export const META = {
-  query: 'f5bot alternative',
-  title: 'F5Bot Alternative: Keyword Alerts vs Buying Intent | Reddix',
+  query: 'f5bot vs reddix',
+  title: 'F5Bot vs Reddix: Keyword Alerts or Buying Intent | Reddix',
   description:
     'F5Bot emails you every Reddit mention of a keyword. Reddix scores Reddit posts for buying intent. Plans, limits and when each one fits, checked October 2026.',
 };

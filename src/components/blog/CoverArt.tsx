@@ -168,7 +168,8 @@ function LockupScene({ seed }: { seed: number }) {
       <RedditGlyph x={110} y={125} r={28} />
       <rect x={232} y={101} width={150} height={48} rx={24} fill={PAPER} />
       <circle cx={256} cy={125} r={7} fill={RED} />
-      <text x={272} y={132} fontSize={20} fontWeight={700} fill={INK} fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
+      {/* The pill is a fixed width, so longer names set smaller to stay inside it. */}
+      <text x={272} y={131} fontSize={sub.length > 11 ? 13 : sub.length > 8 ? 16 : 20} fontWeight={700} fill={INK} fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
         {sub}
       </text>
     </>

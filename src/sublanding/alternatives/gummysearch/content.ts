@@ -17,8 +17,8 @@ export const DATES = {
 };
 
 export const META = {
-  query: 'gummysearch alternative',
-  title: 'GummySearch Alternative: Move Before Dec 1, 2026 | Reddix',
+  query: 'gummysearch shutdown',
+  title: 'GummySearch Shutdown: What to Save Before Dec 1 | Reddix',
   description:
     'GummySearch shuts down and deletes user data on December 1, 2026. What to save first, what Reddix covers, and what it doesn’t.',
 };

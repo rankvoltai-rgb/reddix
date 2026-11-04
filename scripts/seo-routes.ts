@@ -165,7 +165,7 @@ export function getRoutes(): SeoRoute[] {
   for (const p of posts) {
     routes.push({
       path: `/blog/${p.slug}`,
-      title: `${p.title} | Reddix`,
+      title: `${p.searchTitle ?? p.title} | Reddix`,
       description: p.excerpt,
       h1: p.title,
       lead: p.excerpt,

@@ -13,6 +13,7 @@ import { Hero } from './sections/Hero';
 import { Lanes, Questions as TwoQuestions } from './sections/Approach';
 import { Planner } from './sections/Planner';
 import { Choose, Closing, Plans, Questions, Sources } from './sections/Closing';
+import { RelatedGuide } from '../RelatedGuide';
 
 const SITE = 'https://reddix.info';
 
@@ -59,6 +60,11 @@ export default function SyftenPage() {
           <Spacer />
           <Choose />
           <Spacer />
+          <RelatedGuide
+            slug="syften-alternatives"
+            title="The top Syften alternatives"
+            body="Every option side by side, priced, from raw keyword pings to AI lead qualification."
+          />
           <Questions />
           <Sources />
           <Closing />

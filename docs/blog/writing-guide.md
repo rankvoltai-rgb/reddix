@@ -2,7 +2,7 @@
 
 Every post on reddix.info/blog follows one blueprint, so readers can skim it and answer engines (Google AI Overviews, ChatGPT, Perplexity, Claude) can lift a clean passage out of it. It is the same article blueprint Rankbox uses, adapted to Reddix.
 
-A post isn't done until `npm run blog:check -- <slug>` passes: a score of 90 or more and no blueprint failures.
+A post isn't done until `npm run blog:check -- <slug>` passes: a score of 100, no blueprint failures, and none of the rules in `scripts/blog-rules.ts` broken. Posts come from the phases in `docs/blog/content-roadmap.md`.
 
 ## 1. Pick the query
 
@@ -25,7 +25,7 @@ Before drafting, search the query and read the top results.
 
 | Part | What it must be |
 | --- | --- |
-| Title (H1) | Under 60 characters, contains the keyword. It lives in the frontmatter, not the body. |
+| Title (H1) | The brief's exact title. It lives in the frontmatter, not the body. If it runs past 60 characters or doesn't contain the keyword, add a `searchTitle` that does: under 60 characters, used for the `<title>` tag and social card. |
 | Introduction | 150–200 words. The **first paragraph is the answer**: 2–3 sentences, under 80 words, quotable on its own, containing the keyword. |
 | Key Takeaways | `## Key Takeaways` right after the intro, 5–7 bullets, each a complete fact. |
 | Structure | At least 15 headings overall: `##` sections (H2) with `###` (H3) and `####` where useful, in a logical order. |
@@ -95,13 +95,20 @@ More intro…
 
 | Field | Notes |
 | --- | --- |
-| `title` | Under 60 characters, with the keyword. |
+| `title` | The title shown on the page. |
+| `searchTitle` | Optional. Under 60 characters, with the keyword. Used in search results and social cards. |
 | `description` | 120–160 characters. Used as the meta description, the subtitle and the card excerpt. |
 | `keyword` | The one query the post targets. |
-| `date` | Publish date, `YYYY-MM-DD`. A future date schedules the post (see below). |
+| `date` | Publish date, `YYYY-MM-DD`. Write today's date; `npm run blog:schedule` sets the go-live day (see below). |
 | `updated` | Change it when you revise the post substantively. |
 | `author` | `Reddix Team` unless a named person wrote it. |
-| `tags` | 1–4, from: Reddit Marketing, Lead Generation, Playbooks, Community Rules, Tools. The first is the post's topic. |
+| `tags` | 1–4, from: Reddit Marketing, Lead Generation, Playbooks, Community Rules, Tools, Alternatives. The first is the post's topic. |
+| `cluster` | Posts on one topic share a cluster, so the scheduler spaces them out. |
+| `hub` | `true` on the cluster's main post, which goes live first. |
+| `pin` | Optional `YYYY-MM-DD`. Fixes the go-live day, for a post tied to a date. |
+| `roundup` | `true` on a post comparing named tools. Turns on the roundup rules below. |
+| `picks` | The number the title promises, when it promises one. |
+| `about` | The tool the post is about, for the check that catches name-swapped sentences. |
 | `featured` | `true` pins the post as the blog's lead story. Only one at a time. |
 | `cover` | Optional image path in `public/` (e.g. `/blog/my-post.webp`). Without one, a cover is generated from the title. |
 
@@ -112,13 +119,33 @@ More intro…
 - Callouts: start a quote with `[!TIP]`, `[!NOTE]`, `[!WARNING]` or `[!IMPORTANT]`.
 - Images: put files in `public/blog/` and write `![alt text](/blog/file.webp "caption")`.
 
-## 5. Check it, preview it, publish it
+## 5. Roundups
+
+A post comparing named tools sets `roundup: true`. These name real companies and are the likeliest to read as a template, so `blog:check` also holds them to this:
+
+- **4–12 picks**, numbered `### 1. Name`, matching any number in the title.
+- **"We make Reddix"** before the list starts.
+- **Dated prices**, from the vendor's own page: "checked on November 3, 2026". Say where a vendor's pages disagree.
+- **A price chart**: `![alt](figure:price-chart/<slug> "caption")`, with its data in `src/content/price-charts/<slug>.json`. Every charted name must appear in the post. Reddix's bar sets `"reddix": true`; the tool the post is about sets `"reference": true`.
+- **A dated pricing screenshot** in `public/blog`, from `npx tsx scripts/blog/screenshot.ts <name> <url> [widthxheight] [waitMs] [selector]`.
+- **At least 8 references**, and at most 4,400 words.
+- **Never "it can't"**: no "can't", "cannot", "lacks" or "is missing" anywhere in the post. Write what its site shows, or "not mentioned on its site".
+- **Its own angle and structure.** Build the post around one specific finding about that tool, not a generic list. No two posts may share over 8% of their 8-word phrasing or more than 2 H2s, and no sentence may repeat across 3 posts with only the name swapped.
+
+## 6. Check it, schedule it, publish it
 
 1. `npx tsx scripts/og/render.ts` to create the post's social preview image (`public/og/blog/<slug>.jpg`). It needs Google Chrome; Lovable's build can't run it, so the image is committed with the post.
 2. `npm run blog:check -- <slug>` and fix everything it flags until it passes.
 3. Preview at `http://localhost:8080/blog/<slug>` on the dev server (`npx vite`).
-4. Commit and push to `main`. Lovable builds the site, and the build adds the post to `sitemap.xml`, `rss.xml` and `llms.txt` and prerenders its HTML for crawlers.
+4. `npm run blog:schedule` to give the post its go-live day and see the calendar. `--dry-run` shows the plan without changing anything.
+5. Commit and push to `main`.
 
-### Scheduling
+### How scheduling works
 
-A post with a future `date` is hidden from the blog, the sitemap and the feed until that day; the dev server shows it so you can review it. The site is built when you push, so a scheduled post appears at the first build on or after its date. Push (or trigger a Lovable rebuild) on the day.
+Cadence is set in `src/lib/blog/cadence.ts`: one post on Mondays, Wednesdays and Fridays, 3 days apart within a cluster, a cluster's hub first. A small site gaining many similar pages in days is the pattern Google's scaled-content policy describes, and a steady cadence lets each post be crawled and judged on its own.
+
+A post with a future `date` is hidden from the blog until that day; the dev server shows it so you can review it. Links to it from live posts render as plain text until then, so write them normally.
+
+On its day, a post goes live in the app by itself. It reaches `sitemap.xml`, `rss.xml`, `llms.txt` and the crawler HTML at the next build, so push and click Publish in Lovable on go-live days. If a day gets missed, the next Publish catches it up.
+
+If a post waits more than 30 days, the scheduler flags it: re-check its facts before it goes live.

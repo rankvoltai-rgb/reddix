@@ -34,6 +34,9 @@ export interface Block {
 export interface PostMeta {
   slug: string;
   title: string;
+  /** A shorter title for the <title> tag and social cards, carrying the keyword.
+   *  The page itself always shows `title`. */
+  searchTitle: string | null;
   /** The meta description, shown under the title and on cards. */
   excerpt: string;
   /** The search query the post is written to rank for. */

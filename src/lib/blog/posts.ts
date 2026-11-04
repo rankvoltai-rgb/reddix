@@ -24,6 +24,7 @@ export function parsePost(slug: string, raw: string): PostFull {
   return {
     slug,
     title: data.title || slug,
+    searchTitle: data.searchTitle || null,
     excerpt: data.description || '',
     keyword: data.keyword || '',
     date,

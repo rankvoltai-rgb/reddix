@@ -1,0 +1,16 @@
+{
+  "title": "What a business pays to start, billed monthly",
+  "subtitle": "The seven picks, plus Octolens and Brand24 for scale. Plans differ widely in speed and limits.",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    { "name": "RedNudge", "value": 7, "note": "Starter, 5 keywords, daily digest" },
+    { "name": "ReddLeads", "value": 19.99, "note": "Starter, 30-minute scans" },
+    { "name": "Subreddit Signals", "value": 29, "note": "Starter, 10 subreddits" },
+    { "name": "Syften", "value": 29.95, "note": "Entry, 3 community filters" },
+    { "name": "Reddix", "value": 45, "note": "Premium, scans on demand, no alerts", "reddix": true },
+    { "name": "F5Bot", "value": 49.99, "note": "Gold, first plan for business use" },
+    { "name": "SnitchFeed", "value": 59, "note": "Starter, 7,000 credits" },
+    { "name": "Octolens", "value": 199, "note": "Pro, 10 keywords" },
+    { "name": "Brand24", "value": 249, "note": "Individual, updates every 12 hours", "reference": true }
+  ]
+}

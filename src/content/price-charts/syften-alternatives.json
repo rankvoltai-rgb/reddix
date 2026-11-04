@@ -1,0 +1,15 @@
+{
+  "title": "What Syften and five alternatives charge a month",
+  "subtitle": "Lowest to highest. Syften's three plans are the darker bars, and each note says what the price buys.",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    { "name": "KWatch.io", "value": 19, "note": "Essential, 20 Reddit alerts, no Slack" },
+    { "name": "Subreddit Signals", "value": 29, "note": "Starter, up to 10 subreddits" },
+    { "name": "Syften Entry", "value": 29.95, "note": "3 community filters", "reference": true },
+    { "name": "Reddix", "value": 45, "note": "Premium, billed monthly", "reddix": true },
+    { "name": "Syften Standard", "value": 49.95, "note": "20 filters, AI filtering, Slack", "reference": true },
+    { "name": "F5Bot Gold", "value": 49.99, "note": "200 keywords, 2 AI filters" },
+    { "name": "Syften PRO", "value": 119.95, "note": "100 filters, webhooks, MCP", "reference": true },
+    { "name": "Octolens", "value": 199, "note": "Pro, 10 keywords" }
+  ]
+}

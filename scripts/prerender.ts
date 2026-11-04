@@ -21,6 +21,7 @@ import { marked } from "marked";
 import { readLivePosts } from "./blog-files";
 import { faqForSchema } from "../src/lib/blog/outline";
 import { formatDate } from "../src/lib/blog/posts";
+import { formatPrice, type PriceChartData } from "../src/lib/blog/price-chart";
 
 const POSTS = readLivePosts();
 
@@ -355,13 +356,35 @@ function blogIndexBody(): string {
 
 // The whole article, rendered from its markdown, so crawlers that don't run
 // JavaScript read exactly what visitors do.
+/** A post's body for crawlers: a price chart becomes a real table, and a link to
+ *  a post that isn't live yet becomes plain text, as it does on the page. */
+function crawlerArticle(markdown: string): string {
+  const withCharts = markdown.replace(
+    /!\[([^\]]*)\]\(figure:price-chart\/([a-z0-9-]+)(?:\s+"([^"]*)")?\)/g,
+    (_, alt: string, slug: string, caption: string | undefined) => {
+      const file = resolve("src/content/price-charts", `${slug}.json`);
+      if (!existsSync(file)) return "";
+      const chart = JSON.parse(readFileSync(file, "utf8")) as PriceChartData;
+      const rows = chart.bars
+        .map((b) => `<tr><td>${esc(b.name)}</td><td>${esc(formatPrice(b.value))}</td><td>${esc(b.note)}</td></tr>`)
+        .join("");
+      return `<figure><table aria-label="${esc(alt)}"><caption>${esc(chart.title)}. ${esc(chart.subtitle)}</caption><thead><tr><th>Tool</th><th>Price a month</th><th>What it buys</th></tr></thead><tbody>${rows}</tbody></table>${caption ? `<figcaption>${esc(caption)}</figcaption>` : ""}</figure>`;
+    },
+  );
+  const live = new Set(POSTS.map((p) => p.slug));
+  return (marked.parse(withCharts, { async: false, gfm: true }) as string).replace(
+    /<a href="\/blog\/([a-z0-9-]+)\/?(?:[?#][^"]*)?"[^>]*>(.*?)<\/a>/g,
+    (link: string, slug: string, text: string) => (live.has(slug) ? link : text),
+  );
+}
+
 function blogPostBody(path: string): string {
   const post = postFor(path);
   if (!post) return "";
   const byline = `<p>By ${esc(post.author)} · Published <time datetime="${post.date}">${formatDate(post.date)}</time>${
     post.updated !== post.date ? ` · Updated <time datetime="${post.updated}">${formatDate(post.updated)}</time>` : ""
   } · ${post.readingMinutes} min read</p>`;
-  const html = marked.parse(post.body, { async: false, gfm: true }) as string;
+  const html = crawlerArticle(post.body);
   const tags = post.tags.map((t) => `<li>${esc(t)}</li>`).join("");
   return `${byline}<article>${html}</article>${tags ? `<ul aria-label="Topics">${tags}</ul>` : ""}<p><a href="/blog">More articles from the Reddix blog</a></p>`;
 }

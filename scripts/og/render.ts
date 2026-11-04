@@ -60,7 +60,7 @@ if (render(join(OUT, "default.jpg"), { title: "Find warm leads on Reddit, and re
 if (render(join(OUT, "blog.jpg"), { title: "Turn Reddit into a customer channel", eyebrow: "The Reddix blog" })) n++;
 for (const post of readAllPosts()) {
   const subtitle = `<b>reddix.info/blog</b> · ${post.readingMinutes} min read`;
-  if (render(join(OUT, "blog", `${post.slug}.jpg`), { title: post.title, eyebrow: post.tags[0] || "Blog", subtitle })) n++;
+  if (render(join(OUT, "blog", `${post.slug}.jpg`), { title: post.searchTitle ?? post.title, eyebrow: post.tags[0] || "Blog", subtitle })) n++;
 }
 
 rmSync(work, { recursive: true, force: true });

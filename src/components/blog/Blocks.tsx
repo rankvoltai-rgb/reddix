@@ -8,8 +8,10 @@ import { useContext, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Check, Copy, Info, Lightbulb, Link2, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isPostLive } from '@/lib/blog';
 import type { Block, RichTextSpan } from '@/lib/blog/types';
 import { BlockContext } from './block-context';
+import { PriceChart, priceChartSlug } from './PriceChart';
 
 
 /* ---------- inline rich text ---------- */
@@ -18,6 +20,9 @@ const LINK =
   'font-medium text-cta underline decoration-cta/30 decoration-[1.5px] underline-offset-[3px] transition-colors hover:decoration-cta';
 
 function InlineLink({ href, children }: { href: string; children: ReactNode }) {
+  // A post that hasn't gone live yet is plain text until its day.
+  const blogSlug = /^\/blog\/([a-z0-9-]+)\/?(?:[?#].*)?$/.exec(href)?.[1];
+  if (blogSlug && !isPostLive(blogSlug)) return <>{children}</>;
   // Same-site paths route client-side; anything else opens in a new tab.
   if (href.startsWith('/') && !href.startsWith('//')) {
     return (
@@ -253,7 +258,20 @@ function SingleBlock({ block }: { block: Block }) {
       return <CodeBlock block={block} />;
     case 'table':
       return <Table block={block} />;
-    case 'image':
+    case 'image': {
+      const chart = priceChartSlug(block.url);
+      if (chart) {
+        return (
+          <figure className="my-10">
+            <PriceChart slug={chart} alt={block.alt ?? ''} />
+            {block.caption?.length ? (
+              <figcaption className="mt-3 text-center text-[0.8rem] text-muted-foreground">
+                <Rich spans={block.caption} />
+              </figcaption>
+            ) : null}
+          </figure>
+        );
+      }
       return (
         <figure className="my-10">
           <img src={block.url} alt={block.alt ?? ''} loading="lazy" className="w-full rounded-xl border border-ink/[0.08]" />
@@ -264,6 +282,7 @@ function SingleBlock({ block }: { block: Block }) {
           ) : null}
         </figure>
       );
+    }
     case 'divider':
       return <hr className="my-12 border-ink/[0.08]" />;
     default:

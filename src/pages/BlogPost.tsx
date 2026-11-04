@@ -58,7 +58,7 @@ function Article({ post }: { post: PostFull }) {
   const url = `${SITE_URL}/blog/${post.slug}`;
   const article = useMemo(() => ({ published: post.date, modified: post.updated, tags: post.tags }), [post]);
   usePageMeta({
-    title: `${post.title} | Reddix`,
+    title: `${post.searchTitle ?? post.title} | Reddix`,
     description: post.excerpt,
     path: `/blog/${post.slug}`,
     image: `${SITE_URL}/og/blog/${post.slug}.jpg`,
@@ -159,10 +159,11 @@ function Article({ post }: { post: PostFull }) {
                 <ShareButtons url={url} title={post.title} />
               </div>
             </div>
-            {/* The cover, inset in its own cell with a hairline of white around it. */}
-            <div className={cn('border-t p-3 motion-safe:animate-hero-rise lg:border-l lg:border-t-0', LINE)} style={{ '--rise-delay': '0.08s' } as CSSProperties}>
-              <div className="h-full overflow-hidden rounded-lg border border-ink/[0.06]">
-                <CoverArt post={post} className="aspect-[16/11] h-full w-full lg:aspect-auto lg:min-h-[22rem]" />
+            {/* The cover, inset in its own cell at its true shape, so a long title
+                makes the cell taller without cropping the art. */}
+            <div className={cn('flex items-center border-t p-3 motion-safe:animate-hero-rise lg:border-l lg:border-t-0', LINE)} style={{ '--rise-delay': '0.08s' } as CSSProperties}>
+              <div className="w-full overflow-hidden rounded-lg border border-ink/[0.06]">
+                <CoverArt post={post} className="aspect-[8/5] w-full" />
               </div>
             </div>
           </div>

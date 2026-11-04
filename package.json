@@ -12,6 +12,7 @@
     "build:dev": "vite build --mode development && bunx tsx scripts/prerender.ts",
     "lint": "eslint .",
     "blog:check": "bunx tsx scripts/blog-check.ts",
+    "blog:schedule": "bunx tsx scripts/blog-schedule.ts",
     "preview": "vite preview"
   },
   "dependencies": {

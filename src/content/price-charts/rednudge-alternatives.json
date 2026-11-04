@@ -1,0 +1,14 @@
+{
+  "title": "What each tool costs to start, billed monthly",
+  "subtitle": "RedNudge Starter is the lowest US-dollar price charted; Brand24's entry plan is about 36 times that",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    { "name": "RedNudge Starter", "value": 7, "note": "5 keywords, 300 scored matches", "reference": true },
+    { "name": "Sublookout", "value": 12, "note": "Pro, 10-minute checks, posts only" },
+    { "name": "RedNudge Pro", "value": 15, "note": "15 keywords, 1,000 scored matches", "reference": true },
+    { "name": "Subreddit Signals", "value": 29, "note": "Starter, up to 10 subreddits" },
+    { "name": "Syften", "value": 29.95, "note": "Entry, 3 community filters" },
+    { "name": "Reddix", "value": 45, "note": "Premium, billed monthly", "reddix": true },
+    { "name": "Brand24", "value": 249, "note": "Individual, updates every 12 hours" }
+  ]
+}

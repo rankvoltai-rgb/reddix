@@ -1,0 +1,38 @@
+{
+  "title": "What each tool's fastest stated Reddit speed costs",
+  "subtitle": "Cheapest paid plan reaching it, billed monthly. Speeds are vendor-stated, not measured. TrackReddit has no bar because nothing is on sale.",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    {
+      "name": "Sublookout",
+      "value": 12,
+      "note": "Pro. 10-min checks, posts only"
+    },
+    {
+      "name": "KWatch.io",
+      "value": 19,
+      "note": "Essential. Its pages disagree on speed"
+    },
+    {
+      "name": "Syften",
+      "value": 29.95,
+      "note": "Entry. Aims for 1 min, 3 filters"
+    },
+    {
+      "name": "Reddix",
+      "value": 45,
+      "note": "Premium. No alerts; you press Scan",
+      "reddix": true
+    },
+    {
+      "name": "F5Bot",
+      "value": 49.99,
+      "note": "Gold. Instant once a match is found"
+    },
+    {
+      "name": "Octolens",
+      "value": 199,
+      "note": "Pro. Docs: real time. Pricing: hourly"
+    }
+  ]
+}

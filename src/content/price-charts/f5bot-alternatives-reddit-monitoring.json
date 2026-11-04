@@ -1,0 +1,15 @@
+{
+  "title": "What F5Bot alternatives cost next to F5Bot's business floor",
+  "subtitle": "Lowest paid plan for each pick, with F5Bot Silver and Gold for reference",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    { "name": "F5Bot Gold", "value": 49.99, "note": "Where F5Bot points business use", "reference": true },
+    { "name": "Reddix", "value": 45, "note": "Premium, billed monthly. Sends no alerts", "reddix": true },
+    { "name": "CommunityTracker", "value": 39, "note": "Starter, 4 keywords. AI scoring is on Pro, $99" },
+    { "name": "Leado", "value": 29.99, "note": "Pro, a \"Limited offer\" against $39.99" },
+    { "name": "Syften", "value": 29.95, "note": "Entry, 3 community filters. AI from $49.95" },
+    { "name": "KWatch.io", "value": 19, "note": "Essential, 20 Reddit keyword alerts" },
+    { "name": "F5Bot Silver", "value": 12.99, "note": "Labelled personal, non-commercial", "reference": true },
+    { "name": "RedNudge", "value": 7, "note": "Starter, 5 keywords, daily digest" }
+  ]
+}

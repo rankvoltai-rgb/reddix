@@ -25,6 +25,12 @@ export function getPost(slug: string): PostFull | null {
   return live().find((p) => p.slug === slug) ?? null;
 }
 
+/** Whether a post exists and is live. Links to anything else render as plain
+ *  text, so a live post can mention one that's still scheduled. */
+export function isPostLive(slug: string): boolean {
+  return live().some((p) => p.slug === slug);
+}
+
 export * from './posts';
 export * from './outline';
 export type * from './types';

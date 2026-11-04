@@ -14,6 +14,7 @@ import { Timeline } from './sections/Timeline';
 import { Checklist } from './sections/Checklist';
 import { Mapping } from './sections/Mapping';
 import { Close, Fit, Prices, Questions, Sources } from './sections/Closing';
+import { RelatedGuide } from '../RelatedGuide';
 
 const SITE = 'https://reddix.info';
 
@@ -64,6 +65,11 @@ export default function GummySearchAlternative() {
           <Spacer />
           <Fit />
           <Spacer />
+          <RelatedGuide
+            slug="gummysearch-alternatives"
+            title="The top GummySearch alternatives"
+            body="Every replacement for the jobs GummySearch did, including the audience research Reddix doesn't do."
+          />
           <Questions />
           <Sources />
           <Close />

@@ -14,6 +14,7 @@ import { Loops } from './sections/Loops';
 import { Pricing } from './sections/Pricing';
 import { Inbox } from './sections/Inbox';
 import { Better, Both, Closing, Questions, Sources } from './sections/Closing';
+import { RelatedGuide } from '../RelatedGuide';
 
 const SITE = 'https://reddix.info';
 
@@ -60,6 +61,11 @@ export default function F5BotPage() {
           <Spacer />
           <Both />
           <Spacer />
+          <RelatedGuide
+            slug="f5bot-alternatives-reddit-monitoring"
+            title="F5Bot vs. dedicated Reddit CRMs"
+            body="The full guide to moving past keyword alerts: the cost of noise, and the other tools worth a look."
+          />
           <Questions />
           <Sources />
           <Closing />

@@ -10,8 +10,8 @@ import { CHECKED_LABEL, REDDIX } from '../reddix';
 export const PATH = '/alternatives/syften';
 
 export const META = {
-  query: 'syften alternative',
-  title: 'Syften Alternative for Reddit Leads: Coverage vs Depth | Reddix',
+  query: 'syften vs reddix',
+  title: 'Syften vs Reddix: Coverage or Reddit Depth | Reddix',
   description:
     'Syften monitors about 17 communities plus the web and alerts on keyword matches. Reddix scores Reddit posts for buying intent. Which fits, checked October 2026.',
 };

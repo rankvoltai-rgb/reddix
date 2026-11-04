@@ -66,12 +66,14 @@ export function scorePost(post: PostFull): Score {
   const bodyWords = words(bodyText);
   const n = bodyWords.length;
   const kw = post.keyword.trim().toLowerCase();
+  // What a search result shows: the short search title when a post has one.
+  const shownTitle = post.searchTitle ?? post.title;
   const checks: Check[] = [];
 
   // Keyword in title
   if (kw) {
     checks.push(
-      post.title.toLowerCase().includes(kw)
+      shownTitle.toLowerCase().includes(kw)
         ? check('Keyword in title', 15, 'pass', `"${post.keyword}" appears in the title.`)
         : check('Keyword in title', 15, 'fail', `Add "${post.keyword}" to the title.`),
     );
@@ -191,9 +193,9 @@ export function scorePost(post: PostFull): Score {
   const lead = outline.intro.find((b) => b.type === 'paragraph');
   const leadWords = lead ? words(plainText(lead.richText)).length : 0;
   const blueprint: Check[] = [
-    post.title.length <= 60
-      ? check('Title length', 0, 'pass', `${post.title.length} characters.`)
-      : check('Title length', 0, 'warn', `${post.title.length} characters — keep it under 60.`),
+    shownTitle.length <= 60
+      ? check('Title length', 0, 'pass', `${shownTitle.length} characters.`)
+      : check('Title length', 0, 'warn', `${shownTitle.length} characters — keep it under 60, or add a searchTitle.`),
     lead && leadWords <= 80
       ? check('Answer-first intro', 0, 'pass', `Opens with a ${leadWords}-word answer.`)
       : check('Answer-first intro', 0, 'warn', 'Open with a direct 2–3 sentence answer (under 80 words).'),

@@ -1,0 +1,14 @@
+{
+  "title": "What the research replacements cost a month",
+  "subtitle": "GummySearch's plans are its last listed prices and are no longer sold. Reddit Pro and one-time packs aren't charted.",
+  "checkedOn": "2026-11-03",
+  "bars": [
+    { "name": "PainOnSocial", "value": 19, "note": "Starter: 20 scans, 2 subreddits each" },
+    { "name": "GummySearch Starter", "value": 29, "note": "Last listed price, not for sale", "reference": true },
+    { "name": "Reddinbox", "value": 39, "note": "Starter: about 100 AI conversations" },
+    { "name": "Reddix", "value": 45, "note": "Premium, billed monthly. A lead tool, not research", "reddix": true },
+    { "name": "Adlicio", "value": 49, "note": "Starter: 250 credits, 1 Reddit Radar" },
+    { "name": "GummySearch Pro", "value": 59, "note": "Last listed price, not for sale", "reference": true },
+    { "name": "BuzzAbout", "value": 178, "note": "Pro: first plan listing audience research" }
+  ]
+}
