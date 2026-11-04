@@ -169,6 +169,7 @@ export function Field({
   autoComplete,
   inputMode,
   autoFocus,
+  leading,
 }: {
   id: string;
   label: string;
@@ -179,22 +180,30 @@ export function Field({
   autoComplete?: string;
   inputMode?: 'url' | 'text';
   autoFocus?: boolean;
+  /** An icon inside the field, before the text. */
+  leading?: ReactNode;
 }) {
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-[0.85rem] font-medium text-ink">
         {label}
       </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        inputMode={inputMode}
-        autoFocus={autoFocus}
-        className="h-11 w-full rounded-lg border border-ink/[0.1] bg-white px-3.5 text-[0.95rem] text-ink shadow-[0_1px_2px_rgba(16,24,40,0.04)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-ink/[0.16] focus:border-cta/50 focus:shadow-[0_0_0_4px_hsl(var(--cta)/0.12)]"
-      />
+      <div className="relative">
+        {leading && <span className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2">{leading}</span>}
+        <input
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          autoFocus={autoFocus}
+          className={cn(
+            'h-11 w-full rounded-lg border border-ink/[0.1] bg-white px-3.5 text-[0.95rem] text-ink shadow-[0_1px_2px_rgba(16,24,40,0.04)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-ink/[0.16] focus:border-cta/50 focus:shadow-[0_0_0_4px_hsl(var(--cta)/0.12)]',
+            leading && 'pl-10',
+          )}
+        />
+      </div>
       {hint && <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p>}
     </div>
   );

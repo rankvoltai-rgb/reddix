@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SUBSCRIPTION_TIERS, type SubscriptionPlan } from '@/lib/subscriptionTiers';
 import { cn } from '@/lib/utils';
+import { SiteIcon } from '@/components/brand/SiteIcon';
 import { LogoMark } from '@/components/brand/Logo';
 import { Avatar, Stars, SubredditIcon } from '@/components/landing/shared';
 import { ActionBar, Field, OnboardingShell, PRIMARY_BUTTON, StepHeader, type Step } from './shell';
@@ -661,6 +662,7 @@ export default function OnboardingWizard() {
                     value={form.product_url}
                     onChange={(v) => setForm((f) => ({ ...f, product_url: v }))}
                     placeholder="yourproduct.com"
+                    leading={<SiteIcon value={form.product_url} />}
                     inputMode="url"
                     autoComplete="url"
                     autoFocus={!form.product_url}

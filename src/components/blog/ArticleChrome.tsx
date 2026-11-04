@@ -5,7 +5,8 @@
  */
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, Globe, Link2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Link2 } from 'lucide-react';
+import { SiteIcon } from '@/components/brand/SiteIcon';
 import { Reveal } from '@/components/landing/shared';
 import { Band, Spacer } from '@/components/landing/frame';
 import { HeroRadar } from '@/components/landing/hero-radar';
@@ -288,7 +289,7 @@ export function BlogCta({ title = 'Find the Reddit threads asking for you' }: { 
           </p>
           <form onSubmit={submit} className="mt-8 flex w-full max-w-xl flex-col gap-2.5 sm:flex-row">
             <label className="flex h-12 min-w-0 flex-1 cursor-text items-center gap-2.5 rounded-lg bg-white px-3.5 shadow-[0_8px_24px_-12px_rgba(72,4,8,0.45)]">
-              <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <SiteIcon value={website} />
               <input
                 type="text"
                 inputMode="url"

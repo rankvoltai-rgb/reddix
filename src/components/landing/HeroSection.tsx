@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { SiteIcon } from '@/components/brand/SiteIcon';
 import { cn } from '@/lib/utils';
 import { HeroRadar } from './hero-radar';
 import { HeroProofBand } from './hero-proof-band';
@@ -75,7 +76,7 @@ export function HeroSection() {
           <div className="mt-9 w-full max-w-[37rem] motion-safe:animate-hero-rise" style={rise(0.34)}>
             <form onSubmit={handleSubmit} className="group flex w-full flex-col gap-2.5 sm:flex-row">
               <label className="flex h-12 min-w-0 shrink-0 cursor-text items-center gap-2.5 rounded-lg border border-ink/[0.1] bg-white px-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-ink/[0.16] focus-within:border-cta/50 focus-within:shadow-[0_0_0_4px_hsl(var(--cta)/0.12)] sm:flex-1">
-                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <SiteIcon value={website} />
                 <input
                   type="text"
                   inputMode="url"

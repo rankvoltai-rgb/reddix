@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { SiteIcon } from '@/components/brand/SiteIcon';
 import { cn } from '@/lib/utils';
 import { HERO } from '../content';
 
@@ -39,7 +40,7 @@ export function UrlForm({ className, button = HERO.cta }: { className?: string; 
           htmlFor={ids.input}
           className="flex h-12 min-w-0 cursor-text items-center gap-2.5 rounded-lg border border-ink/[0.1] bg-white px-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-[border-color,box-shadow] hover:border-ink/[0.16] focus-within:border-cta/50 focus-within:shadow-[0_0_0_4px_hsl(var(--cta)/0.12)] sm:flex-1"
         >
-          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <SiteIcon value={value} />
           <span className="sr-only">{HERO.fieldLabel}</span>
           <input
             id={ids.input}

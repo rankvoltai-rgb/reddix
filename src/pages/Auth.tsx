@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import { z } from 'zod';
-import { AlertCircle, ArrowRight, Eye, EyeOff, Globe, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { SiteIcon } from '@/components/brand/SiteIcon';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -207,7 +208,7 @@ export default function Auth() {
                 <Reveal delay={0.09}>
                   <p className="mt-5 inline-flex max-w-full items-center gap-2 rounded-lg border border-ink/[0.08] bg-surface/70 py-1.5 pl-2 pr-3 text-[0.82rem] text-ink/80">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-cta-soft text-cta">
-                      <Globe className="h-3 w-3" />
+                      <SiteIcon value={pendingWebsite} className="h-3.5 w-3.5" globeClassName="text-cta" />
                     </span>
                     <span className="truncate">
                       We'll start scanning for <span className="font-semibold text-ink">{pendingWebsite}</span>
